@@ -34,7 +34,6 @@ With **SoftwareTemplate**, you can skip the repetitive tasks of setting up login
   - **Axios**: A promise-based HTTP client to make requests from the frontend to the backend, allowing easy interaction between React and Express.
 
 - **Development Tools:**
-  - **ESLint**: A linter that helps maintain code quality by enforcing JavaScript best practices.
   - **Vite**: A modern, fast development build tool that supports React development.
   - **Prettier**: Code formatter (optional but recommended) for automatic formatting to maintain code consistency.
 
