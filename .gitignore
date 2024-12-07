@@ -1,0 +1,38 @@
+# Node.js / Express Application
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# .env files (environment configuration) - Ignore all .env files in any directory
+.env
+.env.local
+.env.*.local
+backend/.env   # Explicitly ignore .env inside backend folder (if you want to be explicit)
+
+# Logs
+logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# Other directories you may want to ignore
+coverage/
+build/
