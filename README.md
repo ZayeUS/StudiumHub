@@ -62,7 +62,7 @@ To run this project locally, you'll need to configure the environment variables 
 
 The backend uses various services such as **Neon** for the PostgreSQL database, **Firebase** for authentication
 
-Create a `.env` file in the `backend` folder and include the following variables:
+## Create a `.env` file in the `backend` folder and include the following variables:
 
 
 DATABASE_URL=your_neon_database_url
@@ -74,7 +74,7 @@ FIREBASE_PRIVATE_KEY=your_firebase_private_key
 
 CORS_ORIGIN=http://localhost:5173 # Frontend URL, change if deploying elsewhere 
 
-Create a `.env` file in the `root` folder and include the following variables:
+## Create a `.env` file in the `root` folder and include the following variables:
 
 
 VITE_FIREBASE_API_KEY=your_firebase_api_key
