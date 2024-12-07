@@ -68,17 +68,17 @@ env
 # Neon Database Configuration
 DATABASE_URL=your_neon_database_url
 
-# Firebase Authentication Configuration
+#### Firebase Authentication Configuration
 FIREBASE_PROJECT_ID=your_firebase_project_id
 FIREBASE_CLIENT_EMAIL=your_firebase_client_email
 FIREBASE_PRIVATE_KEY=your_firebase_private_key
 
-# CORS Configuration
+#### CORS Configuration
 CORS_ORIGIN=http://localhost:5173 # Frontend URL, change if deploying elsewhere
 
 Create a `.env` file in the `root` folder and include the following variables:
 
-# Firebase Configuration
+#### Firebase Configuration
 VITE_FIREBASE_API_KEY=your_firebase_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
 VITE_FIREBASE_PROJECT_ID=your_firebase_project_id
@@ -86,7 +86,7 @@ VITE_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
 VITE_FIREBASE_APP_ID=your_firebase_app_id
 
-# Backend API Base URL (for making API requests from frontend)
+#### Backend API Base URL (for making API requests from frontend)
 VITE_API_BASE_URL=http://localhost:5000/api # Adjust if backend runs on a different port
 
 ### 4. Database Design
