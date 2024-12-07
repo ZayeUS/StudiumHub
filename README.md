@@ -58,9 +58,7 @@ Run `npm install` to install all dependencies.
 
 To run this project locally, you'll need to configure the environment variables for both the frontend and backend. Here’s what you need to include in your `.env` file for both parts of the project.
 
-### 3. Backend `.env` Configuration
 
-The backend uses various services such as **Neon** for the PostgreSQL database, **Firebase** for authentication
 
 ## Create a `.env` file in the `backend` folder and include the following variables:
 
