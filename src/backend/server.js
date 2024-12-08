@@ -194,24 +194,59 @@ app.delete('/api/roles/:role_id', authenticate, async (req, res) => {
 // ------------------------
 // Routes for Users
 // ------------------------
-app.post('/api/users', authenticate, async (req, res) => {
-  const { firebase_uid, email, role_id } = req.body;
-
-  if (!firebase_uid || !email || !role_id) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
-  const queryText = 'INSERT INTO users (firebase_uid, email, role_id) VALUES ($1, $2, $3) RETURNING *';
-  const values = [firebase_uid, email, role_id];
-
-  try {
-    const result = await query(queryText, values);
-    res.status(201).json({ message: 'User created successfully', user: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Error creating user' });
-  }
-});
+app.post('/api/signup', async (req, res) => {
+    const { firebase_uid, email, role_id } = req.body;
+  
+    if (!firebase_uid || !email || !role_id) {
+      return res.status(400).json({ message: 'All fields are required.' });
+    }
+  
+    try {
+      // Save user in the database and return user data along with role_name using a JOIN
+      const insertUserQuery = `
+        INSERT INTO users (firebase_uid, email, role_id)
+        VALUES ($1, $2, $3)
+        RETURNING user_id, email, role_id
+      `;
+      const userResult = await query(insertUserQuery, [firebase_uid, email, role_id]);
+      const user = userResult.rows[0];
+  
+      // Fetch user and role_name using a JOIN query
+      const userWithRoleQuery = `
+        SELECT 
+          users.user_id, 
+          users.email, 
+          users.role_id, 
+          roles.role_name
+        FROM users
+        INNER JOIN roles ON users.role_id = roles.role_id
+        WHERE users.user_id = $1
+      `;
+      const fullUserResult = await query(userWithRoleQuery, [user.user_id]);
+  
+      if (fullUserResult.rows.length === 0) {
+        return res.status(500).json({ message: 'Error fetching user data after creation.' });
+      }
+  
+      const fullUser = fullUserResult.rows[0];
+  
+      // Respond with user data and role_name
+      res.status(201).json({
+        message: 'User created successfully',
+        user: {
+          user_id: fullUser.user_id,
+          email: fullUser.email,
+          role_name: fullUser.role_name,
+          role_id: fullUser.role_id,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ message: 'Error creating user.' });
+    }
+  });
+  
+  
 
 app.get('/api/users', authenticate, async (req, res) => {
   const queryText = 'SELECT * FROM users';
@@ -226,21 +261,27 @@ app.get('/api/users', authenticate, async (req, res) => {
 });
 
 app.get('/api/users/:firebase_uid', authenticate, async (req, res) => {
-  const { firebase_uid } = req.params;
-  const queryText = 'SELECT * FROM users WHERE firebase_uid = $1';
-  const values = [firebase_uid];
-
-  try {
-    const result = await query(queryText, values);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+    const { firebase_uid } = req.params;
+    const queryText = `
+      SELECT users.user_id, users.email, roles.role_name
+      FROM users
+      JOIN roles ON users.role_id = roles.role_id
+      WHERE users.firebase_uid = $1
+    `;
+    const values = [firebase_uid];
+  
+    try {
+      const result = await query(queryText, values);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.status(200).json(result.rows[0]); // This will include role_name
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Error fetching user' });
     }
-    res.status(200).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Error fetching user' });
-  }
-});
+  });
+  
 
 app.put('/api/users/:firebase_uid', authenticate, async (req, res) => {
   const { firebase_uid } = req.params;
