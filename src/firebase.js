@@ -25,7 +25,6 @@ const analytics = getAnalytics(app);
 const signUp = async (email, password) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log('User signed up: ', userCredential.user);
     return userCredential.user;
   } catch (error) {
     console.error('Error signing up: ', error.message);
@@ -37,7 +36,6 @@ const signUp = async (email, password) => {
 const login = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log('User logged in: ', userCredential.user);
     return userCredential.user;
   } catch (error) {
     console.error('Error logging in: ', error.message);
@@ -49,7 +47,6 @@ const login = async (email, password) => {
 const logout = async () => {
   try {
     await signOut(auth); // Sign the user out from Firebase
-    console.log("User logged out");
   } catch (error) {
     console.error("Error logging out: ", error.message);
     throw new Error(error.message); // Handle logout errors
@@ -60,7 +57,6 @@ const logout = async () => {
 const resetPassword = async (email) => {
   try {
     await sendPasswordResetEmail(auth, email); // Firebase function to send password reset email
-    console.log("Password reset email sent to: ", email);
   } catch (error) {
     console.error("Error sending password reset email: ", error.message);
     throw new Error(error.message); // Handle errors in sending reset email

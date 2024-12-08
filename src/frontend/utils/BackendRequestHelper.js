@@ -1,9 +1,9 @@
-// utils/BackendRequestHelper.js
+// frontend/utils/BackendRequestHelper.js
 
 import axios from "axios";
 import { auth } from "../../firebase";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -38,11 +38,12 @@ export const getData = async (endpoint) => {
 };
 
 // Utility function for POST requests
-export const postData = async (endpoint, payload) => {
+export const postData = async (endpoint, payload, requireAuth = true) => {
   const token = await getToken();
+  const headers = requireAuth && token ? { Authorization: `Bearer ${token}` } : {};
   try {
     const response = await api.post(endpoint, payload, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
     });
     return response.data;
   } catch (error) {

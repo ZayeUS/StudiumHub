@@ -1,3 +1,5 @@
+// frontend/pages/LoginPage.jsx
+
 import React, { useState } from "react";
 import {
   Box,
@@ -14,12 +16,13 @@ import {
   DialogContent,
   DialogTitle,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material"; // Add icons for visibility toggle
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Formik, Field, Form } from "formik";
 import * as Yup from "yup";
-import { login, resetPassword } from "../../firebase"; // Import login and resetPassword function
-import { useUserStore } from "../store/userStore"; // Zustand store to track login state
-import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
+import { login, resetPassword } from "../../firebase";
+import { useUserStore } from "../store/userStore";
+import { useNavigate } from "react-router-dom";
+import axios from "axios"; // Ensure axios is installed
 
 // Yup validation schema for login
 const validationSchema = Yup.object({
@@ -28,50 +31,68 @@ const validationSchema = Yup.object({
 });
 
 const LoginPage = () => {
-  const { setUser } = useUserStore(); // Zustand setter to update the user store
+  const { setUser } = useUserStore();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState(""); // For handling error messages during login
-  const [openSnackbar, setOpenSnackbar] = useState(false); // For Snackbar
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Message for Snackbar
-  const [forgotPasswordModal, setForgotPasswordModal] = useState(false); // State for the forgot password modal
-  const [emailForReset, setEmailForReset] = useState(""); // State to capture email for password reset
-  const navigate = useNavigate(); // useNavigate for routing
+  const [error, setError] = useState("");
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [forgotPasswordModal, setForgotPasswordModal] = useState(false);
+  const [emailForReset, setEmailForReset] = useState("");
+  const navigate = useNavigate();
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
   const handleMouseDownPassword = (event) => event.preventDefault();
 
-  // Handle login with Firebase and update Zustand store
+  // Corrected handleLogin function
   const handleLogin = async (values, { setSubmitting }) => {
     const { email, password } = values;
     try {
       // Step 1: Log the user in using Firebase
       const user = await login(email, password);
 
-      // Step 2: Retrieve role directly from Firebase user metadata
-      const role = user.email === "admin@example.com" ? "admin" : "user"; // Example of hardcoding admin role based on email (change as per your logic)
+      if (!user) {
+        throw new Error("No user returned from Firebase.");
+      }
 
-      // Step 3: Save user data to Zustand store and localStorage
-      setUser(user.uid, user.email, role);
+      // Step 2: Get the Firebase ID token for authentication with backend
+      const idToken = await user.getIdToken();
 
-      // Store user data in localStorage
+      // Step 3: Fetch user data from backend
+      const response = await axios.get(`http://localhost:5000/api/users/${user.uid}`, {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      const userData = response.data;
+
+      if (!userData || !userData.role_name) {
+        throw new Error("User role not found.");
+      }
+
+      // Step 4: Save user data to Zustand store and localStorage
+      setUser(user.uid, user.email, userData.role_name); // Ensure role_name is used
       localStorage.setItem("user", JSON.stringify({
-        uid: user.uid,
-        email: user.email,
-        role: role,
+        user_id: userData.user_id, // Assuming backend returns user_id
+        email: userData.email,
+        role: userData.role_name,
       }));
 
       setSnackbarMessage("Login successful!");
       setOpenSnackbar(true);
 
-      // Step 4: Redirect based on role
-      if (role === "admin") {
+      // Step 5: Redirect based on role
+      if (userData.role_name === "admin") {
         navigate("/admin-dashboard");
-      } else {
+      } else if (userData.role_name === "user") {
         navigate("/user-dashboard");
+      } else {
+        navigate("/login"); // Default fallback
       }
     } catch (err) {
-      setError(err.message);
-      setSnackbarMessage("Login failed! Please check your credentials.");
+      console.error("Login error:", err);
+      setError(err.message || "Login failed! Please check your credentials.");
+      setSnackbarMessage(err.message ? `Error: ${err.message}` : "Login failed! Please check your credentials.");
       setOpenSnackbar(true);
     }
     setSubmitting(false);
@@ -85,11 +106,12 @@ const LoginPage = () => {
       return;
     }
     try {
-      await resetPassword(emailForReset); // Firebase function to send password reset email
+      await resetPassword(emailForReset);
       setSnackbarMessage("Password reset email sent!");
       setOpenSnackbar(true);
-      setForgotPasswordModal(false); // Close the modal after sending email
+      setForgotPasswordModal(false);
     } catch (err) {
+      console.error("Reset password error:", err);
       setSnackbarMessage("Failed to send reset email. Please try again.");
       setOpenSnackbar(true);
     }
