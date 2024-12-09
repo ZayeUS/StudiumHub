@@ -1,5 +1,3 @@
-// frontend/pages/LoginPage.jsx
-
 import React, { useState } from "react";
 import {
   Box,
@@ -19,10 +17,10 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Formik, Field, Form } from "formik";
 import * as Yup from "yup";
-import { login, resetPassword } from "../../firebase";
+import { login as firebaseLogin } from "../../firebase"; // Ensure the login function is correctly imported
 import { useUserStore } from "../store/userStore";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // Ensure axios is installed
+import { getData } from "../utils/BackendRequestHelper"; // Import the getData utility
 
 // Yup validation schema for login
 const validationSchema = Yup.object({
@@ -31,7 +29,7 @@ const validationSchema = Yup.object({
 });
 
 const LoginPage = () => {
-  const { setUser } = useUserStore();
+  const { setUser } = useUserStore(); // Zustand store to manage user state
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
@@ -43,59 +41,49 @@ const LoginPage = () => {
   const handleClickShowPassword = () => setShowPassword(!showPassword);
   const handleMouseDownPassword = (event) => event.preventDefault();
 
-  // Corrected handleLogin function
+  // Updated handleLogin function with role-based redirection
   const handleLogin = async (values, { setSubmitting }) => {
     const { email, password } = values;
     try {
-      // Step 1: Log the user in using Firebase
-      const user = await login(email, password);
+      // Call the login function from firebase.js
+      const user = await firebaseLogin(email, password);
 
-      if (!user) {
-        throw new Error("No user returned from Firebase.");
+      if (!user || !user.uid) {
+        throw new Error("Invalid user object returned from Firebase.");
       }
 
-      // Step 2: Get the Firebase ID token for authentication with backend
-      const idToken = await user.getIdToken();
 
-      // Step 3: Fetch user data from backend
-      const response = await axios.get(`http://localhost:5000/api/users/${user.uid}`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
+      // Fetch user data from the backend using the Firebase UID
+      const idToken = await user.getIdToken(); // Get the Firebase ID token
+      const userData = await getData(`/users/${user.uid}`, idToken); // Fetch user data including role_id
 
-      const userData = response.data;
-
-      if (!userData || !userData.role_name) {
-        throw new Error("User role not found.");
+      if (!userData || !userData.role_id) {
+        throw new Error("Failed to fetch user role. Please contact support.");
       }
 
-      // Step 4: Save user data to Zustand store and localStorage
-      setUser(user.uid, user.email, userData.role_name); // Ensure role_name is used
-      localStorage.setItem("user", JSON.stringify({
-        user_id: userData.user_id, // Assuming backend returns user_id
-        email: userData.email,
-        role: userData.role_name,
-      }));
+
+      // Save user data in Zustand store
+      setUser(user.uid, userData.role_id, userData.user_id);
 
       setSnackbarMessage("Login successful!");
       setOpenSnackbar(true);
 
-      // Step 5: Redirect based on role
-      if (userData.role_name === "admin") {
-        navigate("/admin-dashboard");
-      } else if (userData.role_name === "user") {
-        navigate("/user-dashboard");
+      // Role-based redirection
+      if (userData.role_id === 1) {
+        navigate("/admin-dashboard"); // Redirect to admin dashboard if role is 1 (admin)
+      } else if (userData.role_id === 2) {
+        navigate("/user-dashboard"); // Redirect to user dashboard if role is 2 (user)
       } else {
-        navigate("/login"); // Default fallback
+        throw new Error("Invalid role detected. Please contact support.");
       }
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login error:", err.message);
       setError(err.message || "Login failed! Please check your credentials.");
       setSnackbarMessage(err.message ? `Error: ${err.message}` : "Login failed! Please check your credentials.");
       setOpenSnackbar(true);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   // Handle forgot password
@@ -106,6 +94,7 @@ const LoginPage = () => {
       return;
     }
     try {
+      // Call the resetPassword function to send a reset email
       await resetPassword(emailForReset);
       setSnackbarMessage("Password reset email sent!");
       setOpenSnackbar(true);

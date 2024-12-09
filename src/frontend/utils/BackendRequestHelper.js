@@ -28,7 +28,7 @@ export const getData = async (endpoint) => {
   const token = await getToken();
   try {
     const response = await api.get(endpoint, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     return response.data;
   } catch (error) {

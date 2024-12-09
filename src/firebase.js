@@ -36,12 +36,18 @@ const signUp = async (email, password) => {
 const login = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+    return userCredential.user; // This should contain the logged-in user
   } catch (error) {
-    console.error('Error logging in: ', error.message);
-    throw new Error(error.message); // You can throw the error for the caller to handle
+    console.error("Error logging in:", error.message);
+    if (error.code === "auth/user-not-found") {
+      console.error("User not found. Please check the email address.");
+    } else if (error.code === "auth/wrong-password") {
+      console.error("Incorrect password. Please try again.");
+    }
+    throw new Error(error.message); // Ensure the error is propagated
   }
 };
+
 
 // Logout Function
 const logout = async () => {
