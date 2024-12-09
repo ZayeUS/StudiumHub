@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, fetchSignInMethodsForEmail } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -63,9 +63,20 @@ const resetPassword = async (email) => {
   }
 };
 
+// Check if email exists in Firebase
+const checkEmailExists = async (email) => {
+  try {
+    const methods = await fetchSignInMethodsForEmail(auth, email);
+    return methods.length > 0; // If the email exists, it will return an array with sign-in methods
+  } catch (error) {
+    console.error("Error checking email existence: ", error.message);
+    throw new Error(error.message); // Handle errors in checking email
+  }
+};
+
 // Auth State Listener (for global state management)
 const onAuthStateChangedListener = (callback) => {
   onAuthStateChanged(auth, callback);
 };
 
-export { auth, analytics, signUp, login, logout, resetPassword, onAuthStateChangedListener };
+export { auth, analytics, signUp, login, logout, resetPassword, checkEmailExists, onAuthStateChangedListener };

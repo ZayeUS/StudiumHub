@@ -1,8 +1,5 @@
-// frontend/store/userStore.js
-
-import { create } from "zustand";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase"; // Import Firebase auth
+import { create } from 'zustand';
+import { auth } from '../../firebase';  // Assuming you're using Firebase for authentication
 
 export const useUserStore = create((set) => ({
   firebaseId: localStorage.getItem("firebaseId") || null,
@@ -10,19 +7,14 @@ export const useUserStore = create((set) => ({
   userRole: localStorage.getItem("userRole") || null, // Store role_name
   roleId: localStorage.getItem("roleId") || null, // Store role_id
   userId: localStorage.getItem("userId") || null, // Optional: store user_id
-  isLoggedIn:
-    localStorage.getItem("firebaseId") && localStorage.getItem("userEmail")
-      ? true
-      : false, // Check if the user is logged in
+  isLoggedIn: localStorage.getItem("firebaseId") && localStorage.getItem("userEmail") ? true : false,
 
   setUser: (firebaseId, email, role, roleId, userId = null) => {
-    localStorage.setItem("firebaseId", firebaseId); // Store in localStorage
-    localStorage.setItem("userEmail", email); // Store in localStorage
-    localStorage.setItem("userRole", role); // Store role_name in localStorage
-    localStorage.setItem("roleId", roleId); // Store role_id in localStorage
-    if (userId) {
-      localStorage.setItem("userId", userId); // Optional: store user_id
-    }
+    localStorage.setItem("firebaseId", firebaseId);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userRole", role);
+    localStorage.setItem("roleId", roleId);
+    if (userId) localStorage.setItem("userId", userId);
     set({
       firebaseId,
       userEmail: email,
@@ -30,15 +22,11 @@ export const useUserStore = create((set) => ({
       roleId,
       userId,
       isLoggedIn: true,
-    }); // Update Zustand state
+    });
   },
 
   clearUser: () => {
-    localStorage.removeItem("firebaseId"); // Remove from localStorage
-    localStorage.removeItem("userEmail"); // Remove from localStorage
-    localStorage.removeItem("userRole"); // Remove role from localStorage
-    localStorage.removeItem("roleId"); // Remove role_id from localStorage
-    localStorage.removeItem("userId"); // Optional: remove user_id
+    localStorage.clear();
     set({
       firebaseId: null,
       userEmail: null,
@@ -46,24 +34,38 @@ export const useUserStore = create((set) => ({
       roleId: null,
       userId: null,
       isLoggedIn: false,
-    }); // Reset Zustand state
+    });
   },
 
-  // Firebase authentication listener to handle login state changes
+  // Direct role management methods can be handled via the backend now.
+  setRole: (roleName, roleId) => {
+    localStorage.setItem("userRole", roleName);
+    localStorage.setItem("roleId", roleId);
+    set({
+      userRole: roleName,
+      roleId,
+    });
+  },
+
+  // Firebase listener setup
   listenAuthState: () => {
-    onAuthStateChanged(auth, (user) => {
+    auth.onAuthStateChanged(user => {
       if (user) {
-        // If a user is logged in
-        set({ firebaseId: user.uid, userEmail: user.email, isLoggedIn: true });
-        localStorage.setItem("firebaseId", user.uid); // Store in localStorage
-        localStorage.setItem("userEmail", user.email); // Store in localStorage
-        // Retrieve role and user_id from local storage
-        const role = localStorage.getItem("userRole");
-        const roleId = localStorage.getItem("roleId");
-        const userId = localStorage.getItem("userId");
-        set({ userRole: role, roleId: roleId, userId: userId });
+        // Assuming your Firebase user object contains role and userId
+        set({
+          firebaseId: user.uid,
+          userEmail: user.email,
+          userRole: user.role, // Make sure you handle this properly in Firebase
+          roleId: user.roleId, // Assuming roleId is set in Firebase
+          userId: user.uid,
+          isLoggedIn: true,
+        });
+        localStorage.setItem("firebaseId", user.uid);
+        localStorage.setItem("userEmail", user.email);
+        localStorage.setItem("userRole", user.role);
+        localStorage.setItem("roleId", user.roleId);
+        localStorage.setItem("userId", user.uid);
       } else {
-        // If no user is logged in
         set({
           firebaseId: null,
           userEmail: null,
@@ -72,15 +74,8 @@ export const useUserStore = create((set) => ({
           userId: null,
           isLoggedIn: false,
         });
-        localStorage.removeItem("firebaseId"); // Clear from localStorage
-        localStorage.removeItem("userEmail"); // Clear from localStorage
-        localStorage.removeItem("userRole"); // Clear role from localStorage
-        localStorage.removeItem("roleId"); // Clear role_id from localStorage
-        localStorage.removeItem("userId"); // Optional: clear user_id
+        localStorage.clear();
       }
     });
-  },
+  }
 }));
-
-// Call listenAuthState to start listening to Firebase auth changes
-useUserStore.getState().listenAuthState();

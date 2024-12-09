@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -6,8 +6,6 @@ import {
   Button,
   InputAdornment,
   IconButton,
-  Snackbar,
-  Alert,
   Typography,
   MenuItem,
   Select,
@@ -19,10 +17,10 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material"; // Icons for visibility toggle
 import { Formik, Field, Form } from "formik";
 import * as Yup from "yup";
-import { signUp, login } from "../../firebase"; // Import signUp and login functions
+import { signUp, login, checkEmailExists } from "../../firebase"; // Import checkEmailExists function
 import { useUserStore } from "../store/userStore"; // Zustand store to track login state
 import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
-import { postData } from "../utils/BackendRequestHelper"; // Import BackendRequestHelper
+import { postData } from "../utils/BackendRequestHelper"; // Import postData from BackendRequestHelper
 
 // Yup validation schema for sign up
 const validationSchema = Yup.object({
@@ -42,93 +40,116 @@ const SignUpPage = () => {
   const { setUser } = useUserStore(); // Zustand setter to update the user store
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState(""); // For handling error messages during sign up
-  const [openSnackbar, setOpenSnackbar] = useState(false); // For Snackbar
-  const [snackbarMessage, setSnackbarMessage] = useState(""); // Message for Snackbar
   const [loading, setLoading] = useState(false); // For controlling the loading state
   const [openModal, setOpenModal] = useState(false); // For showing the modal during data saving
   const [modalMessage, setModalMessage] = useState("Signing you up..."); // Modal message
+  const [roles, setRoles] = useState([]); // State for storing roles
+  const [emailError, setEmailError] = useState(""); // For displaying email error directly
   const navigate = useNavigate(); // useNavigate for routing
+
+  // Fetch roles directly from the backend using the .env variable
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_BASE_URL}/roles`
+        );
+        const rolesData = await response.json();
+        setRoles(rolesData); // Assuming response.data contains the roles array
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+      }
+    };
+
+    fetchRoles();
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
   const handleClickShowConfirmPassword = () =>
     setShowConfirmPassword(!showConfirmPassword);
   const handleMouseDownPassword = (event) => event.preventDefault();
 
+  // Check if email already exists in Firebase
+  const checkEmailAvailability = async (email) => {
+    try {
+      const emailExists = await checkEmailExists(email); // Assuming checkEmailExists is implemented in firebase.js
+      if (emailExists) {
+        setEmailError("Email already in use. Please try another.");
+        return false; // Email exists, so return false to prevent sign-up
+      }
+      setEmailError(""); // Reset email error if email doesn't exist
+      return true; // Email doesn't exist, proceed with sign-up
+    } catch (err) {
+      console.error("Error checking email availability:", err);
+  
+      // Check if the error is a Firebase-specific email already in use error
+      if (err.code === "auth/email-already-in-use") {
+        setEmailError("Email already in use. Please try another.");
+      } else {
+        setEmailError("An error occurred while checking email.");
+      }
+  
+      return false;
+    }
+  };
+  
+
   // Handle sign-up with Firebase and backend
   const handleSignUp = async (values, { setSubmitting }) => {
     const { email, password, role } = values;
     let role_id = 2; // Default to 'User' role
-  
+
     // Set role_id based on the selected role
     if (role === "admin") {
       role_id = 1; // 'Admin' role
     }
 
-    // Open the modal to show the loading spinner
+    // Prevent further actions if email already exists
+    const emailAvailable = await checkEmailAvailability(email);
+    if (!emailAvailable) return; // If email is not available, don't proceed
+
+    // Open the modal to show the loading spinner if email is valid
     setOpenModal(true);
     setLoading(true);
-    setModalMessage("Signing you up..."); // Update message
+    setModalMessage("Signing you up...");
 
     try {
-
-  
-      // Step 1: Create user in Firebase
+      // Step 1: Try to create user in Firebase
       const user = await signUp(email, password);
-  
+
       // Step 2: Log the user in immediately after sign-up
       await login(email, password);
-  
-      // Step 3: Save user data to backend
+
+      // Step 3: Save user data to backend using postData
       const payload = {
         firebase_uid: user.uid,
         email: user.email,
         role_id: role_id,
       };
-  
+
       const response = await postData("/signup", payload, false);
-  
+
       // Step 4: Extract user data from backend response
       const { user_id, role_name } = response.user;
-  
-      // Step 5: Redirect immediately after login before storing data
-      setSnackbarMessage("Sign-up successful! Redirecting...");
-      setOpenSnackbar(true);
-  
+
+      // Step 5: Display success message
+      setModalMessage("Sign-up successful! Redirecting...");
+
       // Step 6: Redirect to appropriate dashboard based on role_id
-      if (role_id === 1) {
-      
-        // Set the modal to open
-        setOpenModal(true);
-      
-        // Wait for 1 second before closing the modal and navigating
-        setTimeout(() => {
-          setOpenModal(false); // Close the modal after 1 second
-      
-          // Now that the modal is closed, navigate
-          navigate("/admin-dashboard"); 
-        }, 500); // 1000ms (1 second) delay before redirecting
-      } else if (role_id === 2) {
-      
-        // Set the modal to open
-        setOpenModal(true);
-      
-        // Wait for 1 second before closing the modal and navigating
-        setTimeout(() => {
-          setOpenModal(false); // Close the modal after 1 second
-      
-          // Now that the modal is closed, navigate
-          navigate("/user-dashboard"); 
-        }, 1000); // 1000ms (1 second) delay before redirecting
-      } else {
-        console.error(`Invalid role_id: ${role_id}. Navigation aborted.`);
-      }
-      
-      
+     
+        setOpenModal(false);
+        if (role_id === 1) {
+          navigate("/admin-dashboard"); // Redirect to admin dashboard
+        } else if (role_id === 2) {
+          navigate("/user-dashboard"); // Redirect to user dashboard
+        } else {
+          console.error(`Invalid role_id: ${role_id}. Navigation aborted.`);
+        }
+     
 
       // Step 7: Save user data to Zustand store and localStorage after redirect
       setUser(user.uid, user.email, role_name, role_id, user_id);
-  
+
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -138,20 +159,14 @@ const SignUpPage = () => {
           roleId: role_id,
         })
       );
-      
-       
-  
     } catch (err) {
       console.error("Sign-up error occurred:", err);
-      setError(err.message || "Sign-up failed! Please try again.");
-      setSnackbarMessage(
-        err.message ? `Error: ${err.message}` : "Sign-up failed! Please try again."
-      );
-      setOpenSnackbar(true);
-    }
+      setEmailError(err.message || "Sign-up failed! Please try again.");
+      setOpenModal(false); // Close modal if there is another error
 
-    setSubmitting(false);
-    setLoading(false); // Stop loading once the process is complete
+      setSubmitting(false);
+      setLoading(false); // Stop loading once the process is complete
+    }
   };
 
   return (
@@ -163,24 +178,14 @@ const SignUpPage = () => {
         borderRadius: "8px",
       }}
     >
-      {/* Snackbar for error/success messages */}
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={3000} // Auto hide after 3 seconds
-        onClose={() => setOpenSnackbar(false)}
-      >
-        <Alert
-          onClose={() => setOpenSnackbar(false)}
-          severity={error ? "error" : "success"}
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
       {/* Formik form with Yup validation */}
       <Formik
-        initialValues={{ email: "", password: "", confirmPassword: "", role: "" }}
+        initialValues={{
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "",
+        }}
         validationSchema={validationSchema}
         onSubmit={handleSignUp}
       >
@@ -204,8 +209,12 @@ const SignUpPage = () => {
               value={values.email}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched.email && Boolean(errors.email)}
-              helperText={touched.email && errors.email}
+              error={
+                touched.email && (Boolean(errors.email) || Boolean(emailError))
+              } // Ensure both errors are handled
+              helperText={
+                touched.email ? errors.email || emailError : emailError
+              } // Display emailError if present
             />
 
             {/* Password Field */}
@@ -250,9 +259,7 @@ const SignUpPage = () => {
               value={values.confirmPassword}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={
-                touched.confirmPassword && Boolean(errors.confirmPassword)
-              }
+              error={touched.confirmPassword && Boolean(errors.confirmPassword)}
               helperText={touched.confirmPassword && errors.confirmPassword}
               InputProps={{
                 endAdornment: (
@@ -286,8 +293,11 @@ const SignUpPage = () => {
                 onChange={handleChange}
                 onBlur={handleBlur}
               >
-                <MenuItem value="admin">Admin</MenuItem>
-                <MenuItem value="user">User</MenuItem>
+                {roles.map((role) => (
+                  <MenuItem key={role.role_id} value={role.role_name}>
+                    {role.role_name}
+                  </MenuItem>
+                ))}
               </Select>
               {touched.role && errors.role && (
                 <Typography variant="body2" color="error">

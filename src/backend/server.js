@@ -122,12 +122,12 @@ app.post('/api/roles', authenticate, async (req, res) => {
   }
 });
 
-app.get('/api/roles', authenticate, async (req, res) => {
+app.get('/api/roles', async (req, res) => {
   const queryText = 'SELECT * FROM roles';
 
   try {
     const result = await query(queryText);
-    res.status(200).json(result.rows);
+    res.status(200).json(result.rows); // Send roles as response
   } catch (error) {
     console.error('Error fetching roles:', error);
     res.status(500).json({ message: 'Error fetching roles' });
