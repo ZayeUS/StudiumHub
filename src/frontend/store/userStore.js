@@ -1,5 +1,3 @@
-// frontend/store/userStore.js
-
 import { create } from 'zustand';
 import { auth } from '../../firebase';  // Ensure correct path
 import { getData } from '../utils/BackendRequestHelper'; // Import getData
@@ -34,7 +32,7 @@ export const useUserStore = create((set) => ({
     });
   },
 
-  // Firebase listener setup
+  // Firebase listener setup with a delay for fetching user data (with proper handling to avoid infinite loops)
   listenAuthState: () => {
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -42,14 +40,17 @@ export const useUserStore = create((set) => ({
           // Step 1: Get the Firebase ID token for authentication with backend
           const idToken = await user.getIdToken();
 
-          // Step 2: Fetch user data from backend using BackendRequestHelper
+          // Step 2: Introduce a delay before fetching user data
+          await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second delay
+
+          // Step 3: Fetch user data from backend using BackendRequestHelper
           const userData = await getData(`/users/${user.uid}`);
 
           if (!userData || !userData.role_id || !userData.user_id) {
             throw new Error("Incomplete user data received from backend.");
           }
 
-          // Step 3: Save user data to Zustand store and localStorage
+          // Step 4: Save user data to Zustand store and localStorage only once
           set({
             firebaseId: user.uid,
             roleId: userData.role_id,

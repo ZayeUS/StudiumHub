@@ -1,5 +1,3 @@
-// frontend/pages/SignUpPage.jsx
-
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -22,7 +20,7 @@ import * as Yup from "yup";
 import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../firebase"; // Import checkEmailExists function
 import { useUserStore } from "../store/userStore"; // Zustand store to track login state
 import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
-import { postData } from "../utils/BackendRequestHelper"; // Import postData from BackendRequestHelper
+import { getData, postData } from "../utils/BackendRequestHelper"; // Import getData and postData
 
 // Yup validation schema for sign up
 const validationSchema = Yup.object({
@@ -49,11 +47,11 @@ const SignUpPage = () => {
   const [emailError, setEmailError] = useState(""); // For displaying email error directly
   const navigate = useNavigate(); // useNavigate for routing
 
-  // Fetch roles directly from the backend using the .env variable
+  // Fetch roles directly from the backend using GET request
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const rolesData = await postData("/roles", {}, false); // Assuming GET /roles doesn't require payload
+        const rolesData = await getData("/roles", false); // GET /roles instead of POST
         setRoles(rolesData); // Assuming response is an array of roles
       } catch (error) {
         console.error("Error fetching roles:", error);
@@ -95,82 +93,84 @@ const SignUpPage = () => {
   // Handle sign-up with Firebase and backend using BackendRequestHelper
   const handleSignUp = async (values, { setSubmitting }) => {
     const { email, password, role } = values;
-    let role_id = 2; // Default to 'User' role
-
-    // Set role_id based on the selected role
-    const selectedRole = roles.find(r => r.role_name === role);
-    if (selectedRole) {
-      role_id = selectedRole.role_id;
-    } else {
-      setEmailError("Selected role is invalid.");
-      setSubmitting(false);
-      return;
-    }
-
+  
     // Prevent further actions if email already exists
     const emailAvailable = await checkEmailAvailability(email);
-    if (!emailAvailable) {
-      setSubmitting(false);
-      return; // If email is not available, don't proceed
-    }
-
+    if (!emailAvailable) return; // If email is not available, don't proceed
+  
     // Open the modal to show the loading spinner if email is valid
     setOpenModal(true);
     setLoading(true);
     setModalMessage("Signing you up...");
-
+  
     try {
       // Step 1: Try to create user in Firebase
-      const userCredential = await firebaseSignUp(email, password);
-      const user = userCredential.user;
-
+      const user = await firebaseSignUp(email, password);
+  
       // Step 2: Log the user in immediately after sign-up
       await firebaseLogin(email, password);
-      const idToken = await user.getIdToken();
-
-      // Step 3: Save user data to backend using BackendRequestHelper
+  
+      // Step 3: Find the selected role ID from the roles array
+      const selectedRole = roles.find((r) => r.role_name === role);
+      if (!selectedRole) {
+        throw new Error("Invalid role selected.");
+      }
+  
+      // Step 4: Save user data to backend using postData, including role_id
       const payload = {
         firebase_uid: user.uid,
         email: user.email,
-        role_id: role_id,
+        role_id: selectedRole.role_id, // Send the role_id
       };
-
-      const response = await postData("/signup", payload, false); // Assuming /signup doesn't require auth
-
-      // Step 4: Extract user data from backend response
-      const { user_id, role_name } = response.user;
-
-      if (!user_id || !role_name) {
-        throw new Error("Incomplete user data received from backend.");
-      }
-
-      // Step 5: Save user data to Zustand store and localStorage
-      setUser(user.uid, role_id, user_id);
-
-      // Step 6: Display success message
-      setModalMessage("Sign-up successful! Redirecting...");
-
-      // Step 7: Redirect to appropriate dashboard based on role_id
-      setTimeout(() => { // Adding timeout to allow users to see the success message
-        setOpenModal(false);
-        if (role_id === 1) {
-          navigate("/admin-dashboard"); // Redirect to admin dashboard
-        } else if (role_id === 2) {
-          navigate("/user-dashboard"); // Redirect to user dashboard
-        } else {
-          console.error(`Invalid role_id: ${role_id}. Navigation aborted.`);
-          navigate("/login"); // Fallback
+  
+      const response = await postData("/users", payload, false);  // Save user data in backend
+  
+      // Step 5: Ensure that the user was successfully created in the backend before proceeding
+      if (response && response.user) {
+        // Extract user data from backend response
+        const { user_id } = response.user;
+  
+        // Step 6: Now fetch the user data after successful backend creation
+        const userData = await getData(`/users/${user.uid}`);
+  
+        if (!userData || !userData.role_id || !userData.user_id) {
+          throw new Error("Failed to fetch user data after creation.");
         }
-      }, 1500);
+  
+        // Step 7: Display success message
+        setModalMessage("Sign-up successful! Redirecting...");
+  
+        // Step 8: Redirect to the user dashboard
+        setOpenModal(false);
+        navigate("/user-dashboard"); // Redirect to user dashboard after successful sign-up
+  
+        // Step 9: Save user data to Zustand store and localStorage after redirect
+        setUser(user.uid, selectedRole.role_id, user_id); // Ensure the correct role_id is saved
+  
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            user_id: user_id,
+            email: user.email,
+            role_id: selectedRole.role_id, // Save role_id as well
+          })
+        );
+      } else {
+        throw new Error("Failed to create user in backend.");
+      }
+  
     } catch (err) {
       console.error("Sign-up error occurred:", err);
       setEmailError(err.message || "Sign-up failed! Please try again.");
       setOpenModal(false); // Close modal if there is another error
-
+  
       setSubmitting(false);
       setLoading(false); // Stop loading once the process is complete
     }
   };
+  
+  
+  
 
   return (
     <Container

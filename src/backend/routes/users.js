@@ -1,30 +1,30 @@
+// src/backend/routes/userRoutes.js
+
 import express from 'express';
 import { query } from '../db.js'; // Import the query function from db.js
 import authenticate from '../middlewares/authenticate.js'; // Import the authenticate middleware
 
 const router = express.Router();
 
-
 // CREATE a new user
-router.post("/", authenticate, async (req, res) => {
-    const { firebase_uid, email, role_id } = req.body; // Notice 'email' instead of 'user_email'
-  
-    if (!firebase_uid || !email || !role_id) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-  
-    const queryText = "INSERT INTO users (firebase_uid, email, role_id) VALUES ($1, $2, $3) RETURNING *"; // Use 'email' column
-    const values = [firebase_uid, email, role_id];
-  
-    try {
-      const result = await query(queryText, values);
-      res.status(201).json({ message: "User created successfully", user: result.rows[0] });
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({ message: "Error creating user" });
-    }
-  });
-  
+router.post("/",  async (req, res) => {
+  const { firebase_uid, email, role_id } = req.body;
+
+  if (!firebase_uid || !email || !role_id) {
+    return res.status(400).json({ message: "All fields are required." });
+  }
+
+  const queryText = "INSERT INTO users (firebase_uid, email, role_id) VALUES ($1, $2, $3) RETURNING *";
+  const values = [firebase_uid, email, role_id];
+
+  try {
+    const result = await query(queryText, values);
+    res.status(201).json({ message: "User created successfully", user: result.rows[0] });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ message: "Error creating user" });
+  }
+});
 
 // READ all users
 router.get('/', authenticate, async (req, res) => {

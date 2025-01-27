@@ -1,3 +1,5 @@
+// src/backend/routes/roleRoutes.js
+
 import express from 'express';
 import { query } from '../db.js'; // Import the query function from db.js
 import authenticate from '../middlewares/authenticate.js'; // Import the authenticate middleware
@@ -25,7 +27,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // READ all roles
-router.get('/', authenticate, async (req, res) => {
+router.get('/',  async (req, res) => {
   const queryText = 'SELECT * FROM roles';
 
   try {
