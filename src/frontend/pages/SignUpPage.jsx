@@ -96,7 +96,7 @@ const SignUpPage = () => {
   
     // Prevent further actions if email already exists
     const emailAvailable = await checkEmailAvailability(email);
-    if (!emailAvailable) return; // If email is not available, don't proceed
+    if (!emailAvailable) return;
   
     // Open the modal to show the loading spinner if email is valid
     setOpenModal(true);
@@ -123,51 +123,46 @@ const SignUpPage = () => {
         role_id: selectedRole.role_id, // Send the role_id
       };
   
-      const response = await postData("/users", payload, false);  // Save user data in backend
+      const response = await postData("/users", payload, false);
   
-      // Step 5: Ensure that the user was successfully created in the backend before proceeding
       if (response && response.user) {
-        // Extract user data from backend response
         const { user_id } = response.user;
   
-        // Step 6: Now fetch the user data after successful backend creation
+        // Now fetch the user data after successful backend creation
         const userData = await getData(`/users/${user.uid}`);
   
         if (!userData || !userData.role_id || !userData.user_id) {
           throw new Error("Failed to fetch user data after creation.");
         }
   
-        // Step 7: Display success message
-        setModalMessage("Sign-up successful! Redirecting...");
-  
-        // Step 8: Redirect to the user dashboard
-        setOpenModal(false);
-        navigate("/user-dashboard"); // Redirect to user dashboard after successful sign-up
-  
-        // Step 9: Save user data to Zustand store and localStorage after redirect
-        setUser(user.uid, selectedRole.role_id, user_id); // Ensure the correct role_id is saved
+        // Save user data to Zustand store and localStorage
+        setUser(user.uid, selectedRole.role_id, user_id);
   
         localStorage.setItem(
           "user",
           JSON.stringify({
             user_id: user_id,
             email: user.email,
-            role_id: selectedRole.role_id, // Save role_id as well
+            role_id: selectedRole.role_id,
           })
         );
+  
+        // Step 5: Redirect to the user dashboard
+        setOpenModal(false);
+        navigate(`/user-dashboard`);
       } else {
         throw new Error("Failed to create user in backend.");
       }
-  
     } catch (err) {
       console.error("Sign-up error occurred:", err);
       setEmailError(err.message || "Sign-up failed! Please try again.");
-      setOpenModal(false); // Close modal if there is another error
-  
+      setOpenModal(false);
+    } finally {
       setSubmitting(false);
-      setLoading(false); // Stop loading once the process is complete
+      setLoading(false);
     }
   };
+  
   
   
   

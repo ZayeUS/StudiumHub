@@ -34,14 +34,16 @@ const App = () => {
 
   // Redirect to appropriate dashboard if user is logged in
   useEffect(() => {
-    if (isLoggedIn) {
-      if (roleId === '1') {
+
+    if (isLoggedIn && roleId) {
+      if (roleId === 1) {
         navigate('/admin-dashboard');
-      } else if (roleId === '2') {
+      } else if (roleId === 2) {
         navigate('/user-dashboard');
       }
     }
   }, [isLoggedIn, roleId, navigate]);
+  
 
   return (
     <>
