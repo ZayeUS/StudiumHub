@@ -100,7 +100,8 @@ const Sidebar = ({ isMobile, onClose }) => {
             </ListItem>
           ))}
         </List>
-        <Box position="absolute" bottom={0} width="100%">
+        {/* Move logout button slightly up */}
+        <Box position="absolute" bottom="90px" width="100%">
           <List>
             <ListItem
               onClick={handleLogout}
