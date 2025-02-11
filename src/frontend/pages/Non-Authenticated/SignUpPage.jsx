@@ -14,142 +14,120 @@ import {
   CircularProgress,
   Modal,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material"; // Icons for visibility toggle
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Formik, Field, Form } from "formik";
 import * as Yup from "yup";
-import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../firebase"; // Import checkEmailExists function
-import { useUserStore } from "../store/userStore"; // Zustand store to track login state
-import { useNavigate } from "react-router-dom"; // Import useNavigate for routing
-import { getData, postData } from "../utils/BackendRequestHelper"; // Import getData and postData
+import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../../firebase";
+import { useUserStore } from "../../store/userStore";
+import { useNavigate } from "react-router-dom";
+import { getData, postData } from "../../utils/BackendRequestHelper";
 
-// Yup validation schema for sign up
 const validationSchema = Yup.object({
-  email: Yup.string()
-    .email("Invalid email address")
-    .required("Email is required"),
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .required("Password is required"),
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref("password"), null], "Passwords must match")
-    .required("Confirm your password"),
-  role: Yup.string().required("Role is required"), // Validate role selection
+  email: Yup.string().email("Invalid email address").required("Email is required"),
+  password: Yup.string().min(6, "Password must be at least 6 characters").required("Password is required"),
+  confirmPassword: Yup.string().oneOf([Yup.ref("password"), null], "Passwords must match").required("Confirm your password"),
+  role: Yup.string().required("Role is required"),
 });
 
 const SignUpPage = () => {
-  const { setUser } = useUserStore(); // Zustand setter to update the user store
+  const { setUser, isLoggedIn, roleId } = useUserStore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false); // For controlling the loading state
-  const [openModal, setOpenModal] = useState(false); // For showing the modal during data saving
-  const [modalMessage, setModalMessage] = useState("Signing you up..."); // Modal message
-  const [roles, setRoles] = useState([]); // State for storing roles
-  const [emailError, setEmailError] = useState(""); // For displaying email error directly
-  const navigate = useNavigate(); // useNavigate for routing
+  const [loading, setLoading] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("Signing you up...");
+  const [roles, setRoles] = useState([]);
+  const [emailError, setEmailError] = useState("");
+  const navigate = useNavigate();
 
-  // Fetch roles directly from the backend using GET request
+  // If already logged in, redirect to dashboard
+  useEffect(() => {
+    if (isLoggedIn) {
+      if (roleId === 1) navigate("/admin-dashboard");
+      else if (roleId === 2) navigate("/user-dashboard");
+    }
+  }, [isLoggedIn, roleId, navigate]);
+
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const rolesData = await getData("/roles", false); // GET /roles instead of POST
-        setRoles(rolesData); // Assuming response is an array of roles
+        const rolesData = await getData("/roles");
+        setRoles(rolesData);
       } catch (error) {
         console.error("Error fetching roles:", error);
       }
     };
-
     fetchRoles();
   }, []);
 
   const handleClickShowPassword = () => setShowPassword(!showPassword);
-  const handleClickShowConfirmPassword = () =>
-    setShowConfirmPassword(!showConfirmPassword);
+  const handleClickShowConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
   const handleMouseDownPassword = (event) => event.preventDefault();
 
-  // Check if email already exists in Firebase
   const checkEmailAvailability = async (email) => {
     try {
-      const emailExists = await checkEmailExists(email); // Assuming checkEmailExists is implemented in firebase.js
+      const emailExists = await checkEmailExists(email);
       if (emailExists) {
         setEmailError("Email already in use. Please try another.");
-        return false; // Email exists, so return false to prevent sign-up
+        return false;
       }
-      setEmailError(""); // Reset email error if email doesn't exist
-      return true; // Email doesn't exist, proceed with sign-up
+      setEmailError("");
+      return true;
     } catch (err) {
       console.error("Error checking email availability:", err);
-
-      // Check if the error is a Firebase-specific email already in use error
       if (err.code === "auth/email-already-in-use") {
         setEmailError("Email already in use. Please try another.");
       } else {
         setEmailError("An error occurred while checking email.");
       }
-
       return false;
     }
   };
 
-  // Handle sign-up with Firebase and backend using BackendRequestHelper
   const handleSignUp = async (values, { setSubmitting }) => {
     const { email, password, role } = values;
   
-    // Prevent further actions if email already exists
+    // Check email availability; if false, stop submission
     const emailAvailable = await checkEmailAvailability(email);
-    if (!emailAvailable) return;
+    if (!emailAvailable) {
+      setSubmitting(false);
+      return;
+    }
   
-    // Open the modal to show the loading spinner if email is valid
     setOpenModal(true);
     setLoading(true);
     setModalMessage("Signing you up...");
   
     try {
-      // Step 1: Try to create user in Firebase
       const user = await firebaseSignUp(email, password);
-  
-      // Step 2: Log the user in immediately after sign-up
       await firebaseLogin(email, password);
   
-      // Step 3: Find the selected role ID from the roles array
       const selectedRole = roles.find((r) => r.role_name === role);
       if (!selectedRole) {
         throw new Error("Invalid role selected.");
       }
   
-      // Step 4: Save user data to backend using postData, including role_id
       const payload = {
         firebase_uid: user.uid,
         email: user.email,
-        role_id: selectedRole.role_id, // Send the role_id
+        role_id: selectedRole.role_id,
       };
   
-      const response = await postData("/users", payload, false);
+      const response = await postData("/users", payload);
   
       if (response && response.user) {
         const { user_id } = response.user;
   
-        // Now fetch the user data after successful backend creation
         const userData = await getData(`/users/${user.uid}`);
-  
         if (!userData || !userData.role_id || !userData.user_id) {
           throw new Error("Failed to fetch user data after creation.");
         }
   
-        // Save user data to Zustand store and localStorage
+        // Save user data via the store (which updates localStorage)
         setUser(user.uid, selectedRole.role_id, user_id);
   
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            user_id: user_id,
-            email: user.email,
-            role_id: selectedRole.role_id,
-          })
-        );
-  
-        // Step 5: Redirect to the user dashboard
         setOpenModal(false);
-        navigate(`/user-dashboard`);
+        navigate("/user-dashboard");
       } else {
         throw new Error("Failed to create user in backend.");
       }
@@ -162,41 +140,16 @@ const SignUpPage = () => {
       setLoading(false);
     }
   };
-  
-  
-  
-  
 
   return (
-    <Container
-      maxWidth="xs"
-      sx={{
-        paddingTop: 8,
-        backgroundColor: "#f4f6f9",
-        borderRadius: "8px",
-      }}
-    >
-      {/* Formik form with Yup validation */}
+    <Container maxWidth="xs" sx={{ paddingTop: 8, backgroundColor: "#f4f6f9", borderRadius: "8px" }}>
       <Formik
-        initialValues={{
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "",
-        }}
+        initialValues={{ email: "", password: "", confirmPassword: "", role: "" }}
         validationSchema={validationSchema}
         onSubmit={handleSignUp}
       >
-        {({
-          errors,
-          touched,
-          isSubmitting,
-          values,
-          handleChange,
-          handleBlur,
-        }) => (
+        {({ errors, touched, isSubmitting, values, handleChange, handleBlur }) => (
           <Form>
-            {/* Email Field */}
             <Field
               name="email"
               as={TextField}
@@ -207,18 +160,13 @@ const SignUpPage = () => {
               value={values.email}
               onChange={(e) => {
                 handleChange(e);
-                setEmailError(""); // Reset email error on change
+                setEmailError("");
               }}
               onBlur={handleBlur}
-              error={
-                touched.email && (Boolean(errors.email) || Boolean(emailError))
-              } // Ensure both errors are handled
-              helperText={
-                touched.email ? errors.email || emailError : emailError
-              } // Display emailError if present
+              error={touched.email && (Boolean(errors.email) || Boolean(emailError))}
+              helperText={touched.email ? errors.email || emailError : emailError}
             />
 
-            {/* Password Field */}
             <Field
               name="password"
               as={TextField}
@@ -248,7 +196,6 @@ const SignUpPage = () => {
               }}
             />
 
-            {/* Confirm Password Field */}
             <Field
               name="confirmPassword"
               as={TextField}
@@ -278,22 +225,9 @@ const SignUpPage = () => {
               }}
             />
 
-            {/* Role Selection */}
-            <FormControl
-              fullWidth
-              margin="normal"
-              error={touched.role && Boolean(errors.role)}
-            >
+            <FormControl fullWidth margin="normal" error={touched.role && Boolean(errors.role)}>
               <InputLabel id="role-label">Role</InputLabel>
-              <Select
-                labelId="role-label"
-                id="role"
-                name="role"
-                label="Role"
-                value={values.role}
-                onChange={handleChange}
-                onBlur={handleBlur}
-              >
+              <Select labelId="role-label" id="role" name="role" label="Role" value={values.role} onChange={handleChange} onBlur={handleBlur}>
                 {roles.map((role) => (
                   <MenuItem key={role.role_id} value={role.role_name}>
                     {role.role_name}
@@ -307,22 +241,13 @@ const SignUpPage = () => {
               )}
             </FormControl>
 
-            {/* Submit Button */}
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              type="submit"
-              sx={{ marginTop: 2 }}
-              disabled={isSubmitting}
-            >
+            <Button variant="contained" color="primary" fullWidth type="submit" sx={{ marginTop: 2 }} disabled={isSubmitting}>
               {isSubmitting ? "Signing up..." : "Sign Up"}
             </Button>
           </Form>
         )}
       </Formik>
 
-      {/* Sign-up Link */}
       <Box sx={{ textAlign: "center", marginTop: 2 }}>
         <Typography variant="body2">
           Already have an account?{" "}
@@ -332,7 +257,6 @@ const SignUpPage = () => {
         </Typography>
       </Box>
 
-      {/* Modal Overlay with Loading Spinner */}
       <Modal
         open={openModal}
         onClose={() => {}}

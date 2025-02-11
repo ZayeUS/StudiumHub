@@ -1,9 +1,9 @@
 import React from 'react';
 import { Container, Typography, Box, IconButton, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useUserStore } from '../store/userStore'; // Zustand store to manage user data
+import { useUserStore } from '../../store/userStore'; // Zustand store to manage user data
 import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase'; // Firebase authentication import
+import { auth } from '../../../firebase'; // Firebase authentication import
 import { motion } from 'framer-motion'; // Framer Motion for custom animations
 
 const DashboardPage = () => {

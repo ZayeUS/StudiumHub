@@ -1,5 +1,3 @@
-// frontend/utils/BackendRequestHelper.js
-
 import axios from "axios";
 import { auth } from "../../firebase";
 
@@ -12,18 +10,15 @@ export const api = axios.create({
   },
 });
 
-// Utility to get the Firebase token
 const getToken = async () => {
   const currentUser = auth.currentUser;
   if (currentUser) {
-    // Force refresh the token
-    const token = await currentUser.getIdToken(true); // true forces a token refresh
+    const token = await currentUser.getIdToken(true);
     return token;
   }
   return null;
 };
 
-// Utility function for GET requests
 export const getData = async (endpoint) => {
   const token = await getToken();
   try {
@@ -37,7 +32,6 @@ export const getData = async (endpoint) => {
   }
 };
 
-// Utility function for POST requests
 export const postData = async (endpoint, payload, requireAuth = true) => {
   const token = await getToken();
   const headers = requireAuth && token ? { Authorization: `Bearer ${token}` } : {};
@@ -52,7 +46,6 @@ export const postData = async (endpoint, payload, requireAuth = true) => {
   }
 };
 
-// Utility function for PUT requests
 export const putData = async (endpoint, payload) => {
   const token = await getToken();
   try {
@@ -66,7 +59,6 @@ export const putData = async (endpoint, payload) => {
   }
 };
 
-// Utility function for DELETE requests
 export const deleteData = async (endpoint) => {
   const token = await getToken();
   try {

@@ -1,17 +1,19 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useUserStore } from '../store/userStore'; // Zustand store
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useUserStore } from "../store/userStore";
 
-// ProtectedRoute component to protect routes
-const ProtectedRoute = ({ children }) => {
-  const { firebaseId } = useUserStore(); // Check if the user is logged in from Zustand store
+const ProtectedRoute = ({ children, roleId }) => {
+  const { isLoggedIn, roleId: userRoleId } = useUserStore();
 
-  // If the user is not logged in, redirect to Login page
-  if (!firebaseId) {
-    return <Navigate to="/login" />;
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
   }
 
-  // If the user is logged in, render the children (protected page)
+  if (userRoleId !== roleId) {
+    // Redirect users to their correct dashboard if they try accessing the wrong one
+    return userRoleId === 1 ? <Navigate to="/admin-dashboard" replace /> : <Navigate to="/user-dashboard" replace />;
+  }
+
   return children;
 };
 

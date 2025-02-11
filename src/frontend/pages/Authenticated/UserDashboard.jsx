@@ -1,8 +1,8 @@
 import React from 'react';
 import { Typography, Container } from '@mui/material';
-import { useUserStore } from '../store/userStore';  // Import the Zustand store
+import { useUserStore } from '../../store/userStore';  // Import the Zustand store
 
-const AdminDashboard = () => {
+const UserDashboard = () => {
   // Directly access the values from the Zustand store
   const userId = useUserStore(state => state.userId);
   const isLoggedIn = useUserStore(state => state.isLoggedIn);
@@ -10,13 +10,13 @@ const AdminDashboard = () => {
   return (
     <Container maxWidth="sm" sx={{ paddingTop: 8 }}>
       <Typography variant="h3" color="primary" align="center" gutterBottom>
-        Admin Dashboard
+        User Dashboard
       </Typography>
       <Typography variant="h6" align="center">
-        {isLoggedIn ? `Welcome, Admin with ID: ${userId}. You have full access to all features.` : "Please log in to access the admin features."}
+        {isLoggedIn ? `Welcome, user with ID: ${userId}` : "Please log in to view your information."}
       </Typography>
     </Container>
   );
 };
 
-export default AdminDashboard;
+export default UserDashboard;
