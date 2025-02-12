@@ -1,14 +1,16 @@
+// src/store/userStore.js
 import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
 export const useUserStore = create((set) => ({
   firebaseId: localStorage.getItem("firebaseId") || null,
-  roleId: localStorage.getItem("roleId") ? Number(localStorage.getItem("roleId")) : null,
+  roleId: localStorage.getItem("roleId") || null,
   userId: localStorage.getItem("userId") ? Number(localStorage.getItem("userId")) : null,
   isLoggedIn: localStorage.getItem("firebaseId") && localStorage.getItem("userId") ? true : false,
+  loading: false, // New loading state
 
-  setUser: (firebaseId, roleId, userId = null) => {
+  setUser: (firebaseId, roleId = null, userId = null) => {
     localStorage.setItem("firebaseId", firebaseId);
     localStorage.setItem("roleId", roleId);
     if (userId) localStorage.setItem("userId", userId);
@@ -36,23 +38,28 @@ export const useUserStore = create((set) => ({
   listenAuthState: () => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
+        set({ loading: true }); // Start loading
         try {
           const idToken = await user.getIdToken();
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          // Introduce delay for loading animation
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
           const userData = await getData(`/users/${user.uid}`);
           
           if (!userData) throw new Error("No user data received.");
-  
-          const roleId = userData.role_id || "413c29df-8351-4c14-94a5-bab8eaae3615"; // Default role
-          const userId = userData.id || null; // Using `id` instead of `user_id`
+
+          const roleId = userData.role_id || null; // Default role is now null
+          const userId = userData.user_id || null; // Using `id` instead of `user_id`
   
           if (!userId) throw new Error("Missing user_id (id) in backend response.");
   
           set({
             firebaseId: user.uid,
             roleId,
-            userId, // Store `id` as `userId`
+            userId,
             isLoggedIn: true,
+            loading: false, // Data loaded, stop loading
           });
   
           localStorage.setItem("firebaseId", user.uid);
@@ -65,6 +72,7 @@ export const useUserStore = create((set) => ({
             roleId: null,
             userId: null,
             isLoggedIn: false,
+            loading: false, // Stop loading on error
           });
           localStorage.clear();
         }
@@ -74,11 +82,11 @@ export const useUserStore = create((set) => ({
           roleId: null,
           userId: null,
           isLoggedIn: false,
+          loading: false, // Ensure loading is stopped if no user is found
         });
         localStorage.clear();
       }
     });
     return unsubscribe;
   }
-  
 }));
