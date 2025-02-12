@@ -40,18 +40,24 @@ export const useUserStore = create((set) => ({
           const idToken = await user.getIdToken();
           await new Promise(resolve => setTimeout(resolve, 3000));
           const userData = await getData(`/users/${user.uid}`);
-          if (!userData || !userData.role_id || !userData.user_id) {
-            throw new Error("Incomplete user data received from backend.");
-          }
+          
+          if (!userData) throw new Error("No user data received.");
+  
+          const roleId = userData.role_id || "413c29df-8351-4c14-94a5-bab8eaae3615"; // Default role
+          const userId = userData.id || null; // Using `id` instead of `user_id`
+  
+          if (!userId) throw new Error("Missing user_id (id) in backend response.");
+  
           set({
             firebaseId: user.uid,
-            roleId: userData.role_id,
-            userId: userData.user_id,
+            roleId,
+            userId, // Store `id` as `userId`
             isLoggedIn: true,
           });
+  
           localStorage.setItem("firebaseId", user.uid);
-          localStorage.setItem("roleId", userData.role_id);
-          localStorage.setItem("userId", userData.user_id);
+          localStorage.setItem("roleId", roleId);
+          localStorage.setItem("userId", userId);
         } catch (error) {
           console.error("Error fetching user data:", error);
           set({
@@ -74,4 +80,5 @@ export const useUserStore = create((set) => ({
     });
     return unsubscribe;
   }
+  
 }));
