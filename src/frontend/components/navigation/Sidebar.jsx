@@ -1,132 +1,247 @@
 import React, { useState } from "react";
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Box, Typography, IconButton } from "@mui/material";
-import { Home, Logout, Menu } from "@mui/icons-material"; // Icons for navigation
+import { 
+  Drawer, 
+  Box, 
+  Typography, 
+  IconButton, 
+  List, 
+  ListItem, 
+  Tooltip, 
+  Divider,
+  useTheme
+} from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useUserStore } from "../../store/userStore"; // Zustand store for user
-import { signOut } from "firebase/auth"; // Import signOut from Firebase
-import { auth } from "../../../firebase"; // Firebase auth
-import { motion } from "framer-motion"; // Import Framer Motion for animation
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Home, 
+  Settings, 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight, 
+} from "lucide-react";
+import { useUserStore } from "../../store/userStore";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../firebase";
 
 const Sidebar = ({ isMobile, onClose }) => {
+  const theme = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { isLoggedIn, userRole, clearUser } = useUserStore(); // Get user data from Zustand store
-  const [isOpen, setIsOpen] = useState(true);
+  const { isLoggedIn, userRole, clearUser } = useUserStore();
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  // Handle logout
   const handleLogout = async () => {
     try {
-      await signOut(auth); // Log the user out from Firebase
-      clearUser(); // Clear user data in Zustand store
-      navigate("/login"); // Redirect to login page after logout
+      await signOut(auth);
+      clearUser();
+      navigate("/login");
+      if (isMobile) onClose();
     } catch (error) {
       console.error("Error logging out:", error);
     }
   };
 
-  // Toggle Sidebar visibility
-  const toggleSidebar = () => setIsOpen(!isOpen);
+  const toggleSidebar = () => setIsExpanded(!isExpanded);
 
-  // Define menu items based on user role
-  const menuItems = isLoggedIn
-    ? [
-        { label: "Dashboard", path: userRole === "admin" ? "/admin-dashboard" : "/user-dashboard", icon: <Home /> },
-      ]
-    : [
-        { label: "Dashboard", path: "/dashboard", icon: <Home /> },
-      ];
+  const handleNavigation = (path) => {
+    if (isLoggedIn) {
+      if (path === "/dashboard") {
+        navigate(userRole === "admin" ? "/admin-dashboard" : "/user-dashboard");
+      } else {
+        navigate(path);
+      }
+    } else {
+      navigate("/login");
+    }
+    if (isMobile) onClose();
+  };
+
+  const sidebarVariants = {
+    expanded: { width: 240 },
+    collapsed: { width: 80 }
+  };
+
+  const textVariants = {
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: { duration: 0.2, delay: 0.1 } 
+    },
+    hidden: { 
+      opacity: 0, 
+      x: -20,
+      transition: { duration: 0.2 } 
+    }
+  };
+
+  const iconHoverVariants = {
+    hover: { 
+      scale: 1.1,
+      transition: { duration: 0.2 }
+    }
+  };
+
+  const menuItems = [
+    { 
+      label: "Home", 
+      path: "/dashboard", 
+      icon: <Home size={22} strokeWidth={2} />,
+      color: pathname.includes("dashboard") ? theme.palette.primary.main : theme.palette.text.secondary
+    },
+    {
+      label: "Settings",
+      path: "/settings",
+      icon: <Settings size={22} strokeWidth={2} />,
+      color: pathname.includes("settings") ? theme.palette.primary.main : theme.palette.text.secondary
+    }
+  ];
 
   return (
     <Drawer
       variant={isMobile ? "temporary" : "permanent"}
-      open={isMobile ? isOpen : true}
+      open={isMobile ? true : true}
       onClose={isMobile ? onClose : undefined}
       sx={{
-        width: isOpen ? 240 : 60,
+        width: isExpanded ? 240 : 80,
+        flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: isOpen ? 240 : 60,
           boxSizing: "border-box",
-          backgroundColor: "primary.main",
-          color: "primary.contrastText",
-          transition: "width 0.3s ease-in-out",
+          backgroundColor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          borderRight: `1px solid ${theme.palette.divider}`,
+          overflowX: "hidden",
+          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
         },
       }}
       ModalProps={{
-        keepMounted: true, // Improves performance on mobile
+        keepMounted: true,
       }}
     >
-      {/* Fade-in animation for the sidebar */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        animate={isExpanded ? "expanded" : "collapsed"}
+        variants={sidebarVariants}
+        transition={{ duration: 0.3, type: "tween" }}
       >
-        <Box display="flex" alignItems="center" justifyContent="space-between" p={1.5}>
-          {isOpen && (
-            <Typography variant="h6" fontWeight="bold" color="primary.contrastText">
-              YourApp
-            </Typography>
+        {/* App Logo and Toggle */}
+        <Box display="flex" alignItems="center" justifyContent={isExpanded ? "space-between" : "center"} py={2.5} px={isExpanded ? 3 : 2}>
+          {isExpanded && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={textVariants}
+            >
+              <Typography variant="h6" fontWeight="bold" color="primary">
+                YourApp
+              </Typography>
+            </motion.div>
           )}
-          <IconButton onClick={toggleSidebar} sx={{ color: "primary.contrastText" }}>
-            <Menu />
-          </IconButton>
-        </Box>
-        <List>
-          {menuItems.map((item) => (
-            <ListItem
-              key={item.label}
-              onClick={() => navigate(item.path)} // Navigate to the corresponding dashboard
-              sx={{
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <IconButton 
+              onClick={toggleSidebar} 
+              size="small"
+              sx={{ 
+                backgroundColor: theme.palette.background.default, 
+                borderRadius: 1.5,
                 "&:hover": {
-                  backgroundColor: "primary.dark",
-                },
-                cursor: "pointer",
-                backgroundColor: pathname === item.path ? "secondary" : "inherit",
+                  backgroundColor: theme.palette.action.hover,
+                }
               }}
             >
-              <ListItemIcon sx={{ color: "primary.contrastText" }}>
-                {item.icon}
-              </ListItemIcon>
-              {isOpen && (
-                <ListItemText
-                  primary={item.label}
+              {isExpanded ? 
+                <ChevronLeft size={18} color={theme.palette.text.primary} /> : 
+                <ChevronRight size={18} color={theme.palette.text.primary} />}
+            </IconButton>
+          </motion.div>
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
+        {/* Navigation Menu */}
+        <List sx={{ px: 2 }}>
+          {menuItems.map((item) => (
+            <motion.div key={item.label} whileHover="hover" whileTap={{ scale: 0.95 }}>
+              <Tooltip title={!isExpanded ? item.label : ""} placement="right" arrow>
+                <ListItem
+                  onClick={() => handleNavigation(item.path)}
                   sx={{
-                    fontWeight: 600, // Set font weight to 600
-                    fontSize: "1rem", // Set font size
-                    color: "primary.contrastText", // Set text color to match the sidebar
+                    borderRadius: 1.5,
+                    mb: 1,
+                    py: 1.2,
+                    px: isExpanded ? 2 : 1.5,
+                    cursor: "pointer",
+                    backgroundColor: pathname.includes(item.path.slice(1)) ? theme.palette.action.selected : "transparent",
+                    "&:hover": {
+                      backgroundColor: theme.palette.action.hover,
+                    },
+                    justifyContent: isExpanded ? "flex-start" : "center",
                   }}
-                />
-              )}
-            </ListItem>
+                >
+                  <motion.div variants={iconHoverVariants}>
+                    <Box color={item.color}>
+                      {item.icon}
+                    </Box>
+                  </motion.div>
+                  
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div initial="hidden" animate="visible" exit="hidden" variants={textVariants}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: pathname.includes(item.path.slice(1)) ? 600 : 500,
+                            color: item.color,
+                            ml: 1.5, 
+                          }}
+                        >
+                          {item.label}
+                        </Typography>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </ListItem>
+              </Tooltip>
+            </motion.div>
           ))}
         </List>
-        {/* Move logout button slightly up */}
-        <Box position="absolute" bottom="90px" width="100%">
-          <List>
-            <ListItem
-              onClick={handleLogout}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "primary.dark",
-                },
-                cursor: "pointer",
-              }}
-            >
-              <ListItemIcon sx={{ color: "primary.contrastText" }}>
-                <Logout />
-              </ListItemIcon>
-              {isOpen && (
-                <ListItemText
-                  primary="Logout"
-                  sx={{
-                    fontWeight: 600, // Set font weight to 600
-                    fontSize: "1rem", // Set font size
-                    color: "primary.contrastText", // Set text color to match the sidebar
-                  }}
-                />
-              )}
-            </ListItem>
-          </List>
+
+        {/* Logout Button */}
+        <Box position="absolute" bottom="20px" width="100%" px={2}>
+          <Divider sx={{ mb: 2 }} />
+          <motion.div whileHover="hover" whileTap={{ scale: 0.95 }}>
+            <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
+              <ListItem
+                onClick={handleLogout}
+                sx={{
+                  borderRadius: 1.5,
+                  py: 1.2,
+                  px: isExpanded ? 2 : 1.5,
+                  cursor: "pointer",
+                  "&:hover": {
+                    backgroundColor: theme.palette.action.hover,
+                  },
+                  justifyContent: isExpanded ? "flex-start" : "center",
+                  mb:10
+                }}
+              >
+                <motion.div variants={iconHoverVariants}>
+                  <Box color={theme.palette.error.main}>
+                    <LogOut size={22} strokeWidth={2} />
+                  </Box>
+                </motion.div>
+                
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div  initial="hidden" animate="visible" exit="hidden" variants={textVariants} >
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.error.main, ml: 1.5 }}>
+                        Logout
+                      </Typography>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </ListItem>
+            </Tooltip>
+          </motion.div>
         </Box>
       </motion.div>
     </Drawer>
