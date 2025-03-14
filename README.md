@@ -104,3 +104,4 @@ VITE_API_BASE_URL=http://localhost:5000/api # Adjust if backend runs on a differ
 - In your terminal, type:
   "cd src/backend"
   "node server.js
+# BranchWallet
