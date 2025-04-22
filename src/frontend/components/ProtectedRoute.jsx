@@ -1,17 +1,20 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
-import { useUserStore } from "../store/userStore";
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useUserStore } from '../store/userStore';
 
-const ProtectedRoute = ({ children, roleId }) => {
-  const { isLoggedIn, roleId: userRoleId } = useUserStore();
+const ProtectedRoute = ({ children, allowedRole }) => {
+  const { isLoggedIn, roleId, loading } = useUserStore();
+
+  // Check if still loading the auth state, if yes, don't render the route
+  if (loading) return null;
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
 
-  if (userRoleId !== roleId) {
-    // Redirect users to their correct dashboard if they try accessing the wrong one
-    return userRoleId === 1 ? <Navigate to="/admin-dashboard" replace /> : <Navigate to="/user-dashboard" replace />;
+  if (roleId !== allowedRole) {
+    const fallback = roleId === 1 ? '/admin-dashboard' : '/user-dashboard';
+    return <Navigate to={fallback} replace />;
   }
 
   return children;

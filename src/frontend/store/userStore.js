@@ -3,79 +3,50 @@ import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
 export const useUserStore = create((set) => ({
-  firebaseId: localStorage.getItem("firebaseId") || null,
-  roleId: localStorage.getItem("roleId") ? Number(localStorage.getItem("roleId")) : null,
-  userId: localStorage.getItem("userId") ? Number(localStorage.getItem("userId")) : null,
-  isLoggedIn: !!localStorage.getItem("firebaseId") && !!localStorage.getItem("userId"),
-  loading: false, // Loading state
+  firebaseId: localStorage.getItem('firebaseId') || null,
+  roleId: Number(localStorage.getItem('roleId')) || null,
+  userId: Number(localStorage.getItem('userId')) || null,
+  isLoggedIn: Boolean(localStorage.getItem('firebaseId') && localStorage.getItem('userId')),
+  loading: false,
 
-  setUser: (firebaseId, roleId = null, userId = null) => {
-    localStorage.setItem("firebaseId", firebaseId);
-    localStorage.setItem("roleId", roleId);
-    localStorage.setItem("userId", userId);
+  setLoading: (loading) => set({ loading }),
 
-    set({
-      firebaseId,
-      roleId: Number(roleId),
-      userId: Number(userId),
-      isLoggedIn: true,
-    });
+  setUser: (firebaseId, roleId, userId) => {
+    localStorage.setItem('firebaseId', firebaseId);
+    localStorage.setItem('roleId', String(roleId));
+    localStorage.setItem('userId', String(userId));
+    set({ firebaseId, roleId, userId, isLoggedIn: true });
   },
 
   clearUser: () => {
-    ["firebaseId", "roleId", "userId"].forEach((key) => localStorage.removeItem(key));
-    set({
-      firebaseId: null,
-      roleId: null,
-      userId: null,
-      isLoggedIn: false,
-    });
+    ['firebaseId','roleId','userId'].forEach((k) => localStorage.removeItem(k));
+    set({ firebaseId: null, roleId: null, userId: null, isLoggedIn: false });
   },
 
   listenAuthState: () => {
+    set({ loading: true });
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        set({ loading: true });
         try {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Delay for loading animation
-          const userData = await getData(`/users/${user.uid}`);
-
-          if (!userData || !userData.user_id) throw new Error("Invalid user data received.");
-
-          const roleId = userData.role_id || null;
-          const userId = userData.user_id || null;
-
+          const { role_id, user_id } = await getData(`/users/${user.uid}`);
           set({
             firebaseId: user.uid,
-            roleId,
-            userId,
+            roleId: role_id,
+            userId: user_id,
             isLoggedIn: true,
-            loading: false,
+            loading: false
           });
-
-          localStorage.setItem("firebaseId", user.uid);
-          localStorage.setItem("roleId", roleId);
-          localStorage.setItem("userId", userId);
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          set({
-            firebaseId: null,
-            roleId: null,
-            userId: null,
-            isLoggedIn: false,
-            loading: false,
-          });
-          ["firebaseId", "roleId", "userId"].forEach((key) => localStorage.removeItem(key));
+          localStorage.setItem('firebaseId', user.uid);
+          localStorage.setItem('roleId', String(role_id));
+          localStorage.setItem('userId', String(user_id));
+        } catch (err) {
+          console.error('Auth listener error:', err);
+          set({ loading: false });
+          ['firebaseId','roleId','userId'].forEach((k) => localStorage.removeItem(k));
         }
       } else {
-        set({
-          firebaseId: null,
-          roleId: null,
-          userId: null,
-          isLoggedIn: false,
-          loading: false,
-        });
-        ["firebaseId", "roleId", "userId"].forEach((key) => localStorage.removeItem(key));
+        set({ firebaseId: null, roleId: null, userId: null, isLoggedIn: false, loading: false });
+        ['firebaseId','roleId','userId'].forEach((k) => localStorage.removeItem(k));
       }
     });
     return unsubscribe;
