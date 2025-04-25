@@ -1,71 +1,86 @@
 import { createTheme } from '@mui/material/styles';
 
-// Create theme based on Cofoundless brand kit (Option 3: Minimalist Speed)
+// Configuration for dynamic client-based customization
+const config = {
+  primary: '#0052CC', // Default Deep Blue
+  secondary: '#FF6F61', // Default Coral-Pink (accent color)
+  background: '#F4F6F8', // Default Light Gray Background
+  titleColor: '#2D3748', // Charcoal for title
+  appBarBackground: '#FFFFFF', // Default AppBar White
+  ctaColor: '#FF6F61', // Default CTA color (Coral-Pink)
+  ctaHoverColor: '#E05D4D', // Darker Coral-Pink on hover
+  fontFamily: "'Poppins', sans-serif", // Default font
+  borderRadius: 4, // Default Border Radius (can be customized per client)
+};
+
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#6C63FF', // Velocity Purple - main brand color
-      light: '#8F88FF', // Lighter shade for hover states
-      dark: '#4D45E6', // Darker shade for active states
+      main: config.primary,
+      light: '#4E7AC7',
+      dark: '#003D99',
     },
     secondary: {
-      main: '#FFD60A', // Bright Yellow - accent color
-      light: '#FFE14D', // Lighter yellow shade
-      dark: '#E6C100', // Darker yellow shade
+      main: config.secondary,
+      light: '#FF8C73',
+      dark: '#E05D4D',
     },
     background: {
-      default: '#EDF2F7', // Light Silver for background
-      paper: '#FFFFFF', // White for cards and sections
+      default: config.background,
+      paper: '#FFFFFF',
     },
     text: {
-      primary: '#2D3748', // Charcoal for body text
-      secondary: '#4A5568', // Lighter charcoal for secondary text
+      primary: '#2D3748',
+      secondary: '#4A5568',
     },
     success: {
-      main: '#38B2AC', // Success Teal for success states
+      main: '#38B2AC', // Fresh Green for success states
       dark: '#2C9189',
     },
+    warning: {
+      main: '#F6A800', // Bold Orange for warning messages
+      dark: '#C77400',
+    },
     action: {
-      hover: 'rgba(108, 99, 255, 0.08)', // Transparent purple hover effect
-      selected: '#4D45E6', // Darker purple for active states
+      hover: 'rgba(0, 82, 204, 0.08)', // Light blue hover effect for buttons
+      selected: '#003D99', // Darker blue for active states
     },
   },
   typography: {
-    fontFamily: "'Poppins', sans-serif", // Change to Poppins font
+    fontFamily: config.fontFamily,
     h1: {
       fontSize: '3rem',
-      fontWeight: 700, // Bold
-      color: '#2D3748', // Charcoal
+      fontWeight: 700,
+      color: config.titleColor,
       lineHeight: 1.2,
     },
     h2: {
       fontSize: '2rem',
-      fontWeight: 600, // Semibold
-      color: '#2D3748',
+      fontWeight: 600,
+      color: config.titleColor,
     },
     h3: {
       fontSize: '1.5rem',
-      fontWeight: 600, // Semibold
-      color: '#2D3748',
+      fontWeight: 600,
+      color: config.titleColor,
     },
     body1: {
       fontSize: '1rem',
-      fontWeight: 400, // Regular
+      fontWeight: 400,
       color: '#2D3748',
     },
     body2: {
       fontSize: '0.875rem',
-      fontWeight: 400, // Regular
+      fontWeight: 400,
       color: '#2D3748',
     },
     button: {
-      textTransform: 'none', // No uppercase transformation
-      fontWeight: 600, // Semibold
+      textTransform: 'none',
+      fontWeight: 600,
       color: '#FFFFFF',
     },
-    // Add a monospace font style for technical specifications or code examples
     monospace: {
-      fontFamily: "'JetBrains Mono', monospace", // Secondary font from brand kit
+      fontFamily: "'JetBrains Mono', monospace",
       fontSize: '0.875rem',
     },
   },
@@ -73,32 +88,31 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         containedPrimary: {
-          backgroundColor: '#6C63FF', // Velocity Purple for primary buttons
+          backgroundColor: config.primary,
           '&:hover': {
-            backgroundColor: '#4D45E6', // Darker purple on hover
+            backgroundColor: '#003D99', // Darker blue on hover
           },
         },
         containedSecondary: {
-          backgroundColor: '#FFD60A', // Bright Yellow for secondary/action buttons
-          color: '#2D3748', // Charcoal text for contrast on yellow
+          backgroundColor: config.secondary,
+          color: '#2D3748',
           '&:hover': {
-            backgroundColor: '#E6C100', // Darker yellow on hover
+            backgroundColor: '#E05D4D',
           },
         },
         outlinedPrimary: {
-          borderColor: '#6C63FF',
-          color: '#6C63FF',
+          borderColor: config.primary,
+          color: config.primary,
           '&:hover': {
-            backgroundColor: 'rgba(108, 99, 255, 0.08)',
+            backgroundColor: 'rgba(0, 82, 204, 0.08)',
           },
         },
-        // Adding a "rocket" variant for CTAs highlighting the 72-hour turnaround
         containedRocket: {
-          backgroundColor: '#FFD60A',
+          backgroundColor: config.ctaColor,
           color: '#2D3748',
           fontWeight: 700,
           '&:hover': {
-            backgroundColor: '#E6C100',
+            backgroundColor: config.ctaHoverColor,
           },
         },
       },
@@ -106,8 +120,8 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 8px rgba(45, 55, 72, 0.05)', // Subtle shadow with charcoal tint
-          borderRadius: 4, // Sharper corners for minimalist feel
+          boxShadow: '0 2px 8px rgba(45, 55, 72, 0.05)',
+          borderRadius: config.borderRadius, // Customizable border radius
         },
       },
     },
@@ -115,8 +129,8 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: 'none',
-          backgroundColor: '#FFFFFF', // White app bar
-          color: '#2D3748', // Charcoal text color
+          backgroundColor: config.appBarBackground,
+          color: '#2D3748',
         },
       },
     },
@@ -128,7 +142,6 @@ const theme = createTheme({
         },
       },
     },
-    // Adding a timeline component styling for the "How It Works" section
     MuiTimeline: {
       styleOverrides: {
         root: {
@@ -139,39 +152,38 @@ const theme = createTheme({
     MuiTimelineConnector: {
       styleOverrides: {
         root: {
-          backgroundColor: '#6C63FF', // Velocity Purple
+          backgroundColor: config.primary,
         },
       },
     },
     MuiTimelineDot: {
       styleOverrides: {
         root: {
-          backgroundColor: '#6C63FF', // Velocity Purple
+          backgroundColor: config.primary,
           boxShadow: 'none',
         },
       },
     },
-    // Adding chip styling for pricing tiers
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 4,
+          borderRadius: config.borderRadius,
           fontWeight: 600,
         },
         colorPrimary: {
-          backgroundColor: '#6C63FF', // Velocity Purple
+          backgroundColor: config.primary,
         },
         colorSecondary: {
-          backgroundColor: '#FFD60A', // Bright Yellow
-          color: '#2D3748', // Charcoal text for contrast
+          backgroundColor: config.secondary,
+          color: '#2D3748',
         },
       },
     },
   },
   shape: {
-    borderRadius: 4, // 4px border radius from brand kit
+    borderRadius: config.borderRadius, // Set default border radius from config
   },
-  spacing: 8, // Base spacing unit of 8px
+  spacing: 8,
 });
 
 export default theme;

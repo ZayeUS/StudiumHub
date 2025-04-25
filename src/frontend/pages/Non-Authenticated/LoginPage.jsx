@@ -9,14 +9,18 @@ import {
   IconButton,
   Typography,
   Snackbar,
-  Alert,Divider
+  Alert,
+  Divider,
+  Modal,
+  Fade,
+  Backdrop
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, ChevronRight, LogIn,KeyRound } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ChevronRight, LogIn, KeyRound } from 'lucide-react';
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import LoadingModal from '../../components/LoadingModal';
-import { login as firebaseLogin } from '../../../firebase';
+import { login as firebaseLogin, resetPassword } from '../../../firebase';  // Import resetPassword function
 import { useUserStore } from '../../store/userStore';
 import { useNavigate } from 'react-router-dom';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -25,33 +29,45 @@ const variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, staggerChildren: 0.1 } }
 };
-const fieldSx = { '& .MuiOutlinedInput-root': { borderRadius: 2 } };
-const btnSx = { mt: 3, py: 1.5, borderRadius: 2, textTransform: 'none', fontWeight: 'bold' };
 
 export default function LoginPage() {
   const { setUser, setLoading } = useUserStore();
   const [showPwd, setShowPwd] = useState(false);
   const [snack, setSnack] = useState({ open: false, msg: '', sev: 'success' });
+  const [openModal, setOpenModal] = useState(false); // Modal state for forgot password
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Define isMobile here
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
 
-  // Handler for Login
+  // Fetch border radius from theme
+  const borderRadius = theme.shape.borderRadius;
+
+  const fieldSx = {
+    '& .MuiOutlinedInput-root': { borderRadius }
+  };
+
+  const btnSx = {
+    mt: 3,
+    py: 1.5,
+    borderRadius,
+    textTransform: 'none',
+    fontWeight: 'bold'
+  };
+
   const handleLogin = async ({ email, password }, { setSubmitting }) => {
     setSubmitting(true);
-    setLoading(true); // Set loading to true immediately
+    setLoading(true);
   
     try {
       const user = await firebaseLogin(email, password);
       const token = await user.getIdToken();
       const { role_id, user_id } = await getData(`/users/${user.uid}`, token);
   
-      // Add a delay to ensure loading spinner stays visible for at least 1 second
       setTimeout(() => {
         setUser(user.uid, role_id, user_id);
         setSnack({ open: true, msg: 'Logged in!', sev: 'success' });
         navigate(role_id === 1 ? '/admin-dashboard' : '/user-dashboard');
-      }, 1000); // Delay for 1 second
+      }, 1000);
   
     } catch (e) {
       setSnack({ open: true, msg: e.message || 'Login failed', sev: 'error' });
@@ -59,7 +75,17 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
-  
+
+  // Handle forgot password (send reset email)
+  const handleForgotPassword = async (email) => {
+    try {
+      await resetPassword(email);
+      setSnack({ open: true, msg: 'Password reset email sent. Check your inbox!', sev: 'success' });
+      setOpenModal(false); // Close modal on success
+    } catch (e) {
+      setSnack({ open: true, msg: e.message || 'Failed to send reset email', sev: 'error' });
+    }
+  };
 
   return (
     <Box
@@ -81,10 +107,10 @@ export default function LoginPage() {
       >
         <Alert severity={snack.sev}>{snack.msg}</Alert>
       </Snackbar>
-      
+
       <motion.div initial="hidden" animate="visible" variants={variants} style={{ width: '100%' }}>
         <Container maxWidth="sm">
-          <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={3}>
+          <Paper sx={{ borderRadius, overflow: 'hidden' }} elevation={3}>
             <Box sx={{ bgcolor: theme.palette.primary.main, p: 3, textAlign: 'center' }}>
               <LogIn size={40} color="#fff" />
               <Typography variant="h4" sx={{ color: '#fff', fontWeight: 'bold', mt: 1 }}>
@@ -157,7 +183,13 @@ export default function LoginPage() {
               </Formik>
 
               <Box textAlign="center" mt={2}>
-                <Button variant="text" startIcon={<KeyRound />} onClick={() => setSnack({ open: true, msg: 'Forgot Password clicked', sev: 'info' })} sx={{ textTransform: 'none' }}>
+                {/* Trigger Modal for Forgot Password */}
+                <Button
+                  variant="text"
+                  startIcon={<KeyRound />}
+                  onClick={() => setOpenModal(true)} // Open the modal
+                  sx={{ textTransform: 'none' }}
+                >
                   Forgot your password?
                 </Button>
               </Box>
@@ -178,7 +210,7 @@ export default function LoginPage() {
                   sx={{
                     py: 1,
                     px: isMobile ? 2 : 3,
-                    borderRadius: 2,
+                    borderRadius,
                     textTransform: 'none'
                   }}
                 >
@@ -189,6 +221,67 @@ export default function LoginPage() {
           </Paper>
         </Container>
       </motion.div>
+
+      {/* Modal for Forgot Password */}
+      <Modal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{ timeout: 500 }}
+      >
+        <Fade in={openModal}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              bgcolor: 'background.paper',
+              p: 4,
+              borderRadius: 2,
+              boxShadow: 24,
+              minWidth: 300
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>Reset Your Password</Typography>
+            <Formik
+              initialValues={{ email: '' }}
+              validationSchema={Yup.object({
+                email: Yup.string().email('Invalid email address').required('Required')
+              })}
+              onSubmit={(values) => handleForgotPassword(values.email)}
+            >
+              {({ isSubmitting, handleChange, handleBlur, values }) => (
+                <Form>
+                  <TextField
+                    label="Email Address"
+                    name="email"
+                    type="email"
+                    fullWidth
+                    margin="normal"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    value={values.email}
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius } }}
+                  />
+                  <Box sx={{ textAlign: 'center', mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      type="submit"
+                      disabled={isSubmitting}
+                      sx={{ borderRadius }}
+                    >
+                      Send Reset Email
+                    </Button>
+                  </Box>
+                </Form>
+              )}
+            </Formik>
+          </Box>
+        </Fade>
+      </Modal>
     </Box>
   );
 }

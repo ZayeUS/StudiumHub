@@ -55,6 +55,7 @@ const SignUpPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const borderRadius = theme.shape.borderRadius; // Pulling border radius from theme
 
   // Redirect if already logged in
   useEffect(() => {
@@ -134,7 +135,7 @@ const SignUpPage = () => {
         style={{ width: '100%' }}
       >
         <Container maxWidth="sm">
-          <Paper elevation={3} sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <Paper elevation={3} sx={{ borderRadius: borderRadius, overflow: 'hidden' }}>
             <Box
               sx={{
                 bgcolor: theme.palette.primary.main,
@@ -210,7 +211,9 @@ const SignUpPage = () => {
                                   )
                                 })
                               }}
-                              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                              sx={{
+                                '& .MuiOutlinedInput-root': { borderRadius }
+                              }}
                               onChange={handleChange}
                               onBlur={handleBlur}
                               value={values[name]}
@@ -225,7 +228,9 @@ const SignUpPage = () => {
                         fullWidth
                         margin="normal"
                         error={Boolean(touched.role && errors.role)}
-                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': { borderRadius }
+                        }}
                       >
                         <InputLabel>Role</InputLabel>
                         <Field
@@ -259,7 +264,7 @@ const SignUpPage = () => {
                         sx={{
                           mt: 3,
                           py: 1.5,
-                          borderRadius: 2,
+                          borderRadius,
                           textTransform: 'none',
                           fontWeight: 'bold',
                         }}
@@ -288,7 +293,7 @@ const SignUpPage = () => {
                     mt: 1,
                     py: 1,
                     px: isMobile ? 2 : 3,
-                    borderRadius: 2,
+                    borderRadius,
                     textTransform: 'none'
                   }}
                 >

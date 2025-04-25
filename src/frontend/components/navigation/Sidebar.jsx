@@ -17,7 +17,7 @@ import {
   Settings, 
   LogOut, 
   ChevronLeft, 
-  ChevronRight, 
+  ChevronRight 
 } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
@@ -178,7 +178,7 @@ const Sidebar = ({ isMobile, onClose }) => {
                   }}
                 >
                   <motion.div variants={iconHoverVariants}>
-                    <Box color={item.color}>
+                    <Box color={pathname.includes(item.path.slice(1)) ? '#fff' : item.color}> {/* Update icon color to white if active */}
                       {item.icon}
                     </Box>
                   </motion.div>
@@ -190,7 +190,7 @@ const Sidebar = ({ isMobile, onClose }) => {
                           variant="body2" 
                           sx={{ 
                             fontWeight: pathname.includes(item.path.slice(1)) ? 600 : 500,
-                            color: item.color,
+                            color: pathname.includes(item.path.slice(1)) ? '#fff' : item.color,  // Change text color to white when active
                             ml: 1.5, 
                           }}
                         >
