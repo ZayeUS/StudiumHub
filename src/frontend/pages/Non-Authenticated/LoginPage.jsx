@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useRef } from 'react';
 import {
   Box,
   Container,
@@ -20,7 +20,7 @@ import { Mail, Lock, Eye, EyeOff, ChevronRight, LogIn, KeyRound } from 'lucide-r
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import LoadingModal from '../../components/LoadingModal';
-import { login as firebaseLogin, resetPassword } from '../../../firebase';  // Import resetPassword function
+import { login as firebaseLogin, resetPassword } from '../../../firebase';  // Import firebase methods
 import { useUserStore } from '../../store/userStore';
 import { useNavigate } from 'react-router-dom';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -35,6 +35,7 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [snack, setSnack] = useState({ open: false, msg: '', sev: 'success' });
   const [openModal, setOpenModal] = useState(false); // Modal state for forgot password
+  const errorRef = useRef(null); // Use ref instead of state for the error
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
@@ -54,11 +55,37 @@ export default function LoginPage() {
     fontWeight: 'bold'
   };
 
+  // Function to show login error without causing a re-render
+  const showLoginError = (message) => {
+    if (errorRef.current) {
+      errorRef.current.textContent = message;
+      errorRef.current.style.display = 'block';
+      
+      // Auto-hide after 30 seconds
+      setTimeout(() => {
+        if (errorRef.current) {
+          errorRef.current.style.display = 'none';
+        }
+      }, 30000);
+    }
+  };
+
+  // Function to hide login error
+  const hideLoginError = () => {
+    if (errorRef.current) {
+      errorRef.current.style.display = 'none';
+    }
+  };
+
   const handleLogin = async ({ email, password }, { setSubmitting }) => {
     setSubmitting(true);
     setLoading(true);
+    
+    // Hide any existing errors
+    hideLoginError();
   
     try {
+      // Try logging in using the credentials
       const user = await firebaseLogin(email, password);
       const token = await user.getIdToken();
       const { role_id, user_id } = await getData(`/users/${user.uid}`, token);
@@ -70,9 +97,17 @@ export default function LoginPage() {
       }, 1000);
   
     } catch (e) {
-      setSnack({ open: true, msg: e.message || 'Login failed', sev: 'error' });
+      console.error("Login error:", e);
+      
+      // Show error message without state update
+      const errorMessage = e.message || 'Incorrect Email or Password';
+      showLoginError(errorMessage);
+      
+      // Show snackbar (this does cause a re-render, but it's expected for notifications)
+      setSnack({ open: true, msg: errorMessage, sev: 'error' });
     } finally {
       setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -167,6 +202,20 @@ export default function LoginPage() {
                         )}
                       </Field>
                     ))}
+                    
+                    {/* Error message element manipulated via DOM instead of React state */}
+                    <div 
+                      ref={errorRef}
+                      style={{
+                        color: theme.palette.error.main,
+                        marginTop: '8px',
+                        marginBottom: '8px',
+                        fontWeight: 500,
+                        display: 'none' // Initially hidden
+                      }}
+                    >
+                      Incorrect Email or Password
+                    </div>
 
                     <Button
                       variant="contained"

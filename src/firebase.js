@@ -40,7 +40,23 @@ const login = async (email, password) => {
     return userCredential.user;
   } catch (error) {
     console.error("Error logging in:", error.message);
-    throw new Error(error.message);
+    
+    // Convert Firebase errors to user-friendly messages
+    if (
+      error.code === 'auth/invalid-credential' || 
+      error.code === 'auth/user-not-found' || 
+      error.code === 'auth/wrong-password' ||
+      error.message === 'INVALID_LOGIN_CREDENTIALS' ||
+      (error.error && error.error.message === 'INVALID_LOGIN_CREDENTIALS')
+    ) {
+      throw new Error('Incorrect Email or Password');
+    } else if (error.code === 'auth/too-many-requests') {
+      throw new Error('Too many failed login attempts. Please try again later.');
+    } else if (error.code === 'auth/user-disabled') {
+      throw new Error('This account has been disabled. Please contact support.');
+    } else {
+      throw new Error('Login failed. Please try again.');
+    }
   }
 };
 

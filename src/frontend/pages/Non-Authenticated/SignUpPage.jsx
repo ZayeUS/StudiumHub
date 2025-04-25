@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Container,
@@ -13,6 +13,7 @@ import {
   Select,
   MenuItem,
   Divider,
+  CircularProgress,
   useTheme,
   useMediaQuery
 } from '@mui/material';
@@ -47,11 +48,53 @@ const containerVariants = {
   }
 };
 
+const PasswordField = ({ name, label, show, setShow, borderRadius }) => (
+  <Field name={name}>
+    {({ field, meta }) => (
+      <TextField
+        {...field}
+        type={show ? 'text' : 'password'}
+        label={label}
+        fullWidth
+        margin="normal"
+        error={Boolean(meta.touched && meta.error)}
+        helperText={meta.touched && meta.error}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Lock />
+            </InputAdornment>
+          ),
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                size="small"
+                onClick={() =>
+                  setShow((s) => ({
+                    ...s,
+                    [name]: !s[name]
+                  }))
+                }
+              >
+                {show ? <EyeOff /> : <Eye />}
+              </IconButton>
+            </InputAdornment>
+          )
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': { borderRadius }
+        }}
+      />
+    )}
+  </Field>
+);
+
 const SignUpPage = () => {
   const { setUser, isLoggedIn, roleId } = useUserStore();
   const [roles, setRoles] = useState([]);
   const [show, setShow] = useState({ password: false, confirm: false });
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const emailInputRef = useRef(null); // For focusing on email input if error
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -80,31 +123,44 @@ const SignUpPage = () => {
 
   const handleSubmit = async (vals, { setSubmitting, setFieldError }) => {
     setFormSubmitted(true);
-
+  
     // Quick email check
     if (!(await checkEmailExists(vals.email).then(exists => !exists).catch(() => false))) {
       setFieldError('email', 'Already in use');
       setFormSubmitted(false);
+      emailInputRef.current.focus(); // Focus on email input if error
       return setSubmitting(false);
     }
-
+  
     useUserStore.setState({ loading: true });
     try {
+      // Sign up user with Firebase
       const user = await firebaseSignUp(vals.email, vals.password);
+  
+      // Automatically log in the user after sign-up
       await firebaseLogin(vals.email, vals.password);
+  
+      // Create user record in the backend after Firebase login
+      const token = await user.getIdToken();
       const { role_id } = roles.find(r => r.role_name === vals.role) || {};
-      const { user_id } = (await postData('/users', {
+  
+      // Create user in the backend with Firebase UID and role_id
+      const backendUserResponse = await postData('/users', {
         firebase_uid: user.uid,
         email: user.email,
         role_id
-      })).user;
-
-      // Add delay to ensure the loading spinner is visible for 1 second
+      });
+  
+      const { user_id } = backendUserResponse.user;  // Get the user_id from backend response
+  
+      // Now update Zustand store with the new user data
+      setUser(user.uid, role_id, user_id);
+  
+      // Add delay to make sure the spinner is visible before redirecting
       setTimeout(() => {
-        setUser(user.uid, role_id, user_id);
-        navigate('/user-dashboard');
-      }, 1000); // 1 second delay after successful sign-up
-
+        navigate(role_id === 1 ? '/admin-dashboard' : '/user-dashboard');
+      }, 1000);
+  
     } catch (err) {
       console.error(err);
       setFieldError('general', err.message || 'Sign‑up failed');
@@ -114,6 +170,7 @@ const SignUpPage = () => {
       useUserStore.setState({ loading: false });
     }
   };
+  
 
   return (
     <Box
@@ -217,6 +274,7 @@ const SignUpPage = () => {
                               onChange={handleChange}
                               onBlur={handleBlur}
                               value={values[name]}
+                              inputRef={name === 'email' ? emailInputRef : null} // Focus on email input if error
                             />
                           )}
                         </Field>
@@ -260,7 +318,7 @@ const SignUpPage = () => {
                         fullWidth
                         type="submit"
                         disabled={isSubmitting || formSubmitted}
-                        endIcon={<ChevronRight />}
+                        endIcon={isSubmitting ? <CircularProgress size={24} /> : <ChevronRight />}
                         sx={{
                           mt: 3,
                           py: 1.5,
