@@ -2,57 +2,55 @@ import { createTheme } from '@mui/material/styles';
 
 // Configuration for dynamic client-based customization
 const config = {
-  primary: '#0052CC', // Default Deep Blue
-  secondary: '#FF6F61', // Default Coral-Pink (accent color)
-  background: '#F4F6F8', // Default Light Gray Background
-  titleColor: '#2D3748', // Charcoal for title
-  appBarBackground: '#FFFFFF', // Default AppBar White
-  ctaColor: '#FF6F61', // Default CTA color (Coral-Pink)
-  ctaHoverColor: '#E05D4D', // Darker Coral-Pink on hover
-  fontFamily: "'Poppins', sans-serif", // Default font
-  borderRadius: 4, // Default Border Radius (can be customized per client)
+  primary: '#2ECC71', // Emerald Green (Tech-savvy and fresh)
+  secondary: '#FF7043', // Bright Orange for accents (Eye-catching, modern)
+  background: '#FFFFFF', // Clean White Background (classic modern feel)
+  paperBackground: '#F5F5F5', // Light gray for paper/cards (adds some depth)
+  titleColor: '#333333', // Dark text for titles and headers (contrast on white background)
+  appBarBackground: '#F5F5F5', // Light gray AppBar for consistency
+  ctaColor: '#FF6F61', // CTA color (Coral Red)
+  ctaHoverColor: '#E05D4D', // Darker Coral Red on hover (emphasis)
+  fontFamily: "'Roboto', sans-serif", // Modern, clean font
+  borderRadius: 4, // Sharp borders for a sleek, modern design
 };
 
 const theme = createTheme({
   palette: {
     primary: {
       main: config.primary,
-      light: '#4E7AC7',
-      dark: '#003D99',
+      light: '#5FF78B', // Light green for subtle accents
+      dark: '#28B45A', // Darker green for hover effects
     },
     secondary: {
       main: config.secondary,
-      light: '#FF8C73',
-      dark: '#E05D4D',
+      light: '#FF8A65', // Lighter orange for softer accents
+      dark: '#E64A19', // Darker orange for hover effects
     },
     background: {
       default: config.background,
-      paper: '#FFFFFF',
+      paper: config.paperBackground,
     },
     text: {
-      primary: '#2D3748',
-      secondary: '#4A5568',
+      primary: config.titleColor, // Dark text for better readability
+      secondary: '#757575', // Slightly lighter secondary text for contrast
     },
     success: {
-      main: '#38B2AC', // Fresh Green for success states
-      dark: '#2C9189',
+      main: '#2E7D32', // Fresh green for success actions
     },
     warning: {
-      main: '#F6A800', // Bold Orange for warning messages
-      dark: '#C77400',
+      main: '#FF9800', // Orange for warning actions
     },
     action: {
-      hover: 'rgba(0, 82, 204, 0.08)', // Light blue hover effect for buttons
-      selected: '#003D99', // Darker blue for active states
+      hover: 'rgba(46, 204, 113, 0.08)', // Light hover effect for buttons
+      selected: '#28B45A', // Darker green for active selections
     },
   },
   typography: {
     fontFamily: config.fontFamily,
     h1: {
-      fontSize: '3rem',
+      fontSize: '2.5rem',
       fontWeight: 700,
       color: config.titleColor,
-      lineHeight: 1.2,
     },
     h2: {
       fontSize: '2rem',
@@ -60,19 +58,19 @@ const theme = createTheme({
       color: config.titleColor,
     },
     h3: {
-      fontSize: '1.5rem',
+      fontSize: '1.75rem',
       fontWeight: 600,
       color: config.titleColor,
     },
     body1: {
       fontSize: '1rem',
       fontWeight: 400,
-      color: '#2D3748',
+      color: '#333333', // Dark text for readability
     },
     body2: {
       fontSize: '0.875rem',
       fontWeight: 400,
-      color: '#2D3748',
+      color: '#757575', // Dimmed secondary text
     },
     button: {
       textTransform: 'none',
@@ -90,26 +88,26 @@ const theme = createTheme({
         containedPrimary: {
           backgroundColor: config.primary,
           '&:hover': {
-            backgroundColor: '#003D99', // Darker blue on hover
+            backgroundColor: '#28B45A', // Darker green on hover
           },
         },
         containedSecondary: {
           backgroundColor: config.secondary,
-          color: '#2D3748',
+          color: '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#E05D4D',
+            backgroundColor: '#E64A19', // Darker orange on hover
           },
         },
         outlinedPrimary: {
           borderColor: config.primary,
           color: config.primary,
           '&:hover': {
-            backgroundColor: 'rgba(0, 82, 204, 0.08)',
+            backgroundColor: 'rgba(46, 204, 113, 0.08)', // Light green on hover
           },
         },
         containedRocket: {
           backgroundColor: config.ctaColor,
-          color: '#2D3748',
+          color: '#FFFFFF',
           fontWeight: 700,
           '&:hover': {
             backgroundColor: config.ctaHoverColor,
@@ -120,8 +118,8 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 8px rgba(45, 55, 72, 0.05)',
-          borderRadius: config.borderRadius, // Customizable border radius
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // Light shadow for depth
+          borderRadius: config.borderRadius,
         },
       },
     },
@@ -130,7 +128,7 @@ const theme = createTheme({
         root: {
           boxShadow: 'none',
           backgroundColor: config.appBarBackground,
-          color: '#2D3748',
+          color: '#333333',
         },
       },
     },
@@ -139,28 +137,6 @@ const theme = createTheme({
         root: {
           paddingLeft: 24,
           paddingRight: 24,
-        },
-      },
-    },
-    MuiTimeline: {
-      styleOverrides: {
-        root: {
-          padding: '16px 0',
-        },
-      },
-    },
-    MuiTimelineConnector: {
-      styleOverrides: {
-        root: {
-          backgroundColor: config.primary,
-        },
-      },
-    },
-    MuiTimelineDot: {
-      styleOverrides: {
-        root: {
-          backgroundColor: config.primary,
-          boxShadow: 'none',
         },
       },
     },
@@ -175,13 +151,27 @@ const theme = createTheme({
         },
         colorSecondary: {
           backgroundColor: config.secondary,
-          color: '#2D3748',
+          color: '#FFFFFF',
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        h1: {
+          fontSize: '2.5rem',
+          fontWeight: 'bold',
+          color: config.titleColor,
+        },
+        h2: {
+          fontSize: '2rem',
+          fontWeight: 'bold',
+          color: config.titleColor,
         },
       },
     },
   },
   shape: {
-    borderRadius: config.borderRadius, // Set default border radius from config
+    borderRadius: config.borderRadius,
   },
   spacing: 8,
 });

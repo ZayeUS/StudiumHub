@@ -1,12 +1,11 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import usersRouter from './routes/users.js';
+import rolesRouter from './routes/roles.js'; // Import the roles router
+import profileRouter from './routes/profiles.js'; // Import the profile routes
 
 dotenv.config();
-
-// Import routes
-import usersRouter from "./routes/users.js";
-import rolesRouter from "./routes/roles.js"; // Import the roles router
 
 const app = express();
 
@@ -23,6 +22,7 @@ app.use(express.json());
 // Routes
 app.use("/api/users", usersRouter);  // Users routes
 app.use("/api/roles", rolesRouter);  // Roles routes
+app.use("/api/profiles", profileRouter);  // Profile routes
 
 // Server
 const PORT = process.env.PORT || 5000;

@@ -15,7 +15,8 @@ import {
   Divider,
   CircularProgress,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Alert
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import {
@@ -27,8 +28,9 @@ import {
   ChevronRight,
   UserPlus
 } from 'lucide-react';
-import { Formik, Field, Form } from 'formik';
-import * as Yup from 'yup';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import LoadingModal from '../../components/LoadingModal';
 import {
   signUp as firebaseSignUp,
@@ -48,129 +50,131 @@ const containerVariants = {
   }
 };
 
-const PasswordField = ({ name, label, show, setShow, borderRadius }) => (
-  <Field name={name}>
-    {({ field, meta }) => (
-      <TextField
-        {...field}
-        type={show ? 'text' : 'password'}
-        label={label}
-        fullWidth
-        margin="normal"
-        error={Boolean(meta.touched && meta.error)}
-        helperText={meta.touched && meta.error}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Lock />
-            </InputAdornment>
-          ),
-          endAdornment: (
-            <InputAdornment position="end">
-              <IconButton
-                size="small"
-                onClick={() =>
-                  setShow((s) => ({
-                    ...s,
-                    [name]: !s[name]
-                  }))
-                }
-              >
-                {show ? <EyeOff /> : <Eye />}
-              </IconButton>
-            </InputAdornment>
-          )
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root': { borderRadius }
-        }}
-      />
-    )}
-  </Field>
-);
+// Define the validation schema with Zod
+const signupSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  confirm: z.string().min(1, 'Confirm your password'),
+  role: z.string().min(1, 'Please select a role')
+}).refine((data) => data.password === data.confirm, {
+  message: 'Passwords must match',
+  path: ['confirm']
+});
 
 const SignUpPage = () => {
   const { setUser, isLoggedIn, roleId } = useUserStore();
   const [roles, setRoles] = useState([]);
-  const [show, setShow] = useState({ password: false, confirm: false });
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const emailInputRef = useRef(null); // For focusing on email input if error
+  const [rolesLoaded, setRolesLoaded] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false); 
+  const [error, setError] = useState('');
+  const emailInputRef = useRef(null);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const borderRadius = theme.shape.borderRadius; // Pulling border radius from theme
+  const borderRadius = theme.shape.borderRadius;
+
+  // Form setup with React Hook Form + Zod
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+    setError: setFieldError,
+    clearErrors
+  } = useForm({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirm: '',
+      role: ''
+    }
+  });
 
   // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
-      navigate(roleId === 1 ? '/admin-dashboard' : '/user-dashboard');
+      navigate(roleId === 1 ? '/admin-dashboard' : '/dashboard');
     }
   }, [isLoggedIn, roleId, navigate]);
 
   // Fetch roles once
   useEffect(() => {
-    getData('/roles').then(setRoles).catch(console.error);
+    const fetchRoles = async () => {
+      try {
+        const rolesData = await getData('/roles');
+        setRoles(rolesData);
+        setRolesLoaded(true);
+      } catch (err) {
+        console.error("Error fetching roles:", err);
+        setError("Could not load roles. Please try again later.");
+      }
+    };
+    
+    fetchRoles();
   }, []);
 
-  const validationSchema = Yup.object({
-    email: Yup.string().email().required('Required'),
-    password: Yup.string().min(6, 'Min 6 chars').required('Required'),
-    confirm: Yup.string()
-      .oneOf([Yup.ref('password')], 'Must match')
-      .required('Required'),
-    role: Yup.string().required('Required')
-  });
-
-  const handleSubmit = async (vals, { setSubmitting, setFieldError }) => {
+  const onSignupSubmit = async (data) => {
+    clearErrors();
+    setError('');
     setFormSubmitted(true);
   
-    // Quick email check
-    if (!(await checkEmailExists(vals.email).then(exists => !exists).catch(() => false))) {
-      setFieldError('email', 'Already in use');
-      setFormSubmitted(false);
-      emailInputRef.current.focus(); // Focus on email input if error
-      return setSubmitting(false);
-    }
-  
-    useUserStore.setState({ loading: true });
     try {
+      // Check if email already exists
+      const emailAvailable = await checkEmailExists(data.email)
+        .then(exists => !exists)
+        .catch(() => false);
+      
+      if (!emailAvailable) {
+        setFieldError('email', { type: 'manual', message: 'Email already in use' });
+        if (emailInputRef.current) emailInputRef.current.focus();
+        setFormSubmitted(false);
+        return;
+      }
+  
+      useUserStore.setState({ loading: true });
+      
       // Sign up user with Firebase
-      const user = await firebaseSignUp(vals.email, vals.password);
+      const user = await firebaseSignUp(data.email, data.password);
   
-      // Automatically log in the user after sign-up
-      await firebaseLogin(vals.email, vals.password);
+      // Automatically log in
+      await firebaseLogin(data.email, data.password);
   
-      // Create user record in the backend after Firebase login
-      const token = await user.getIdToken();
-      const { role_id } = roles.find(r => r.role_name === vals.role) || {};
+      // Get role ID
+      const selectedRole = roles.find(r => r.role_name === data.role);
+      if (!selectedRole) {
+        throw new Error("Invalid role selected");
+      }
+      
+      const role_id = selectedRole.role_id;
   
-      // Create user in the backend with Firebase UID and role_id
+      // Create user in backend
       const backendUserResponse = await postData('/users', {
         firebase_uid: user.uid,
         email: user.email,
         role_id
       });
   
-      const { user_id } = backendUserResponse.user;  // Get the user_id from backend response
-  
-      // Now update Zustand store with the new user data
+      const { user_id } = backendUserResponse.user;
+      
+      // Update global state
       setUser(user.uid, role_id, user_id);
   
-      // Add delay to make sure the spinner is visible before redirecting
+      // Add delay for better UX
       setTimeout(() => {
-        navigate(role_id === 1 ? '/admin-dashboard' : '/user-dashboard');
+        navigate(role_id === 1 ? '/admin-dashboard' : '/dashboard');
       }, 1000);
   
     } catch (err) {
-      console.error(err);
-      setFieldError('general', err.message || 'Sign‑up failed');
+      console.error('Signup error:', err);
+      setError(err.message || 'Sign-up failed. Please try again.');
       setFormSubmitted(false);
     } finally {
-      setSubmitting(false);
       useUserStore.setState({ loading: false });
     }
   };
-  
 
   return (
     <Box
@@ -192,7 +196,7 @@ const SignUpPage = () => {
         style={{ width: '100%' }}
       >
         <Container maxWidth="sm">
-          <Paper elevation={3} sx={{ borderRadius: borderRadius, overflow: 'hidden' }}>
+          <Paper elevation={3} sx={{ borderRadius, overflow: 'hidden' }}>
             <Box
               sx={{
                 bgcolor: theme.palette.primary.main,
@@ -201,7 +205,7 @@ const SignUpPage = () => {
               }}
             >
               <motion.div variants={containerVariants}>
-                <UserPlus size={40} color="#fff" style={{ marginBottom: 8 }} />
+                <UserPlus size={40} color={theme.palette.common.white} style={{ marginBottom: 8 }} />
                 <Typography variant="h4" sx={{ color: '#fff', fontWeight: 'bold', mb: 1 }}>
                   Create Account
                 </Typography>
@@ -212,127 +216,176 @@ const SignUpPage = () => {
             </Box>
 
             <Box sx={{ p: 3 }}>
-              <Formik
-                initialValues={{ email: '', password: '', confirm: '', role: '' }}
-                validationSchema={validationSchema}
-                onSubmit={handleSubmit}
-              >
-                {({ errors, touched, isSubmitting, values, handleChange, handleBlur }) => (
-                  <Form>
-                    {['email', 'password', 'confirm'].map((name) => (
-                      <motion.div key={name} variants={containerVariants}>
-                        <Field name={name}>
-                          {({ field, meta }) => (
-                            <TextField
-                              {...field}
-                              type={
-                                name === 'email'
-                                  ? 'email'
-                                  : show[name === 'confirm' ? 'confirm' : 'password']
-                                  ? 'text'
-                                  : 'password'
-                              }
-                              label={
-                                name === 'confirm' ? 'Confirm Password' : name.charAt(0).toUpperCase() + name.slice(1)
-                              }
-                              fullWidth
-                              margin="normal"
-                              error={Boolean(meta.touched && (meta.error || errors.general))}
-                              helperText={meta.touched && (meta.error || errors.general)}
-                              InputProps={{
-                                startAdornment: (
-                                  <InputAdornment position="start">
-                                    {name === 'email' ? <Mail /> : <Lock />}
-                                  </InputAdornment>
-                                ),
-                                ...(name !== 'email' && {
-                                  endAdornment: (
-                                    <InputAdornment position="end">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() =>
-                                          setShow((s) => ({
-                                            ...s,
-                                            [name === 'confirm' ? 'confirm' : 'password']:
-                                              !s[name === 'confirm' ? 'confirm' : 'password']
-                                          }))
-                                        }
-                                      >
-                                        {show[name === 'confirm' ? 'confirm' : 'password'] ? (
-                                          <EyeOff />
-                                        ) : (
-                                          <Eye />
-                                        )}
-                                      </IconButton>
-                                    </InputAdornment>
-                                  )
-                                })
-                              }}
-                              sx={{
-                                '& .MuiOutlinedInput-root': { borderRadius }
-                              }}
-                              onChange={handleChange}
-                              onBlur={handleBlur}
-                              value={values[name]}
-                              inputRef={name === 'email' ? emailInputRef : null} // Focus on email input if error
-                            />
-                          )}
-                        </Field>
-                      </motion.div>
-                    ))}
+              {error && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              )}
+              
+              <form onSubmit={handleSubmit(onSignupSubmit)} noValidate>
+                <motion.div variants={containerVariants}>
+                  {/* Email Field */}
+                  <TextField
+                    {...register('email')}
+                    inputRef={emailInputRef}
+                    type="email"
+                    label="Email"
+                    fullWidth
+                    margin="normal"
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                    disabled={isSubmitting || formSubmitted}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Mail color={theme.palette.primary.main} />
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius }
+                    }}
+                  />
+                </motion.div>
 
-                    <motion.div variants={containerVariants}>
+                <motion.div variants={containerVariants}>
+                  {/* Password Field */}
+                  <TextField
+                    {...register('password')}
+                    type={showPassword ? 'text' : 'password'}
+                    label="Password"
+                    fullWidth
+                    margin="normal"
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    disabled={isSubmitting || formSubmitted}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock color={theme.palette.primary.main} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => setShowPassword(prev => !prev)}
+                            edge="end"
+                            disabled={isSubmitting || formSubmitted}
+                          >
+                            {showPassword ? <EyeOff color={theme.palette.primary.main} /> : <Eye color={theme.palette.primary.main} />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius }
+                    }}
+                  />
+                </motion.div>
+
+                <motion.div variants={containerVariants}>
+                  {/* Confirm Password Field */}
+                  <TextField
+                    {...register('confirm')}
+                    type={showConfirm ? 'text' : 'password'}
+                    label="Confirm Password"
+                    fullWidth
+                    margin="normal"
+                    error={!!errors.confirm}
+                    helperText={errors.confirm?.message}
+                    disabled={isSubmitting || formSubmitted}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock color={theme.palette.primary.main} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => setShowConfirm(prev => !prev)}
+                            edge="end"
+                            disabled={isSubmitting || formSubmitted}
+                          >
+                            {showConfirm ? <EyeOff color={theme.palette.primary.main} /> : <Eye color={theme.palette.primary.main} />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius }
+                    }}
+                  />
+                </motion.div>
+
+                <motion.div variants={containerVariants}>
+                  {/* Role Selection - Using Controller for proper MUI integration */}
+                  <Controller
+                    name="role"
+                    control={control}
+                    render={({ field }) => (
                       <FormControl
                         fullWidth
                         margin="normal"
-                        error={Boolean(touched.role && errors.role)}
+                        error={!!errors.role}
+                        disabled={isSubmitting || formSubmitted || !rolesLoaded}
                         sx={{
                           '& .MuiOutlinedInput-root': { borderRadius }
                         }}
                       >
                         <InputLabel>Role</InputLabel>
-                        <Field
-                          name="role"
-                          as={Select}
+                        <Select
+                          {...field}
+                          label="Role"
                           startAdornment={
                             <InputAdornment position="start">
-                              <Briefcase />
+                              <Briefcase color={theme.palette.primary.main} />
                             </InputAdornment>
                           }
-                          value={values.role}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
+                          value={field.value || ''}
                         >
-                          {roles.map((r) => (
-                            <MenuItem key={r.role_id} value={r.role_name}>
-                              {r.role_name}
-                            </MenuItem>
-                          ))}
-                        </Field>
+                          {rolesLoaded ? (
+                            roles.map((r) => (
+                              <MenuItem key={r.role_id} value={r.role_name}>
+                                {r.role_name}
+                              </MenuItem>
+                            ))
+                          ) : (
+                            <MenuItem value="">Loading roles...</MenuItem>
+                          )}
+                        </Select>
+                        {errors.role && (
+                          <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 2 }}>
+                            {errors.role.message}
+                          </Typography>
+                        )}
                       </FormControl>
-                    </motion.div>
+                    )}
+                  />
+                </motion.div>
 
-                    <motion.div variants={containerVariants}>
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        type="submit"
-                        disabled={isSubmitting || formSubmitted}
-                        endIcon={isSubmitting ? <CircularProgress size={24} /> : <ChevronRight />}
-                        sx={{
-                          mt: 3,
-                          py: 1.5,
-                          borderRadius,
-                          textTransform: 'none',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {isSubmitting || formSubmitted ? 'Creating...' : 'Sign Up'}
-                      </Button>
-                    </motion.div>
-                  </Form>
-                )}
-              </Formik>
+                <motion.div variants={containerVariants}>
+                  {/* Submit Button */}
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    type="submit"
+                    disabled={isSubmitting || formSubmitted || !rolesLoaded}
+                    endIcon={isSubmitting || formSubmitted ? <CircularProgress size={24} /> : <ChevronRight />}
+                    sx={{
+                      mt: 3,
+                      py: 1.5,
+                      borderRadius,
+                      textTransform: 'none',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {isSubmitting || formSubmitted ? 'Creating...' : 'Sign Up'}
+                  </Button>
+                </motion.div>
+              </form>
 
               <Divider sx={{ my: 3 }}>
                 <Typography variant="body2" color="text.secondary">

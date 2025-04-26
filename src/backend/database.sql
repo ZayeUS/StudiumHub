@@ -27,3 +27,18 @@ VALUES ('admin');
 -- Insert a 'user' role into the roles table
 INSERT INTO roles (role_name) 
 VALUES ('user');
+
+-- Create the profile table
+CREATE TABLE profiles (
+  profile_id SERIAL PRIMARY KEY,
+  user_id UUID NOT NULL,  -- Foreign key to the users table
+  first_name VARCHAR(255) NOT NULL,
+  last_name VARCHAR(255) NOT NULL,
+  date_of_birth DATE NOT NULL,  -- New field for storing the user's date of birth
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Add a unique constraint to ensure a user has only one profile
+ALTER TABLE profiles ADD CONSTRAINT unique_user_profile UNIQUE (user_id);
