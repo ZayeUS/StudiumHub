@@ -51,9 +51,9 @@ const NavBar = () => {
       position="sticky" 
       elevation={0}
       sx={{ 
-        backgroundColor: 'background.paper',
+        backgroundColor: theme.palette.background.paper, // Use theme colors
         borderBottom: `1px solid ${theme.palette.divider}`,
-        color: 'text.primary'
+        color: theme.palette.text.primary
       }}
     >
       <Container maxWidth="xl">
@@ -226,7 +226,8 @@ const NavBar = () => {
                   sx: {
                     width: isSmallMobile ? '100%' : 280,
                     p: 2,
-                    background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${alpha(theme.palette.primary.main, 0.03)})`,
+                    backgroundColor: theme.palette.background.paper, // Solid background color for Drawer
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`, // Optional: Adds slight shadow
                   }
                 }}
               >

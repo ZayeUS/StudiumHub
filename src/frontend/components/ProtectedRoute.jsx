@@ -1,27 +1,30 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
+import LoadingModal from '../components/LoadingModal';
 
-const ProtectedRoute = ({ children, allowedRole }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isLoggedIn, roleId, profile, loading } = useUserStore();
+  const location = useLocation(); // 🔥 Grab current location
 
-  // If the app is still loading user state, don't render anything
-  if (loading) return null; 
+  if (loading) {
+    return <LoadingModal open={true} />;
+  }
 
-  // Check if user is logged in
-  if (!isLoggedIn) {
+  // 🔥 ONLY Redirect if needed
+  if (!isLoggedIn && location.pathname !== '/login' && location.pathname !== '/signup') {
     return <Navigate to="/login" replace />;
   }
 
-  // Check if role matches
-  if (roleId !== allowedRole) {
+  if (isLoggedIn && !profile && location.pathname !== '/profile-onboarding') {
+    return <Navigate to="/profile-onboarding" replace />;
+  }
+
+  if (isLoggedIn && profile && !allowedRoles.includes(roleId)) {
     const fallback = roleId === 1 ? '/admin-dashboard' : '/user-dashboard';
     return <Navigate to={fallback} replace />;
   }
 
-
-
-  // If all checks pass, render the protected content
   return children;
 };
 

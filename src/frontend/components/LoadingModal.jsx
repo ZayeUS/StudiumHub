@@ -1,78 +1,157 @@
-// src/components/LoadingModal.js
 import React from 'react';
-import { Dialog, DialogContent, Typography, Box } from '@mui/material';
+import { Dialog, DialogContent, Typography } from '@mui/material';
 import { useUserStore } from '../store/userStore';
 import { useTheme } from '@mui/material/styles';
 import { motion } from 'framer-motion';
-import { Loader } from 'lucide-react';
 
 const LoadingModal = ({ message = "Loading..." }) => {
   const loading = useUserStore(state => state.loading);
   const theme = useTheme();
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0, scale: 0.9 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { 
-        duration: 0.3,
-        ease: "easeOut"
-      }
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.9,
-      transition: { 
-        duration: 0.2,
-        ease: "easeIn"
-      }
-    }
-  };
-
-  const loaderVariants = {
-    animate: { 
-      rotate: 360,
-      transition: { 
-        repeat: Infinity, 
-        duration: 1.5, 
-        ease: "linear"
-      }
-    }
-  };
-
-  // Custom loader with Lucide icon and Framer Motion
-  const CustomLoader = () => (
-    <Box sx={{ position: 'relative', width: 60, height: 60 }}>
-      {/* Outer spinning circle */}
-      <motion.div
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          border: `3px solid ${theme.palette.background.paper}`,
-          borderTopColor: theme.palette.primary.main,
-          position: 'absolute'
+  const LogoLoader = () => (
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      {/* Central glowing core */}
+      <motion.circle
+        cx="70"
+        cy="70"
+        r="15"
+        fill={theme.palette.primary.main}
+        filter="url(#glow)"
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [1, 0.85, 1],
         }}
-        animate={loaderVariants.animate}
-      />
-      
-      {/* Center dot with brand accent color */}
-      <Box 
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 12,
-          height: 12,
-          borderRadius: '50%',
-          backgroundColor: theme.palette.secondary.main,
-          boxShadow: `0 0 12px ${theme.palette.secondary.light}`
+        transition={{
+          repeat: Infinity,
+          duration: 1.8,
+          ease: 'easeInOut',
         }}
       />
-    </Box>
+      {/* Interconnected nodes */}
+      <motion.path
+        d="M70 55 L85 70 M70 85 L85 70 M55 70 L70 55 M55 70 L70 85"
+        stroke={theme.palette.primary.light}
+        strokeWidth="2"
+        fill="none"
+        animate={{
+          scale: [1, 1.05, 1],
+          rotate: [0, 5, -5, 0],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 3,
+          ease: 'easeInOut',
+        }}
+      />
+      {/* Orbiting particles with trails */}
+      <motion.g
+        animate={{
+          rotate: [0, 360],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 12,
+          ease: 'linear',
+        }}
+      >
+        <motion.circle
+          cx="90"
+          cy="70"
+          r="4"
+          fill={theme.palette.secondary.main}
+          filter="url(#glow)"
+          animate={{
+            cx: [90, 95, 90],
+            cy: [70, 75, 70],
+            opacity: [1, 0.7, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2,
+            ease: 'easeInOut',
+          }}
+        />
+        <motion.circle
+          cx="50"
+          cy="70"
+          r="3"
+          fill={theme.palette.secondary.light}
+          filter="url(#glow)"
+          animate={{
+            cx: [50, 45, 50],
+            cy: [70, 65, 70],
+            opacity: [1, 0.7, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2.3,
+            ease: 'easeInOut',
+            delay: 0.4,
+          }}
+        />
+        <motion.circle
+          cx="70"
+          cy="90"
+          r="3"
+          fill={theme.palette.primary.light}
+          filter="url(#glow)"
+          animate={{
+            cx: [70, 75, 70],
+            cy: [90, 95, 90],
+            opacity: [1, 0.7, 1],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2.1,
+            ease: 'easeInOut',
+            delay: 0.8,
+          }}
+        />
+      </motion.g>
+      {/* Outer orbital ring with subtle pulse */}
+      <motion.path
+        d="M70 40 A30 30 0 0 1 100 70 A30 30 0 0 1 70 100 A30 30 0 0 1 40 70 A30 30 0 0 1 70 40"
+        fill="none"
+        stroke={theme.palette.primary.main}
+        strokeWidth="1.5"
+        strokeOpacity="0.5"
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.5, 0.7, 0.5],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 4,
+          ease: 'easeInOut',
+        }}
+      />
+      {/* Secondary orbital ring (counter-rotation) */}
+      <motion.path
+        d="M70 35 A35 35 0 0 1 105 70 A35 35 0 0 1 70 105 A35 35 0 0 1 35 70 A35 35 0 0 1 70 35"
+        fill="none"
+        stroke={theme.palette.secondary.main}
+        strokeWidth="1"
+        strokeOpacity="0.3"
+        animate={{
+          rotate: [0, -360],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 15,
+          ease: 'linear',
+        }}
+      />
+      {/* Glow filter for enhanced effect */}
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+    </svg>
   );
 
   return (
@@ -80,61 +159,63 @@ const LoadingModal = ({ message = "Loading..." }) => {
       open={loading}
       PaperProps={{
         sx: {
-          backgroundColor: 'transparent',
-          boxShadow: 'none',
-          overflow: 'hidden'
+          backgroundColor: theme.palette.background.paper,
+          borderRadius: 3,
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+          overflow: 'hidden',
+          border: `1px solid ${theme.palette.divider}`,
         },
       }}
       disableEscapeKeyDown
       BackdropProps={{
         sx: {
-          backgroundColor: 'rgba(45, 55, 72, 0.7)',
-          backdropFilter: 'blur(3px)'
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(6px)',
         },
       }}
     >
-      <DialogContent 
-        sx={{ 
-          padding: 0,
-          overflow: 'hidden'
+      <DialogContent
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 4,
+          minWidth: 240,
+          minHeight: 240,
         }}
       >
         <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <Box
+          <LogoLoader />
+        </motion.div>
+        <motion.div
+          animate={{
+            opacity: [1, 0.6, 1],
+            y: [0, -2, 0],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 1.8,
+            ease: 'easeInOut',
+          }}
+        >
+          <Typography
+            variant="h6"
             sx={{
-              padding: theme.spacing(4),
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: theme.palette.background.paper,
-              borderRadius: theme.shape.borderRadius,
-              minWidth: '240px',
-              maxWidth: '300px',
-              boxShadow: '0 8px 32px rgba(45, 55, 72, 0.12)',
-              border: `1px solid ${theme.palette.primary.light}20`
+              color: theme.palette.text.primary,
+              fontWeight: 600,
+              mt: 3,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              fontSize: '1.1rem',
             }}
           >
-            <CustomLoader />
-            
-            <Typography
-              variant="h3"
-              sx={{
-                marginTop: theme.spacing(3),
-                color: theme.palette.text.primary,
-                fontWeight: 600,
-                textAlign: 'center',
-                fontSize: '1.25rem'
-              }}
-            >
-              {message}
-            </Typography>
-          </Box>
+            Loading
+          </Typography>
         </motion.div>
       </DialogContent>
     </Dialog>
