@@ -1,30 +1,31 @@
+// src/frontend/theme.js
 import { createTheme } from '@mui/material/styles';
 
-// Base configuration for colors, typography, spacing
+// Luxury Base Configuration
 const config = {
-  primary: '#14532d', // Deep Green (luxury feel)
-  secondary: '#B87333', // Muted Copper (rich, not playful)
-  background: '#FAFAFA', // Soft white
-  paperBackground: '#FFFFFF', // Clean white for cards
-  titleColor: '#222222', // Near-black for sharp readability
-  appBarBackground: '#FFFFFF', // Clean for app bar
-  ctaColor: '#B87333', // Copper CTA
-  ctaHoverColor: '#94542b', // Darker copper on hover
-  fontFamily: "'Inter', sans-serif", // Professional, premium font
-  borderRadius: 3, // Sharper for luxury feel
+  primary: '#0A84FF', // Vibrant Electric Blue
+  secondary: '#00D4B1', // Neon Cyan
+  background: '#0D1B2A', // Deep Navy
+  paperBackground: '#1B263B', // Dark Slate
+  titleColor: '#E0E7FF', // Soft White-Blue
+  appBarBackground: '#1B263B',
+  ctaColor: '#FF2E63', // Neon Pink CTA
+  ctaHoverColor: '#D81E5B', // Darker Pink on hover
+  fontFamily: "'Poppins', sans-serif", // ✅ Upgraded to modern sans-serif luxury
+  borderRadius: 8, // ✅ More generous rounding for softer look
 };
 
 const theme = createTheme({
   palette: {
     primary: {
       main: config.primary,
-      light: '#2e7d32', // Soft green for hover accents
-      dark: '#0e4421', // Even darker green if needed
+      light: '#5ABEFF',
+      dark: '#0066CC',
     },
     secondary: {
       main: config.secondary,
-      light: '#d1884f', // Lighter copper
-      dark: '#80461b', // Darker copper
+      light: '#5CF0D8',
+      dark: '#009e8f',
     },
     background: {
       default: config.background,
@@ -32,29 +33,30 @@ const theme = createTheme({
     },
     text: {
       primary: config.titleColor,
-      secondary: '#757575',
+      secondary: '#A5B4FC', // Soft Indigo
     },
     success: { main: '#2E7D32' },
     warning: { main: '#FF9800' },
     action: {
-      hover: 'rgba(20, 83, 45, 0.08)', // Light green hover background
+      hover: 'rgba(255, 255, 255, 0.05)', // ✅ Subtle hover glow
       selected: config.primary,
     },
   },
   typography: {
     fontFamily: config.fontFamily,
     h1: {
+      fontSize: '3rem',
+      fontWeight: 800,
+      color: config.titleColor,
+      letterSpacing: '-0.5px',
+    },
+    h2: {
       fontSize: '2.5rem',
       fontWeight: 700,
       color: config.titleColor,
     },
-    h2: {
-      fontSize: '2rem',
-      fontWeight: 600,
-      color: config.titleColor,
-    },
     h3: {
-      fontSize: '1.75rem',
+      fontSize: '2rem',
       fontWeight: 600,
       color: config.titleColor,
     },
@@ -64,48 +66,38 @@ const theme = createTheme({
       color: config.titleColor,
     },
     body2: {
-      fontSize: '0.875rem',
+      fontSize: '0.9rem',
       fontWeight: 400,
-      color: '#757575',
+      color: '#B0BEC5',
     },
     button: {
       textTransform: 'none',
       fontWeight: 600,
-      color: '#FFFFFF',
-    },
-    monospace: {
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '0.875rem',
+      letterSpacing: '0.5px',
     },
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          transition: 'all 0.3s ease',
+          transition: 'all 0.35s cubic-bezier(0.23, 1, 0.32, 1)', // ✅ Springy luxury easing
           borderRadius: config.borderRadius,
           '&:hover': {
-            transform: 'scale(1.02)',
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 20px rgba(10, 132, 255, 0.35)', // Subtle blue glow
           },
         },
         containedPrimary: {
           backgroundColor: config.primary,
           '&:hover': {
-            backgroundColor: '#0e4421',
+            backgroundColor: '#0066CC',
           },
         },
         containedSecondary: {
           backgroundColor: config.secondary,
           color: '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#80461b',
-          },
-        },
-        outlinedPrimary: {
-          borderColor: config.primary,
-          color: config.primary,
-          '&:hover': {
-            backgroundColor: 'rgba(20, 83, 45, 0.08)',
+            backgroundColor: '#009e8f',
           },
         },
         containedRocket: {
@@ -121,11 +113,12 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          transition: 'all 0.3s ease',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)', // Deeper, luxury shadow
           borderRadius: config.borderRadius,
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
+          transition: 'all 0.4s ease',
+          background: 'linear-gradient(145deg, #1B263B, #0D1B2A)', // ✅ Soft luxurious card background
           '&:hover': {
-            transform: 'scale(1.02)',
+            transform: 'scale(1.015)',
           },
         },
       },
@@ -142,37 +135,24 @@ const theme = createTheme({
     MuiContainer: {
       styleOverrides: {
         root: {
-          paddingLeft: 24,
-          paddingRight: 24,
+          paddingLeft: 32,
+          paddingRight: 32,
         },
       },
     },
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: config.borderRadius,
+          borderRadius: 16,
           fontWeight: 600,
-        },
-        colorPrimary: {
-          backgroundColor: config.primary,
-        },
-        colorSecondary: {
-          backgroundColor: config.secondary,
-          color: '#FFFFFF',
+          fontSize: '0.8rem',
         },
       },
     },
-    MuiTypography: {
+    MuiPaper: {
       styleOverrides: {
-        h1: {
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          color: config.titleColor,
-        },
-        h2: {
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          color: config.titleColor,
+        root: {
+          backgroundImage: 'none', // ✅ Kill default ugly MUI paper background
         },
       },
     },

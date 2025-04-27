@@ -43,8 +43,7 @@ export const useUserStore = create((set, get) => ({
       if (user) {
         try {
           const { role_id, user_id } = await getData(`/users/${user.uid}`);
-          const profileData = await getData(`/profiles/${user_id}`);
-  
+          const profileData = await getData(`/profile`);  
           await ensureOneSecond(); // ✅ Wait if needed
   
           set({

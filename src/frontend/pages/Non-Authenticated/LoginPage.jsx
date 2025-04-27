@@ -15,7 +15,7 @@ import {
   Fade,
   Backdrop,
 } from "@mui/material";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion"; // ✅ Luxury motion
 import {
   Mail,
   Lock,
@@ -32,17 +32,7 @@ import { login as firebaseLogin, resetPassword } from "../../../firebase";
 import { useUserStore } from "../../store/userStore";
 import { useNavigate } from "react-router-dom";
 import { useTheme, useMediaQuery } from "@mui/material";
-import { getData } from "../../utils/BackendRequestHelper";
-import LoadingModal from "../../components/LoadingModal"; // ✅ Import LoadingModal
-
-const variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, staggerChildren: 0.1 },
-  },
-};
+import LoadingModal from "../../components/LoadingModal";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -79,9 +69,7 @@ export default function LoginPage() {
     try {
       await firebaseLogin(data.email, data.password);
       setSnack({ open: true, msg: "Logged in!", sev: "success" });
-      
     } catch (e) {
-      console.error("Login error:", e);
       const errorMessage = e.message || "Incorrect Email or Password";
       setLoginError(errorMessage);
       setSnack({ open: true, msg: errorMessage, sev: "error" });
@@ -117,12 +105,11 @@ export default function LoginPage() {
         p: 2,
       }}
     >
-      {/* ✅ Always render LoadingModal */}
       <LoadingModal open={loading} />
 
       <Snackbar
         open={snack.open}
-        autoHideDuration={5000}
+        autoHideDuration={4000}
         onClose={() => setSnack((s) => ({ ...s, open: false }))}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
@@ -130,186 +117,230 @@ export default function LoginPage() {
       </Snackbar>
 
       <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={variants}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         style={{ width: "100%" }}
       >
         <Container maxWidth="sm">
-          <Paper sx={{ borderRadius, overflow: "hidden" }} elevation={3}>
-            <Box sx={{ bgcolor: theme.palette.primary.main, p: 3, textAlign: "center" }}>
-              <LogIn size={40} color={theme.palette.common.white} />
-              <Typography variant="h4" sx={{ color: "white", fontWeight: "bold", mt: 1 }}>
-                Welcome Back
-              </Typography>
-              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
-                Sign in to your account
-              </Typography>
-            </Box>
-
-            <Box sx={{ p: 3 }}>
-              <form onSubmit={handleSubmit(onLoginSubmit)} noValidate>
-                {/* Email Field */}
-                <TextField
-                  {...register("email")}
-                  type="email"
-                  label="Email Address"
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
-                  disabled={isSubmitting}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Mail color={theme.palette.primary.main} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius } }}
-                />
-
-                {/* Password Field */}
-                <TextField
-                  {...register("password")}
-                  type={showPwd ? "text" : "password"}
-                  label="Password"
-                  fullWidth
-                  margin="normal"
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                  disabled={isSubmitting}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock color={theme.palette.primary.main} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setShowPwd((v) => !v)} edge="end">
-                          {showPwd ? (
-                            <EyeOff color={theme.palette.primary.main} />
-                          ) : (
-                            <Eye color={theme.palette.primary.main} />
-                          )}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{ "& .MuiOutlinedInput-root": { borderRadius } }}
-                />
-
-                {/* Login Error */}
-                {loginError && (
-                  <Typography variant="body2" color="error" sx={{ mt: 1, mb: 1, fontWeight: 500 }}>
-                    {loginError}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <Paper
+              elevation={4}
+              sx={{
+                borderRadius: 4,
+                background: "linear-gradient(145deg, #1B263B, #0D1B2A)",
+                boxShadow: "0 12px 30px rgba(0,0,0,0.3)",
+                overflow: "hidden",
+              }}
+            >
+              <Box sx={{ bgcolor: theme.palette.primary.main, p: 3, textAlign: "center" }}>
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <LogIn size={40} color={theme.palette.common.white} />
+                  <Typography variant="h4" sx={{ color: "white", fontWeight: "bold", mt: 1 }}>
+                    Welcome Back
                   </Typography>
-                )}
-
-                <Button
-                  variant="contained"
-                  fullWidth
-                  type="submit"
-                  disabled={isSubmitting}
-                  endIcon={isSubmitting ? null : <ChevronRight />}
-                  sx={{
-                    mt: 3,
-                    py: 1.5,
-                    borderRadius,
-                    textTransform: "none",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {isSubmitting ? "Signing in..." : "Sign In"}
-                </Button>
-              </form>
-
-              <Box textAlign="center" mt={2}>
-                <Button
-                  variant="text"
-                  startIcon={<KeyRound />}
-                  onClick={() => setOpenModal(true)}
-                  sx={{ textTransform: "none" }}
-                >
-                  Forgot your password?
-                </Button>
+                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                    Sign in to your account
+                  </Typography>
+                </motion.div>
               </Box>
 
-              <Divider sx={{ my: 3 }}>
-                <Typography variant="body2" color="text.secondary">
-                  OR
-                </Typography>
-              </Divider>
+              <Box sx={{ p: 3 }}>
+                <form onSubmit={handleSubmit(onLoginSubmit)} noValidate>
+                  <TextField
+                    {...register("email")}
+                    type="email"
+                    label="Email Address"
+                    fullWidth
+                    margin="normal"
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                    disabled={isSubmitting}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Mail color={theme.palette.primary.main} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius,
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
+                    }}
+                  />
 
-              <Box textAlign="center">
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                  Don't have an account?
-                </Typography>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate("/signup")}
-                  sx={{
-                    py: 1,
-                    px: isMobile ? 2 : 3,
-                    borderRadius,
-                    textTransform: "none",
-                  }}
-                >
-                  Create Account
-                </Button>
+                  <TextField
+                    {...register("password")}
+                    type={showPwd ? "text" : "password"}
+                    label="Password"
+                    fullWidth
+                    margin="normal"
+                    error={!!errors.password}
+                    helperText={errors.password?.message}
+                    disabled={isSubmitting}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock color={theme.palette.primary.main} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton size="small" onClick={() => setShowPwd((v) => !v)} edge="end">
+                            {showPwd ? <EyeOff color={theme.palette.primary.main} /> : <Eye color={theme.palette.primary.main} />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius,
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
+                    }}
+                  />
+
+                  {loginError && (
+                    <Typography variant="body2" color="error" sx={{ mt: 1, mb: 1, fontWeight: 500 }}>
+                      {loginError}
+                    </Typography>
+                  )}
+
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    type="submit"
+                    disabled={isSubmitting}
+                    endIcon={isSubmitting ? null : <ChevronRight />}
+                    sx={{
+                      mt: 3,
+                      py: 1.5,
+                      borderRadius,
+                      textTransform: "none",
+                      fontWeight: "bold",
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 6px 18px rgba(10,132,255,0.3)",
+                      },
+                    }}
+                  >
+                    {isSubmitting ? "Signing in..." : "Sign In"}
+                  </Button>
+                </form>
+
+                <Box textAlign="center" mt={2}>
+                  <Button
+                    variant="text"
+                    startIcon={<KeyRound />}
+                    onClick={() => setOpenModal(true)}
+                    sx={{ textTransform: "none" }}
+                  >
+                    Forgot your password?
+                  </Button>
+                </Box>
+
+                <Divider sx={{ my: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    OR
+                  </Typography>
+                </Divider>
+
+                <Box textAlign="center">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Don't have an account?
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate("/signup")}
+                    sx={{
+                      py: 1,
+                      px: isMobile ? 2 : 3,
+                      borderRadius,
+                      textTransform: "none",
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 6px 18px rgba(0,212,177,0.3)",
+                      },
+                    }}
+                  >
+                    Create Account
+                  </Button>
+                </Box>
               </Box>
-            </Box>
-          </Paper>
+            </Paper>
+          </motion.div>
         </Container>
       </motion.div>
 
       {/* Forgot Password Modal */}
-      <Modal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{ timeout: 500 }}
-      >
-        <Fade in={openModal}>
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              bgcolor: "background.paper",
-              p: 4,
-              borderRadius: 2,
-              boxShadow: 24,
-              minWidth: 300,
-            }}
+      <AnimatePresence>
+        {openModal && (
+          <Modal
+            open
+            onClose={() => setOpenModal(false)}
+            closeAfterTransition
+            BackdropComponent={Backdrop}
+            BackdropProps={{ timeout: 500 }}
           >
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Reset Your Password
-            </Typography>
-            <form onSubmit={handleSubmitReset(onResetSubmit)} noValidate>
-              <TextField
-                {...registerReset("email")}
-                label="Email Address"
-                type="email"
-                fullWidth
-                margin="normal"
-                error={!!resetErrors.email}
-                helperText={resetErrors.email?.message}
-                disabled={isResetting}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius } }}
-              />
-              <Box sx={{ textAlign: "center", mt: 2 }}>
-                <Button variant="contained" fullWidth type="submit" disabled={isResetting} sx={{ borderRadius }}>
-                  {isResetting ? "Sending..." : "Send Reset Email"}
-                </Button>
-              </Box>
-            </form>
-          </Box>
-        </Fade>
-      </Modal>
+            <Fade in={openModal}>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 30 }}
+                transition={{ duration: 0.4 }}
+              >
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    bgcolor: "background.paper",
+                    p: 4,
+                    borderRadius: 2,
+                    boxShadow: 24,
+                    minWidth: 300,
+                  }}
+                >
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Reset Your Password
+                  </Typography>
+                  <form onSubmit={handleSubmitReset(onResetSubmit)} noValidate>
+                    <TextField
+                      {...registerReset("email")}
+                      label="Email Address"
+                      type="email"
+                      fullWidth
+                      margin="normal"
+                      error={!!resetErrors.email}
+                      helperText={resetErrors.email?.message}
+                      disabled={isResetting}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius } }}
+                    />
+                    <Box sx={{ textAlign: "center", mt: 2 }}>
+                      <Button variant="contained" fullWidth type="submit" disabled={isResetting} sx={{ borderRadius }}>
+                        {isResetting ? "Sending..." : "Send Reset Email"}
+                      </Button>
+                    </Box>
+                  </form>
+                </Box>
+              </motion.div>
+            </Fade>
+          </Modal>
+        )}
+      </AnimatePresence>
     </Box>
   );
 }

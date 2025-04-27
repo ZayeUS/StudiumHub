@@ -37,7 +37,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const result = await query(queryText, values);
     if (result.rows.length === 0) {
-      return res.status(200).json(null); // No profile yet is OK
+      return res.status(200).json({}); // Return empty object instead of null
     }
     res.status(200).json(result.rows[0]);
   } catch (error) {

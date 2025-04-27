@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, TextField, Button, Alert, CircularProgress, Paper, Divider } from "@mui/material";
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  Paper,
+  Divider,
+} from "@mui/material";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from "../../store/userStore";
 import { putData } from "../../utils/BackendRequestHelper";
+import { motion, AnimatePresence } from "framer-motion";
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -18,17 +28,21 @@ const UserProfilePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const profile = useUserStore(state => state.profile);
-  const userId = useUserStore(state => state.userId);
-  const setProfile = useUserStore(state => state.setProfile);
+  const profile = useUserStore((state) => state.profile);
+  const setProfile = useUserStore((state) => state.setProfile);
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       first_name: "",
       last_name: "",
-      date_of_birth: ""
-    }
+      date_of_birth: "",
+    },
   });
 
   useEffect(() => {
@@ -36,7 +50,7 @@ const UserProfilePage = () => {
       reset({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
-        date_of_birth: formatDateForInput(profile.date_of_birth) || ""
+        date_of_birth: formatDateForInput(profile.date_of_birth) || "",
       });
     }
   }, [profile, isEditing, reset]);
@@ -44,22 +58,25 @@ const UserProfilePage = () => {
   const formatDateForInput = (isoDate) => {
     if (!isoDate) return "";
     const date = new Date(isoDate);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   const formatDateForDisplay = (isoDate) => {
     if (!isoDate) return "";
     const date = new Date(isoDate);
-    return `${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}/${date.getFullYear()}`;
+    return `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date
+      .getDate()
+      .toString()
+      .padStart(2, "0")}/${date.getFullYear()}`;
   };
 
   const onSubmit = async (data) => {
     setSubmitting(true);
     setError("");
-  
+
     try {
-      const response = await putData(`/profile`, data); // ✅ NO userId in URL
-  
+      const response = await putData(`/profile`, data);
+
       if (response && response.profile) {
         setProfile(response.profile);
         setIsEditing(false);
@@ -73,7 +90,6 @@ const UserProfilePage = () => {
       setSubmitting(false);
     }
   };
-  
 
   const toggleEditMode = () => setIsEditing(!isEditing);
 
@@ -81,111 +97,177 @@ const UserProfilePage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         bgcolor: "background.default",
-        p: 3,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        p: { xs: 2, md: 6 },
       }}
     >
-      <Paper
-        elevation={4}
+      {/* Header */}
+      <Box
         sx={{
           width: "100%",
-          maxWidth: 600,
-          p: 5,
-          borderRadius: 3,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          transition: 'all 0.3s ease',
+          maxWidth: "800px",
+          textAlign: "left",
+          mb: 4,
         }}
       >
-        <Box textAlign="center" mb={4}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            {isEditing ? "Update Your Profile" : "Your Profile"}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {isEditing ? "Make changes below and save your profile." : "Here's your current information."}
-          </Typography>
-        </Box>
+        <Typography variant="h3" fontWeight="bold" mb={1}>
+          {isEditing ? "Edit Your Profile" : "Your Profile"}
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          {isEditing
+            ? "Update your details below."
+            : "Review your personal information."}
+        </Typography>
+      </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
+      {/* Form */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        style={{ width: "100%" }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: "100%",
+            maxWidth: "800px",
+            mx: "auto",
+            p: { xs: 3, md: 5 },
+            borderRadius: 4,
+            background: "linear-gradient(145deg, #1B263B, #0D1B2A)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+          }}
+        >
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
 
-        {profile ? (
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-            {["first_name", "last_name", "date_of_birth"].map((field, index) => (
-              <Box key={index} mb={3}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  {field.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
-                </Typography>
-                {isEditing ? (
-                  <TextField
-                    {...register(field)}
-                    type={field === "date_of_birth" ? "date" : "text"}
-                    fullWidth
-                    error={!!errors[field]}
-                    helperText={errors[field]?.message}
-                    disabled={submitting}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      },
-                    }}
-                  />
-                ) : (
-                  <Typography variant="h6" fontWeight="500">
-                    {field === "date_of_birth"
-                      ? formatDateForDisplay(profile[field])
-                      : profile[field]}
-                  </Typography>
+          {profile ? (
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
+              <AnimatePresence mode="wait">
+                {["first_name", "last_name", "date_of_birth"].map(
+                  (field, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4, delay: index * 0.1 }}
+                    >
+                      <Box mb={3}>
+                        <Typography
+                          variant="subtitle2"
+                          color="text.secondary"
+                          gutterBottom
+                        >
+                          {field
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l) => l.toUpperCase())}
+                        </Typography>
+                        {isEditing ? (
+                          <TextField
+                            {...register(field)}
+                            type={field === "date_of_birth" ? "date" : "text"}
+                            fullWidth
+                            error={!!errors[field]}
+                            helperText={errors[field]?.message}
+                            disabled={submitting}
+                            InputLabelProps={{ shrink: true }}
+                            sx={{
+                              "& .MuiOutlinedInput-root": {
+                                borderRadius: 2,
+                                backgroundColor: "rgba(255,255,255,0.04)",
+                              },
+                            }}
+                          />
+                        ) : (
+                          <Typography variant="h6" fontWeight="500">
+                            {field === "date_of_birth"
+                              ? formatDateForDisplay(profile[field])
+                              : profile[field]}
+                          </Typography>
+                        )}
+                      </Box>
+                    </motion.div>
+                  )
                 )}
-              </Box>
-            ))}
+              </AnimatePresence>
 
-            <Divider sx={{ my: 4 }} />
+              <Divider sx={{ my: 4 }} />
 
-            <Box display="flex" justifyContent="center" gap={2}>
-              {isEditing ? (
-                <>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={toggleEditMode}
-                    disabled={submitting}
-                    sx={{ textTransform: "none" }}
-                  >
-                    Cancel
-                  </Button>
+              <Box display="flex" justifyContent="center" gap={2}>
+                {isEditing ? (
+                  <>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={toggleEditMode}
+                      disabled={submitting}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 3,
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          transform: "translateY(-1px)",
+                          boxShadow: "0 4px 12px rgba(255,0,0,0.3)",
+                        },
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="contained"
+                      type="submit"
+                      disabled={submitting}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: 3,
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          transform: "translateY(-1px)",
+                          boxShadow: "0 4px 12px rgba(10,132,255,0.3)",
+                        },
+                      }}
+                    >
+                      {submitting ? (
+                        <CircularProgress size={24} color="inherit" />
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
+                  </>
+                ) : (
                   <Button
                     variant="contained"
-                    type="submit"
-                    disabled={submitting}
-                    sx={{ textTransform: "none" }}
+                    onClick={toggleEditMode}
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: 3,
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-1px)",
+                        boxShadow: "0 4px 12px rgba(10,132,255,0.3)",
+                      },
+                    }}
                   >
-                    {submitting ? <CircularProgress size={24} color="inherit" /> : "Save Changes"}
+                    Edit Profile
                   </Button>
-                </>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={toggleEditMode}
-                  sx={{ textTransform: "none" }}
-                >
-                  Edit Profile
-                </Button>
-              )}
+                )}
+              </Box>
             </Box>
-          </Box>
-        ) : (
-          <Box textAlign="center">
-            <CircularProgress />
-          </Box>
-        )}
-      </Paper>
+          ) : (
+            <Box textAlign="center">
+              <CircularProgress />
+            </Box>
+          )}
+        </Paper>
+      </motion.div>
     </Box>
   );
 };
