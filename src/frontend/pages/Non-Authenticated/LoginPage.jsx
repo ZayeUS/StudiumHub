@@ -14,8 +14,10 @@ import {
   Modal,
   Fade,
   Backdrop,
+  useTheme,
+  useMediaQuery
 } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion"; // ✅ Luxury motion
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Lock,
@@ -23,7 +25,7 @@ import {
   EyeOff,
   ChevronRight,
   LogIn,
-  KeyRound,
+  KeyRound
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,7 +33,6 @@ import { z } from "zod";
 import { login as firebaseLogin, resetPassword } from "../../../firebase";
 import { useUserStore } from "../../store/userStore";
 import { useNavigate } from "react-router-dom";
-import { useTheme, useMediaQuery } from "@mui/material";
 import LoadingModal from "../../components/LoadingModal";
 
 const loginSchema = z.object({
@@ -102,7 +103,7 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         bgcolor: theme.palette.background.default,
-        p: 2,
+        p: { xs: 2, md: 6 },
       }}
     >
       <LoadingModal open={loading} />
@@ -129,14 +130,15 @@ export default function LoginPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <Paper
-              elevation={4}
+              elevation={0}
               sx={{
-                borderRadius: 4,
-                background: "linear-gradient(145deg, #1B263B, #0D1B2A)",
-                boxShadow: "0 12px 30px rgba(0,0,0,0.3)",
+                borderRadius,
+                background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
+                boxShadow: theme.shadows[10],
                 overflow: "hidden",
               }}
             >
+              {/* Top Heading */}
               <Box sx={{ bgcolor: theme.palette.primary.main, p: 3, textAlign: "center" }}>
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -153,6 +155,7 @@ export default function LoginPage() {
                 </motion.div>
               </Box>
 
+              {/* Form Section */}
               <Box sx={{ p: 3 }}>
                 <form onSubmit={handleSubmit(onLoginSubmit)} noValidate>
                   <TextField
@@ -228,10 +231,12 @@ export default function LoginPage() {
                       borderRadius,
                       textTransform: "none",
                       fontWeight: "bold",
-                      transition: "all 0.3s ease",
+                      transition: theme.transitions.create(["transform", "box-shadow"], {
+                        duration: theme.transitions.duration.short,
+                      }),
                       "&:hover": {
                         transform: "translateY(-2px)",
-                        boxShadow: "0 6px 18px rgba(10,132,255,0.3)",
+                        boxShadow: theme.shadows[6],
                       },
                     }}
                   >
@@ -239,6 +244,7 @@ export default function LoginPage() {
                   </Button>
                 </form>
 
+                {/* Forgot Password */}
                 <Box textAlign="center" mt={2}>
                   <Button
                     variant="text"
@@ -256,6 +262,7 @@ export default function LoginPage() {
                   </Typography>
                 </Divider>
 
+                {/* Create Account Link */}
                 <Box textAlign="center">
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Don't have an account?
@@ -268,10 +275,12 @@ export default function LoginPage() {
                       px: isMobile ? 2 : 3,
                       borderRadius,
                       textTransform: "none",
-                      transition: "all 0.3s ease",
+                      transition: theme.transitions.create(["transform", "box-shadow"], {
+                        duration: theme.transitions.duration.short,
+                      }),
                       "&:hover": {
                         transform: "translateY(-2px)",
-                        boxShadow: "0 6px 18px rgba(0,212,177,0.3)",
+                        boxShadow: theme.shadows[6],
                       },
                     }}
                   >
@@ -307,10 +316,10 @@ export default function LoginPage() {
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
-                    bgcolor: "background.paper",
+                    bgcolor: theme.palette.background.paper,
                     p: 4,
-                    borderRadius: 2,
-                    boxShadow: 24,
+                    borderRadius,
+                    boxShadow: theme.shadows[24],
                     minWidth: 300,
                   }}
                 >

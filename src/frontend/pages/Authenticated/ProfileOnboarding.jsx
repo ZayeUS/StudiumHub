@@ -7,6 +7,7 @@ import {
   Alert,
   CircularProgress,
   Paper,
+  useTheme,
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,7 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
-import { motion } from "framer-motion"; // ✅ Add motion luxury like Profile page
+import { motion } from "framer-motion";
 
 const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -23,10 +24,10 @@ const profileSchema = z.object({
 });
 
 const ProfileOnboarding = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const userId = useUserStore((state) => state.userId);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(profileSchema),
@@ -44,22 +45,17 @@ const ProfileOnboarding = () => {
     try {
       const response = await postData(`/profile`, data);
 
-      if (
-        response &&
-        (response.status === 201 ||
-          response.message === "Profile created successfully")
-      ) {
+      if (response && (response.status === 201 || response.message === "Profile created successfully")) {
         if (response.profile) {
           useUserStore.getState().setProfile(response.profile);
         }
         navigate("/dashboard");
-        return;
+      } else {
+        setError("Unable to save your profile. Please try again.");
       }
-
-      setError("Unable to save your profile. Please try again.");
     } catch (err) {
-      setError("Something went wrong. Please try again later.");
       console.error(err);
+      setError("Something went wrong. Please try again later.");
     } finally {
       setSubmitting(false);
     }
@@ -72,7 +68,7 @@ const ProfileOnboarding = () => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        bgcolor: "background.default",
+        bgcolor: theme.palette.background.default,
         p: { xs: 2, md: 6 },
       }}
     >
@@ -108,8 +104,8 @@ const ProfileOnboarding = () => {
             mx: "auto",
             p: { xs: 3, md: 5 },
             borderRadius: 4,
-            background: "linear-gradient(145deg, #1B263B, #0D1B2A)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
+            boxShadow: theme.shadows[10],
           }}
         >
           {error && (
@@ -177,7 +173,7 @@ const ProfileOnboarding = () => {
               }}
             />
 
-            {/* Submit Button */}
+            {/* Submit */}
             <Button
               variant="contained"
               type="submit"
@@ -187,13 +183,12 @@ const ProfileOnboarding = () => {
                 mt: 4,
                 py: 1.5,
                 borderRadius: 3,
-                textTransform: "none",
                 fontWeight: 600,
-                position: "relative",
+                textTransform: "none",
                 transition: "all 0.3s ease",
                 "&:hover": {
-                  transform: "translateY(-1px)",
-                  boxShadow: "0 4px 12px rgba(10,132,255,0.3)",
+                  transform: "translateY(-2px)",
+                  boxShadow: theme.shadows[6],
                 },
               }}
             >

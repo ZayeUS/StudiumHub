@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { Drawer, Box, Typography, IconButton, List, ListItem, Tooltip, Divider, useTheme } from "@mui/material";
+import {
+  Drawer,
+  Box,
+  Typography,
+  IconButton,
+  List,
+  ListItem,
+  Tooltip,
+  Divider,
+  useTheme,
+} from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, User, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
@@ -7,7 +17,6 @@ import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
 
-// Sidebar Item Component
 const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
   const theme = useTheme();
 
@@ -21,18 +30,26 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
             px: isExpanded ? 2.5 : 1.5,
             py: 1.5,
             cursor: "pointer",
-            backgroundColor: isActive ? theme.palette.action.selected : "transparent",
+            backgroundColor: isActive
+              ? theme.palette.primary.main
+              : "transparent",
+            color: isActive
+              ? theme.palette.common.white
+              : theme.palette.text.secondary,
             "&:hover": {
-              backgroundColor: theme.palette.action.hover,
+              backgroundColor: isActive
+                ? theme.palette.primary.dark
+                : theme.palette.action.hover,
             },
-            transition: "all 0.3s cubic-bezier(.25,.8,.25,1)",
+            transition: "all 0.3s ease",
             justifyContent: isExpanded ? "flex-start" : "center",
           }}
         >
           <Box
-            color={isActive ? theme.palette.primary.contrastText : theme.palette.text.secondary}
             sx={{
               transition: "color 0.3s ease",
+              display: "flex",
+              alignItems: "center",
             }}
           >
             {icon}
@@ -49,11 +66,11 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
                   variant="body2"
                   sx={{
                     fontWeight: isActive ? 700 : 500,
-                    color: isActive
-                      ? theme.palette.primary.contrastText
-                      : theme.palette.text.primary,
                     ml: 2,
                     letterSpacing: 0.5,
+                    color: isActive
+                      ? theme.palette.common.white
+                      : theme.palette.text.primary,
                   }}
                 >
                   {label}
@@ -170,7 +187,7 @@ const Sidebar = ({ isMobile, onClose }) => {
           </List>
         </Box>
 
-        {/* Logout Button */}
+        {/* Logout */}
         <Box px={isExpanded ? 2.5 : 1} pb={4}>
           <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
             <ListItem
@@ -180,6 +197,7 @@ const Sidebar = ({ isMobile, onClose }) => {
                 py: 1.5,
                 cursor: "pointer",
                 backgroundColor: "transparent",
+                color: theme.palette.error.main,
                 "&:hover": {
                   backgroundColor: "rgba(244,67,54,0.1)",
                 },
@@ -187,7 +205,7 @@ const Sidebar = ({ isMobile, onClose }) => {
                 transition: "all 0.3s ease",
               }}
             >
-              <Box color={theme.palette.error.main}>
+              <Box>
                 <LogOut size={22} strokeWidth={2} />
               </Box>
               <AnimatePresence>
@@ -202,7 +220,6 @@ const Sidebar = ({ isMobile, onClose }) => {
                       variant="body2"
                       sx={{
                         fontWeight: 600,
-                        color: theme.palette.error.main,
                         ml: 2,
                         letterSpacing: 0.5,
                       }}

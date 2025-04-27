@@ -3,17 +3,19 @@ import { createTheme } from '@mui/material/styles';
 
 // Luxury Base Configuration
 const config = {
-  primary: '#0A84FF', // Vibrant Electric Blue
-  secondary: '#00D4B1', // Neon Cyan
-  background: '#0D1B2A', // Deep Navy
-  paperBackground: '#1B263B', // Dark Slate
-  titleColor: '#E0E7FF', // Soft White-Blue
-  appBarBackground: '#1B263B',
-  ctaColor: '#FF2E63', // Neon Pink CTA
-  ctaHoverColor: '#D81E5B', // Darker Pink on hover
-  fontFamily: "'Poppins', sans-serif", // ✅ Upgraded to modern sans-serif luxury
-  borderRadius: 8, // ✅ More generous rounding for softer look
+  primary: '#0A2540',        // Deep Navy (primary brand color, serious and secure)
+  secondary: '#3C5A80',      // Muted Indigo (for secondary actions, calm and corporate)
+  background: '#F5F7FA',     // Very Light Gray-Blue (for main background)
+  paperBackground: '#FFFFFF', // Pure White (cards and elevated surfaces)
+  titleColor: '#0A2540',      // Deep Navy again for titles (consistent, serious)
+  appBarBackground: '#0A2540', // Match primary for App Bar (strong and clean)
+  ctaColor: '#1D72B8',        // Bold Blue (clear CTA action button color)
+  ctaHoverColor: '#155D8B',   // Slightly darker blue for hover (UX expectation)
+  fontFamily: "'Poppins', sans-serif", // Modern sans-serif (good choice, stick with it)
+  borderRadius: 6,            // Slight rounding (enough for softness but still "sharp" for SaaS)
 };
+
+
 
 const theme = createTheme({
   palette: {

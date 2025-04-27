@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Paper,
   Divider,
+  useTheme
 } from "@mui/material";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +25,7 @@ const profileSchema = z.object({
 });
 
 const UserProfilePage = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -97,20 +99,20 @@ const UserProfilePage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
+        bgcolor: theme.palette.background.default,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        p: { xs: 2, md: 6 },
+        p: { xs: 2, md: theme.spacing(6) },
       }}
     >
       {/* Header */}
       <Box
         sx={{
           width: "100%",
-          maxWidth: "800px",
+          maxWidth: theme.breakpoints.values.md,
           textAlign: "left",
-          mb: 4,
+          mb: theme.spacing(4),
         }}
       >
         <Typography variant="h3" fontWeight="bold" mb={1}>
@@ -134,16 +136,16 @@ const UserProfilePage = () => {
           elevation={0}
           sx={{
             width: "100%",
-            maxWidth: "800px",
+            maxWidth: theme.breakpoints.values.md,
             mx: "auto",
             p: { xs: 3, md: 5 },
-            borderRadius: 4,
-            background: "linear-gradient(145deg, #1B263B, #0D1B2A)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+            borderRadius: theme.shape.borderRadius,
+            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
+            boxShadow: theme.shadows[10],
           }}
         >
           {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert severity="error" sx={{ mb: theme.spacing(3) }}>
               {error}
             </Alert>
           )}
@@ -160,7 +162,7 @@ const UserProfilePage = () => {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.4, delay: index * 0.1 }}
                     >
-                      <Box mb={3}>
+                      <Box mb={theme.spacing(3)}>
                         <Typography
                           variant="subtitle2"
                           color="text.secondary"
@@ -181,7 +183,7 @@ const UserProfilePage = () => {
                             InputLabelProps={{ shrink: true }}
                             sx={{
                               "& .MuiOutlinedInput-root": {
-                                borderRadius: 2,
+                                borderRadius: theme.shape.borderRadius,
                                 backgroundColor: "rgba(255,255,255,0.04)",
                               },
                             }}
@@ -199,7 +201,7 @@ const UserProfilePage = () => {
                 )}
               </AnimatePresence>
 
-              <Divider sx={{ my: 4 }} />
+              <Divider sx={{ my: theme.spacing(4) }} />
 
               <Box display="flex" justifyContent="center" gap={2}>
                 {isEditing ? (
@@ -211,11 +213,13 @@ const UserProfilePage = () => {
                       disabled={submitting}
                       sx={{
                         textTransform: "none",
-                        borderRadius: 3,
-                        transition: "all 0.3s ease",
+                        borderRadius: theme.shape.borderRadius,
+                        transition: theme.transitions.create(["transform", "box-shadow"], {
+                          duration: theme.transitions.duration.short,
+                        }),
                         "&:hover": {
                           transform: "translateY(-1px)",
-                          boxShadow: "0 4px 12px rgba(255,0,0,0.3)",
+                          boxShadow: theme.shadows[6],
                         },
                       }}
                     >
@@ -227,11 +231,13 @@ const UserProfilePage = () => {
                       disabled={submitting}
                       sx={{
                         textTransform: "none",
-                        borderRadius: 3,
-                        transition: "all 0.3s ease",
+                        borderRadius: theme.shape.borderRadius,
+                        transition: theme.transitions.create(["transform", "box-shadow"], {
+                          duration: theme.transitions.duration.short,
+                        }),
                         "&:hover": {
                           transform: "translateY(-1px)",
-                          boxShadow: "0 4px 12px rgba(10,132,255,0.3)",
+                          boxShadow: theme.shadows[6],
                         },
                       }}
                     >
@@ -248,11 +254,13 @@ const UserProfilePage = () => {
                     onClick={toggleEditMode}
                     sx={{
                       textTransform: "none",
-                      borderRadius: 3,
-                      transition: "all 0.3s ease",
+                      borderRadius: theme.shape.borderRadius,
+                      transition: theme.transitions.create(["transform", "box-shadow"], {
+                        duration: theme.transitions.duration.short,
+                      }),
                       "&:hover": {
                         transform: "translateY(-1px)",
-                        boxShadow: "0 4px 12px rgba(10,132,255,0.3)",
+                        boxShadow: theme.shadows[6],
                       },
                     }}
                   >
