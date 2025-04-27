@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Drawer, Box, Typography, IconButton, List, ListItem, Tooltip, Divider, useTheme } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Settings, LogOut, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Home, User, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
@@ -12,29 +12,27 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
   const theme = useTheme();
 
   return (
-    <motion.div whileHover="hover" whileTap={{ scale: 0.95 }} onClick={onClick}>
+    <motion.div whileHover="hover" whileTap={{ scale: 0.97 }} onClick={onClick}>
       <Tooltip title={!isExpanded ? label : ""} placement="right" arrow>
         <ListItem
           sx={{
-            borderRadius: 1.5,
+            borderRadius: 2,
             mb: 1,
-            py: 1.2,
-            px: isExpanded ? 2 : 1.5,
+            px: isExpanded ? 2.5 : 1.5,
+            py: 1.5,
             cursor: "pointer",
             backgroundColor: isActive ? theme.palette.action.selected : "transparent",
             "&:hover": {
-              backgroundColor: theme.palette.action.hover, // Using theme for hover background
-              opacity: isActive ? 1 : 0.8, // Keep active item full opacity on hover
+              backgroundColor: theme.palette.action.hover,
             },
+            transition: "all 0.3s cubic-bezier(.25,.8,.25,1)",
             justifyContent: isExpanded ? "flex-start" : "center",
           }}
         >
           <Box
-            color={
-              isActive ? theme.palette.common.white : theme.palette.text.secondary
-            }
+            color={isActive ? theme.palette.primary.contrastText : theme.palette.text.secondary}
             sx={{
-              transition: "color 0.3s ease", // Smooth color transition
+              transition: "color 0.3s ease",
             }}
           >
             {icon}
@@ -42,26 +40,20 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
           <AnimatePresence>
             {isExpanded && (
               <motion.div
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                variants={{
-                  visible: {
-                    opacity: 1,
-                    x: 0,
-                    transition: { duration: 0.2, delay: 0.1 },
-                  },
-                  hidden: { opacity: 0, x: -20, transition: { duration: 0.2 } },
-                }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.3 }}
               >
                 <Typography
                   variant="body2"
                   sx={{
-                    fontWeight: isActive ? 600 : 500,
+                    fontWeight: isActive ? 700 : 500,
                     color: isActive
-                      ? theme.palette.common.white
+                      ? theme.palette.primary.contrastText
                       : theme.palette.text.primary,
-                    ml: 1.5,
+                    ml: 2,
+                    letterSpacing: 0.5,
                   }}
                 >
                   {label}
@@ -99,8 +91,6 @@ const Sidebar = ({ isMobile, onClose }) => {
     if (isLoggedIn) {
       if (path === "/dashboard") {
         navigate(userRole === "admin" ? "/admin-dashboard" : "/user-dashboard");
-      } else if (path === "/user-profile") {
-        navigate("/user-profile"); // Navigate to profile page
       } else {
         navigate(path);
       }
@@ -110,165 +100,122 @@ const Sidebar = ({ isMobile, onClose }) => {
     if (isMobile) onClose();
   };
 
-  const sidebarVariants = {
-    expanded: { width: 240 },
-    collapsed: { width: 80 },
-  };
-
   const menuItems = [
     { label: "Home", path: "/dashboard", icon: <Home size={22} strokeWidth={2} /> },
-    // { label: "Settings", path: "/settings", icon: <Settings size={22} strokeWidth={2} /> },
-    { label: "Profile", path: "/user-profile", icon: <User size={22} strokeWidth={2} /> }, // Profile item
+    { label: "Profile", path: "/user-profile", icon: <User size={22} strokeWidth={2} /> },
   ];
 
   return (
     <Drawer
       variant={isMobile ? "temporary" : "permanent"}
-      open={true}
+      open
       onClose={isMobile ? onClose : undefined}
       sx={{
         width: isExpanded ? 240 : 80,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          boxSizing: "border-box",
-          backgroundColor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          borderRight: `1px solid ${theme.palette.divider}`,
-          overflowX: "hidden",
-          transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          width: isExpanded ? 240 : 80,
+          background: `linear-gradient(to bottom, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
+          borderRight: "none",
+          boxShadow: "4px 0 12px rgba(0,0,0,0.05)",
+          transition: "width 0.4s cubic-bezier(.25,.8,.25,1)",
         },
       }}
-      ModalProps={{
-        keepMounted: true,
-      }}
     >
-      <motion.div
-        animate={isExpanded ? "expanded" : "collapsed"}
-        variants={sidebarVariants}
-        transition={{ duration: 0.3, type: "tween" }}
-      >
-        {/* App Logo and Toggle */}
+      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Logo / App Name */}
         <Box
           display="flex"
           alignItems="center"
           justifyContent={isExpanded ? "space-between" : "center"}
-          py={2.5}
           px={isExpanded ? 3 : 2}
+          py={3}
         >
           {isExpanded && (
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              variants={{
-                visible: {
-                  opacity: 1,
-                  x: 0,
-                  transition: { duration: 0.2, delay: 0.1 },
-                },
-                hidden: { opacity: 0, x: -20, transition: { duration: 0.2 } },
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold" color="primary">
-                YourApp
-              </Typography>
-            </motion.div>
+            <Typography variant="h6" fontWeight="bold" color="primary" noWrap>
+              Cofoundless
+            </Typography>
           )}
-          <motion.div whileTap={{ scale: 0.95 }}>
-            <IconButton
-              onClick={toggleSidebar}
-              size="small"
-              sx={{
-                backgroundColor: theme.palette.background.default,
-                borderRadius: 1.5,
-                "&:hover": {
-                  backgroundColor: theme.palette.action.hover,
-                },
-              }}
-            >
-              {isExpanded ? (
-                <ChevronLeft size={18} color={theme.palette.text.primary} />
-              ) : (
-                <ChevronRight size={18} color={theme.palette.text.primary} />
-              )}
-            </IconButton>
-          </motion.div>
+          <IconButton
+            onClick={toggleSidebar}
+            size="small"
+            sx={{
+              backgroundColor: theme.palette.background.default,
+              borderRadius: 2,
+              "&:hover": { backgroundColor: theme.palette.action.hover },
+            }}
+          >
+            {isExpanded ? (
+              <ChevronLeft size={20} color={theme.palette.text.primary} />
+            ) : (
+              <ChevronRight size={20} color={theme.palette.text.primary} />
+            )}
+          </IconButton>
         </Box>
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* Navigation Menu */}
-        <List sx={{ px: 2 }}>
-          {menuItems.map((item) => (
-            <SidebarItem
-              key={item.label}
-              label={item.label}
-              path={item.path}
-              icon={item.icon}
-              isActive={pathname.includes(item.path.slice(1))}
-              onClick={() => handleNavigation(item.path)}
-              isExpanded={isExpanded}
-            />
-          ))}
-        </List>
+        {/* Menu Items */}
+        <Box flexGrow={1} overflow="auto">
+          <List sx={{ px: isExpanded ? 2 : 1 }}>
+            {menuItems.map((item) => (
+              <SidebarItem
+                key={item.label}
+                {...item}
+                isActive={pathname.includes(item.path.slice(1))}
+                onClick={() => handleNavigation(item.path)}
+                isExpanded={isExpanded}
+              />
+            ))}
+          </List>
+        </Box>
 
         {/* Logout Button */}
-        <Box position="absolute" bottom="20px" width="100%" px={2}>
-          <Divider sx={{ mb: 2 }} />
-          <motion.div whileHover="hover" whileTap={{ scale: 0.95 }}>
-            <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
-              <ListItem
-                onClick={handleLogout}
-                sx={{
-                  borderRadius: 1.5,
-                  py: 1.2,
-                  px: isExpanded ? 2 : 1.5,
-                  cursor: "pointer",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                  },
-                  justifyContent: isExpanded ? "flex-start" : "center",
-                  mb: 10,
-                }}
-              >
-                <motion.div
-                  variants={{
-                    hover: { scale: 1.1, transition: { duration: 0.2 } },
-                  }}
-                >
-                  <Box color={theme.palette.error.main}>
-                    <LogOut size={22} strokeWidth={2} />
-                  </Box>
-                </motion.div>
-
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial="hidden"
-                      animate="visible"
-                      exit="hidden"
-                      variants={{
-                        visible: {
-                          opacity: 1,
-                          x: 0,
-                          transition: { duration: 0.2, delay: 0.1 },
-                        },
+        <Box px={isExpanded ? 2.5 : 1} pb={4}>
+          <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
+            <ListItem
+              onClick={handleLogout}
+              sx={{
+                borderRadius: 2,
+                py: 1.5,
+                cursor: "pointer",
+                backgroundColor: "transparent",
+                "&:hover": {
+                  backgroundColor: "rgba(244,67,54,0.1)",
+                },
+                justifyContent: isExpanded ? "flex-start" : "center",
+                transition: "all 0.3s ease",
+              }}
+            >
+              <Box color={theme.palette.error.main}>
+                <LogOut size={22} strokeWidth={2} />
+              </Box>
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.error.main,
+                        ml: 2,
+                        letterSpacing: 0.5,
                       }}
                     >
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: 500, color: theme.palette.error.main, ml: 1.5 }}
-                      >
-                        Logout
-                      </Typography>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </ListItem>
-            </Tooltip>
-          </motion.div>
+                      Logout
+                    </Typography>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </ListItem>
+          </Tooltip>
         </Box>
-      </motion.div>
+      </Box>
     </Drawer>
   );
 };

@@ -1,48 +1,44 @@
 import { createTheme } from '@mui/material/styles';
 
-// Configuration for dynamic client-based customization
+// Base configuration for colors, typography, spacing
 const config = {
-  primary: '#2ECC71', // Emerald Green (Tech-savvy and fresh)
-  secondary: '#FF7043', // Bright Orange for accents (Eye-catching, modern)
-  background: '#FFFFFF', // Clean White Background (classic modern feel)
-  paperBackground: '#F5F5F5', // Light gray for paper/cards (adds some depth)
-  titleColor: '#333333', // Dark text for titles and headers (contrast on white background)
-  appBarBackground: '#F5F5F5', // Light gray AppBar for consistency
-  ctaColor: '#FF6F61', // CTA color (Coral Red)
-  ctaHoverColor: '#E05D4D', // Darker Coral Red on hover (emphasis)
-  fontFamily: "'Roboto', sans-serif", // Modern, clean font
-  borderRadius: 4, // Sharp borders for a sleek, modern design
+  primary: '#14532d', // Deep Green (luxury feel)
+  secondary: '#B87333', // Muted Copper (rich, not playful)
+  background: '#FAFAFA', // Soft white
+  paperBackground: '#FFFFFF', // Clean white for cards
+  titleColor: '#222222', // Near-black for sharp readability
+  appBarBackground: '#FFFFFF', // Clean for app bar
+  ctaColor: '#B87333', // Copper CTA
+  ctaHoverColor: '#94542b', // Darker copper on hover
+  fontFamily: "'Inter', sans-serif", // Professional, premium font
+  borderRadius: 3, // Sharper for luxury feel
 };
 
 const theme = createTheme({
   palette: {
     primary: {
       main: config.primary,
-      light: '#5FF78B', // Light green for subtle accents
-      dark: '#28B45A', // Darker green for hover effects
+      light: '#2e7d32', // Soft green for hover accents
+      dark: '#0e4421', // Even darker green if needed
     },
     secondary: {
       main: config.secondary,
-      light: '#FF8A65', // Lighter orange for softer accents
-      dark: '#E64A19', // Darker orange for hover effects
+      light: '#d1884f', // Lighter copper
+      dark: '#80461b', // Darker copper
     },
     background: {
       default: config.background,
       paper: config.paperBackground,
     },
     text: {
-      primary: config.titleColor, // Dark text for better readability
-      secondary: '#757575', // Slightly lighter secondary text for contrast
+      primary: config.titleColor,
+      secondary: '#757575',
     },
-    success: {
-      main: '#2E7D32', // Fresh green for success actions
-    },
-    warning: {
-      main: '#FF9800', // Orange for warning actions
-    },
+    success: { main: '#2E7D32' },
+    warning: { main: '#FF9800' },
     action: {
-      hover: 'rgba(46, 204, 113, 0.08)', // Light hover effect for buttons
-      selected: '#28B45A', // Darker green for active selections
+      hover: 'rgba(20, 83, 45, 0.08)', // Light green hover background
+      selected: config.primary,
     },
   },
   typography: {
@@ -65,12 +61,12 @@ const theme = createTheme({
     body1: {
       fontSize: '1rem',
       fontWeight: 400,
-      color: '#333333', // Dark text for readability
+      color: config.titleColor,
     },
     body2: {
       fontSize: '0.875rem',
       fontWeight: 400,
-      color: '#757575', // Dimmed secondary text
+      color: '#757575',
     },
     button: {
       textTransform: 'none',
@@ -85,24 +81,31 @@ const theme = createTheme({
   components: {
     MuiButton: {
       styleOverrides: {
+        root: {
+          transition: 'all 0.3s ease',
+          borderRadius: config.borderRadius,
+          '&:hover': {
+            transform: 'scale(1.02)',
+          },
+        },
         containedPrimary: {
           backgroundColor: config.primary,
           '&:hover': {
-            backgroundColor: '#28B45A', // Darker green on hover
+            backgroundColor: '#0e4421',
           },
         },
         containedSecondary: {
           backgroundColor: config.secondary,
           color: '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#E64A19', // Darker orange on hover
+            backgroundColor: '#80461b',
           },
         },
         outlinedPrimary: {
           borderColor: config.primary,
           color: config.primary,
           '&:hover': {
-            backgroundColor: 'rgba(46, 204, 113, 0.08)', // Light green on hover
+            backgroundColor: 'rgba(20, 83, 45, 0.08)',
           },
         },
         containedRocket: {
@@ -118,17 +121,21 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)', // Light shadow for depth
+          transition: 'all 0.3s ease',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)', // Deeper, luxury shadow
           borderRadius: config.borderRadius,
+          '&:hover': {
+            transform: 'scale(1.02)',
+          },
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          boxShadow: 'none',
           backgroundColor: config.appBarBackground,
-          color: '#333333',
+          color: config.titleColor,
+          boxShadow: 'none',
         },
       },
     },

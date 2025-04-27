@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Box, Paper, Typography, useTheme } from "@mui/material";
+import { Box, Paper, Typography, useTheme, Divider } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Home, Settings, LogOut, UserCircle, ChevronRight } from "lucide-react";
+import { Home, UserCircle, LogOut, ChevronRight,Menu } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
@@ -11,10 +11,27 @@ import { auth } from "../../../firebase";
 const NavigationButton = ({ icon, label, onClick, active }) => {
   const theme = useTheme();
   return (
-    <motion.div variants={{ rest: { scale: 1 }, pressed: { scale: 0.95 } }} initial="rest" whileTap="pressed" onClick={onClick}>
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", cursor: "pointer" }}>
+    <motion.div whileTap={{ scale: 0.95 }} onClick={onClick}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          cursor: "pointer",
+          py: 1,
+          transition: "all 0.3s ease",
+          color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+        }}
+      >
         {icon}
-        <Typography variant="caption" sx={{ fontWeight: active ? 600 : 500, color: active ? theme.palette.primary.main : theme.palette.text.secondary, mt: 0.5 }}>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: active ? 700 : 500,
+            mt: 0.5,
+            letterSpacing: 0.5,
+          }}
+        >
           {label}
         </Typography>
       </Box>
@@ -29,20 +46,10 @@ const MobileBottomNavigation = () => {
   const { isLoggedIn, userRole, clearUser } = useUserStore();
 
   const handleNavigation = (path) => {
+    setShowMenu(false);
     if (isLoggedIn) {
-      // Close the menu first
-      setShowMenu(false);
-      
-      // Then navigate
-      if (path === "/dashboard") {
-        navigate(userRole === "admin" ? "/admin-dashboard" : "/dashboard");
-      } else if (path === "/user-profile") {
-        navigate("/user-profile");
-      } else {
-        navigate(path);
-      }
+      navigate(path === "/dashboard" ? (userRole === "admin" ? "/admin-dashboard" : "/user-dashboard") : path);
     } else {
-      setShowMenu(false);
       navigate("/login");
     }
   };
@@ -59,84 +66,148 @@ const MobileBottomNavigation = () => {
   };
 
   const menuVariants = {
-    hidden: { opacity: 0, y: 50 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 30 } },
-    exit: { opacity: 0, y: 50, transition: { duration: 0.2 } },
+    hidden: { opacity: 0, y: 80 },
+    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 160, damping: 20 } },
+    exit: { opacity: 0, y: 80, transition: { duration: 0.2 } },
   };
 
   return (
     <>
-      <Box sx={{ display: { xs: "block", sm: "none" }, position: "fixed", bottom: 0, left: 0, width: "100%", zIndex: 1200 }}>
-        <Paper elevation={6} sx={{ borderRadius: "16px 16px 0 0", backgroundColor: theme.palette.background.paper, overflow: "hidden" }}>
-          <Box sx={{ display: "flex", justifyContent: "space-around", padding: "12px 8px" }}>
-            <NavigationButton icon={<Home size={24} />} label="Home" onClick={() => handleNavigation("/dashboard")} active={false} />
-            <NavigationButton icon={<Settings size={24} />} label="Settings" onClick={() => setShowMenu(!showMenu)} active={showMenu} />
+      {/* Bottom Bar */}
+      <Box
+        sx={{
+          display: { xs: "block", sm: "none" },
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          zIndex: 1300,
+        }}
+      >
+        <Paper
+          elevation={8}
+          sx={{
+            borderRadius: "16px 16px 0 0",
+            background: theme.palette.background.paper,
+            boxShadow: "0px -2px 8px rgba(0,0,0,0.06)",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+              padding: "10px 16px",
+            }}
+          >
+            <NavigationButton
+              icon={<Home size={24} />}
+              label="Home"
+              onClick={() => handleNavigation("/dashboard")}
+              active={false}
+            />
+            <NavigationButton
+              icon={<Menu size={24} />}
+              label="Menu"
+              onClick={() => setShowMenu(!showMenu)}
+              active={showMenu}
+            />
           </Box>
         </Paper>
       </Box>
 
+      {/* Expandable Menu */}
       <AnimatePresence>
         {showMenu && (
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={menuVariants}
-            style={{
-              position: "fixed",
-              bottom: "80px",
-              left: 0,
-              width: "100%",
-              zIndex: 1100,
-              display: { xs: "block", sm: "none" },
-              padding: "0 16px",
-            }}
-          >
-            <Paper elevation={8} sx={{ borderRadius: "12px", overflow: "hidden", backgroundColor: theme.palette.background.paper }}>
-              <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }} onClick={() => handleNavigation("/user-profile")}>
-                <Box sx={{ display: "flex", alignItems: "center", padding: "16px", cursor: "pointer" }}>
-                  <UserCircle size={20} color={theme.palette.text.primary} strokeWidth={2} />
-                  <Typography variant="body2" sx={{ fontWeight: 500, ml: 2 }}>Profile</Typography>
-                </Box>
-              </motion.div>
+          <>
+            {/* Dark backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                backgroundColor: "rgba(0,0,0,0.5)",
+                zIndex: 1200,
+              }}
+              onClick={() => setShowMenu(false)}
+            />
 
-              {/* <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }} onClick={() => handleNavigation("/settings")}>
-                <Box sx={{ display: "flex", alignItems: "center", padding: "16px", cursor: "pointer" }}>
-                  <Settings size={20} color={theme.palette.text.primary} strokeWidth={2} />
-                  <Typography variant="body2" sx={{ fontWeight: 500, ml: 2 }}>Account Settings</Typography>
-                </Box>
-              </motion.div> */}
+            {/* Floating Menu */}
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={menuVariants}
+              style={{
+                position: "fixed",
+                bottom: "80px",
+                left: 0,
+                width: "100%",
+                padding: "0 16px",
+                zIndex: 1301,
+              }}
+            >
+              <Paper
+                elevation={12}
+                sx={{
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  backgroundColor: theme.palette.background.paper,
+                  boxShadow: "0px 6px 24px rgba(0,0,0,0.15)",
+                }}
+              >
+                <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: 2,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => handleNavigation("/user-profile")}
+                  >
+                    <UserCircle size={22} color={theme.palette.text.primary} />
+                    <Typography variant="body2" sx={{ fontWeight: 500, ml: 2 }}>
+                      Profile
+                    </Typography>
+                  </Box>
+                </motion.div>
 
-              <Box sx={{ height: "1px", backgroundColor: theme.palette.divider }} />
+                <Divider />
 
-              <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }} onClick={handleLogout}>
-                <Box sx={{ display: "flex", alignItems: "center", padding: "16px", cursor: "pointer" }}>
-                  <LogOut size={20} color={theme.palette.error.main} strokeWidth={2} />
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.error.main, ml: 2 }}>Logout</Typography>
-                </Box>
-              </motion.div>
-            </Paper>
-          </motion.div>
+                <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      padding: 2,
+                      cursor: "pointer",
+                    }}
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={22} color={theme.palette.error.main} />
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 500,
+                        color: theme.palette.error.main,
+                        ml: 2,
+                      }}
+                    >
+                      Logout
+                    </Typography>
+                  </Box>
+                </motion.div>
+              </Paper>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-
-      {showMenu && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setShowMenu(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.2)",
-            zIndex: 1050,
-          }}
-        />
-      )}
     </>
   );
 };

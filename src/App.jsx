@@ -38,7 +38,7 @@ const App = () => {
   const showMobileNav = isLoggedIn && isMobile && location.pathname !== "/profile-onboarding";
   const showNavBar = !isLoggedIn && location.pathname !== "/profile-onboarding";
 
-  // 🛑 IMPORTANT: show a special LoadingModal if authHydrated hasn't finished yet
+  // 🛑 IMPORTANT: show a loading modal if authHydrated hasn't finished yet
   if (!authHydrated) {
     return <LoadingModal message="Waking up the dragon..." />;
   }
@@ -46,19 +46,21 @@ const App = () => {
   return (
     <>
       <CssBaseline />
-
-      {/* 🔥 Add spinner globally if loading */}
+      
+      {/* 🔥 Global spinner if loading */}
       {loading && <LoadingModal message="Just a moment..." />}
 
       <Box sx={{ display: "flex" }}>
         {showSidebar && <Sidebar />}
+
         <Box
           component="main"
           sx={{
             flexGrow: 1,
             bgcolor: "background.default",
             ml: showSidebar ? `${drawerWidth}px` : 0,
-            transition: theme.transitions.create("margin-left", {
+            pb: showMobileNav ? 10 : 0, // 🧠 KEY LINE: prevent bottom nav overlap
+            transition: theme.transitions.create(["margin-left", "padding-bottom"], {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
             }),

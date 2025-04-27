@@ -22,7 +22,7 @@ app.use(express.json());
 // Routes
 app.use("/api/users", usersRouter);  // Users routes
 app.use("/api/roles", rolesRouter);  // Roles routes
-app.use("/api/profiles", profileRouter);  // Profile routes
+app.use("/api/profile", profileRouter);  // Profile routes
 
 // Server
 const PORT = process.env.PORT || 5000;

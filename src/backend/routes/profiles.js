@@ -1,12 +1,13 @@
+// src/backend/routes/profile.js
 import express from 'express';
-import { query } from '../db.js'; // Import the query function from db.js
-import authenticate from '../middlewares/authenticate.js'; // Import the authenticate middleware
+import { query } from '../db.js';
+import authenticate from '../middlewares/authenticate.js';
 
 const router = express.Router();
 
-// CREATE a new profile for a user
-router.post('/:user_id', authenticate, async (req, res) => {
-  const { user_id } = req.params;
+// CREATE a new profile for the authenticated user
+router.post('/', authenticate, async (req, res) => {
+  const { user_id } = req.user;
   const { first_name, last_name, date_of_birth } = req.body;
 
   if (!first_name || !last_name || !date_of_birth) {
@@ -27,17 +28,16 @@ router.post('/:user_id', authenticate, async (req, res) => {
   }
 });
 
-// READ a user's profile
-router.get('/:user_id', authenticate, async (req, res) => {
-  const { user_id } = req.params;
+// READ the authenticated user's profile
+router.get('/', authenticate, async (req, res) => {
+  const { user_id } = req.user;
   const queryText = 'SELECT * FROM profiles WHERE user_id = $1';
   const values = [user_id];
 
   try {
     const result = await query(queryText, values);
     if (result.rows.length === 0) {
-      // Return null when profile is not found
-      return res.status(200).json(null);
+      return res.status(200).json(null); // No profile yet is OK
     }
     res.status(200).json(result.rows[0]);
   } catch (error) {
@@ -46,10 +46,9 @@ router.get('/:user_id', authenticate, async (req, res) => {
   }
 });
 
-
-// UPDATE a user's profile
-router.put('/:user_id', authenticate, async (req, res) => {
-  const { user_id } = req.params;
+// UPDATE the authenticated user's profile
+router.put('/', authenticate, async (req, res) => {
+  const { user_id } = req.user;
   const { first_name, last_name, date_of_birth } = req.body;
 
   if (!first_name || !last_name || !date_of_birth) {
@@ -58,7 +57,7 @@ router.put('/:user_id', authenticate, async (req, res) => {
 
   const queryText = `
     UPDATE profiles
-    SET first_name = $1, last_name = $2, date_of_birth = $3
+    SET first_name = $1, last_name = $2, date_of_birth = $3, updated_at = CURRENT_TIMESTAMP
     WHERE user_id = $4 RETURNING *`;
   const values = [first_name, last_name, date_of_birth, user_id];
 
@@ -74,9 +73,9 @@ router.put('/:user_id', authenticate, async (req, res) => {
   }
 });
 
-// DELETE a user's profile
-router.delete('/:user_id', authenticate, async (req, res) => {
-  const { user_id } = req.params;
+// DELETE the authenticated user's profile
+router.delete('/', authenticate, async (req, res) => {
+  const { user_id } = req.user;
   const queryText = 'DELETE FROM profiles WHERE user_id = $1 RETURNING *';
   const values = [user_id];
 
