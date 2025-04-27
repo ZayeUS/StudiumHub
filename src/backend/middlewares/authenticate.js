@@ -29,7 +29,6 @@ const authenticate = async (req, res, next) => {
       [decodedToken.uid]
     );
 
-    console.log(rows)
     if (rows.length === 0) {
       return res.status(401).json({ message: "User not found in system" });
     }
