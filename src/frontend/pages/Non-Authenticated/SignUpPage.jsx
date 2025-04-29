@@ -13,13 +13,13 @@ import {
   Select,
   MenuItem,
   Divider,
-  CircularProgress,
+  Snackbar,
+  Alert,
   useTheme,
-  useMediaQuery,
-  Alert
+  useMediaQuery
 } from "@mui/material";
-import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, Mail, Lock, Briefcase, ChevronRight, UserPlus } from "lucide-react";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Mail, Lock, ChevronRight, UserPlus } from "lucide-react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,25 +39,18 @@ const signupSchema = z.object({
   path: ["confirm"],
 });
 
-const containerVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, staggerChildren: 0.1 },
-  },
-};
-
-const SignUpPage = () => {
+export default function SignUpPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const borderRadius = theme.shape.borderRadius;
   const navigate = useNavigate();
   const { setUser, isLoggedIn, roleId } = useUserStore();
+  const { loading } = useUserStore();
 
   const [roles, setRoles] = useState([]);
-  const [error, setError] = useState("");
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [signupError, setSignupError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [snack, setSnack] = useState({ open: false, msg: "", sev: "success" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const emailInputRef = useRef(null);
@@ -67,8 +60,7 @@ const SignUpPage = () => {
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-    setError: setFieldError,
-    clearErrors,
+    watch,
   } = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: { email: "", password: "", confirm: "", role: "" },
@@ -85,51 +77,84 @@ const SignUpPage = () => {
       try {
         const data = await getData("/roles");
         setRoles(data);
-      } catch {
-        setError("Failed to load roles.");
+      } catch (error) {
+        setSnack({
+          open: true,
+          msg: "Failed to load roles. Please refresh and try again.",
+          sev: "error"
+        });
       }
     };
     fetchRoles();
   }, []);
 
+  // Clear email error when user types in email field
+  const watchEmail = watch("email");
+  useEffect(() => {
+    if (emailError && watchEmail) {
+      setEmailError("");
+    }
+  }, [watchEmail, emailError]);
+
   const onSignupSubmit = async (data) => {
-    clearErrors();
-    setError("");
-    setFormSubmitted(true);
+    // Reset error states
+    setSignupError("");
+    setEmailError("");
 
     try {
-      const emailAvailable = await checkEmailExists(data.email).then(exists => !exists);
-      if (!emailAvailable) {
-        setFieldError("email", { type: "manual", message: "Email already in use" });
+      // Check if email already exists
+      const emailExists = await checkEmailExists(data.email);
+      if (emailExists) {
+        setEmailError("Email already in use");
         if (emailInputRef.current) emailInputRef.current.focus();
-        setFormSubmitted(false);
         return;
       }
 
+      // Set loading state
       useUserStore.setState({ loading: true });
 
+      // Create Firebase account
       const user = await firebaseSignUp(data.email, data.password);
+      
+      // Sign in the user
       await firebaseLogin(data.email, data.password);
 
+      // Find role ID
       const selectedRole = roles.find(r => r.role_name === data.role);
-      if (!selectedRole) throw new Error("Invalid role selected");
+      if (!selectedRole) {
+        throw new Error("Invalid role selected");
+      }
 
+      // Create backend user
       const backendUser = await postData("/users", {
         firebase_uid: user.uid,
         email: user.email,
         role_id: selectedRole.role_id,
       });
 
+      // Update user store
       const { user_id } = backendUser.user;
       setUser(user.uid, selectedRole.role_id, user_id);
 
+      // Show success message
+      setSnack({
+        open: true,
+        msg: "Account created successfully! Redirecting...",
+        sev: "success"
+      });
+
+      // Navigate to dashboard
       setTimeout(() => {
         navigate(selectedRole.role_id === 1 ? "/admin-dashboard" : "/dashboard");
-      }, 800);
+      }, 1000);
     } catch (err) {
       console.error(err);
-      setError(err.message || "Sign-up failed. Please try again.");
-      setFormSubmitted(false);
+      setSignupError(err.message || "Sign-up failed. Please try again.");
+      setSnack({
+        open: true,
+        msg: err.message || "Sign-up failed. Please try again.",
+        sev: "error"
+      });
     } finally {
       useUserStore.setState({ loading: false });
     }
@@ -146,9 +171,23 @@ const SignUpPage = () => {
         p: { xs: 2, md: 6 },
       }}
     >
-      <LoadingModal />
+      <LoadingModal open={loading} />
 
-      <motion.div initial="hidden" animate="visible" variants={containerVariants} style={{ width: "100%" }}>
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert severity={snack.sev}>{snack.msg}</Alert>
+      </Snackbar>
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ width: "100%" }}
+      >
         <Container maxWidth="sm">
           <motion.div
             initial={{ y: 30, opacity: 0 }}
@@ -166,41 +205,47 @@ const SignUpPage = () => {
             >
               {/* Header */}
               <Box sx={{ bgcolor: theme.palette.primary.main, p: 3, textAlign: "center" }}>
-                <UserPlus size={40} color={theme.palette.common.white} style={{ marginBottom: 8 }} />
-                <Typography variant="h4" sx={{ color: "#fff", fontWeight: "bold", mb: 1 }}>
-                  Create Account
-                </Typography>
-                <Typography variant="body1" sx={{ color: "rgba(255,255,255,0.8)" }}>
-                  Join our platform and get started.
-                </Typography>
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <UserPlus size={40} color={theme.palette.common.white} />
+                  <Typography variant="h4" sx={{ color: "white", fontWeight: "bold", mt: 1 }}>
+                    Create Account
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
+                    Join our platform and get started
+                  </Typography>
+                </motion.div>
               </Box>
 
               {/* Form */}
-              <Box sx={{ p: 4 }}>
-                {error && (
-                  <Alert severity="error" sx={{ mb: 3 }}>
-                    {error}
-                  </Alert>
-                )}
-
+              <Box sx={{ p: 3 }}>
                 <form onSubmit={handleSubmit(onSignupSubmit)} noValidate>
                   {/* Email */}
                   <TextField
                     {...register("email")}
                     inputRef={emailInputRef}
+                    type="email"
                     label="Email Address"
                     fullWidth
                     margin="normal"
-                    error={!!errors.email}
-                    helperText={errors.email?.message}
-                    disabled={isSubmitting || formSubmitted}
+                    error={!!errors.email || !!emailError}
+                    helperText={emailError || errors.email?.message}
+                    disabled={isSubmitting}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
                           <Mail color={theme.palette.primary.main} />
                         </InputAdornment>
                       ),
-                      sx: { borderRadius, backgroundColor: "rgba(255,255,255,0.04)" },
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius,
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
                     }}
                   />
 
@@ -213,7 +258,7 @@ const SignUpPage = () => {
                     margin="normal"
                     error={!!errors.password}
                     helperText={errors.password?.message}
-                    disabled={isSubmitting || formSubmitted}
+                    disabled={isSubmitting}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -222,12 +267,17 @@ const SignUpPage = () => {
                       ),
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword(prev => !prev)} edge="end">
-                            {showPassword ? <EyeOff /> : <Eye />}
+                          <IconButton size="small" onClick={() => setShowPassword((v) => !v)} edge="end">
+                            {showPassword ? <EyeOff color={theme.palette.primary.main} /> : <Eye color={theme.palette.primary.main} />}
                           </IconButton>
                         </InputAdornment>
                       ),
-                      sx: { borderRadius, backgroundColor: "rgba(255,255,255,0.04)" },
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius,
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
                     }}
                   />
 
@@ -240,7 +290,7 @@ const SignUpPage = () => {
                     margin="normal"
                     error={!!errors.confirm}
                     helperText={errors.confirm?.message}
-                    disabled={isSubmitting || formSubmitted}
+                    disabled={isSubmitting}
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
@@ -249,12 +299,17 @@ const SignUpPage = () => {
                       ),
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton onClick={() => setShowConfirm(prev => !prev)} edge="end">
-                            {showConfirm ? <EyeOff /> : <Eye />}
+                          <IconButton size="small" onClick={() => setShowConfirm((v) => !v)} edge="end">
+                            {showConfirm ? <EyeOff color={theme.palette.primary.main} /> : <Eye color={theme.palette.primary.main} />}
                           </IconButton>
                         </InputAdornment>
                       ),
-                      sx: { borderRadius, backgroundColor: "rgba(255,255,255,0.04)" },
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius,
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                      },
                     }}
                   />
 
@@ -263,13 +318,23 @@ const SignUpPage = () => {
                     name="role"
                     control={control}
                     render={({ field }) => (
-                      <FormControl fullWidth margin="normal" error={!!errors.role}>
+                      <FormControl 
+                        fullWidth 
+                        margin="normal" 
+                        error={!!errors.role}
+                        sx={{ 
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius,
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                          },
+                        }}
+                      >
                         <InputLabel>Role</InputLabel>
                         <Select
                           {...field}
                           label="Role"
                           value={field.value || ""}
-                          sx={{ borderRadius }}
+                          disabled={isSubmitting}
                         >
                           {roles.length ? (
                             roles.map(r => (
@@ -278,11 +343,11 @@ const SignUpPage = () => {
                               </MenuItem>
                             ))
                           ) : (
-                            <MenuItem value="">Loading...</MenuItem>
+                            <MenuItem value="">Loading roles...</MenuItem>
                           )}
                         </Select>
                         {errors.role && (
-                          <Typography variant="caption" color="error">
+                          <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
                             {errors.role.message}
                           </Typography>
                         )}
@@ -290,51 +355,61 @@ const SignUpPage = () => {
                     )}
                   />
 
-                  {/* Submit */}
+                  {/* General Error Message */}
+                  {signupError && (
+                    <Typography variant="body2" color="error" sx={{ mt: 1, mb: 1, fontWeight: 500 }}>
+                      {signupError}
+                    </Typography>
+                  )}
+
+                  {/* Submit Button */}
                   <Button
                     variant="contained"
                     fullWidth
                     type="submit"
-                    disabled={isSubmitting || formSubmitted}
-                    endIcon={<ChevronRight />}
+                    disabled={isSubmitting}
+                    endIcon={isSubmitting ? null : <ChevronRight />}
                     sx={{
-                      mt: 4,
+                      mt: 3,
                       py: 1.5,
-                      borderRadius: 3,
-                      fontWeight: 600,
+                      borderRadius,
                       textTransform: "none",
-                      transition: "all 0.3s ease",
+                      fontWeight: "bold",
+                      transition: theme.transitions.create(["transform", "box-shadow"], {
+                        duration: theme.transitions.duration.short,
+                      }),
                       "&:hover": {
                         transform: "translateY(-2px)",
                         boxShadow: theme.shadows[6],
                       },
                     }}
                   >
-                    {isSubmitting || formSubmitted ? "Creating..." : "Sign Up"}
+                    {isSubmitting ? "Creating Account..." : "Sign Up"}
                   </Button>
                 </form>
 
-                <Divider sx={{ my: 4 }}>
+                <Divider sx={{ my: 3 }}>
                   <Typography variant="body2" color="text.secondary">
                     OR
                   </Typography>
                 </Divider>
 
-                {/* Already have an account */}
+                {/* Login Link */}
                 <Box textAlign="center">
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Already have an account?
                   </Typography>
                   <Button
                     variant="outlined"
                     onClick={() => navigate("/login")}
                     sx={{
-                      mt: 1,
                       py: 1,
                       px: isMobile ? 2 : 3,
                       borderRadius,
                       textTransform: "none",
-                      transition: "all 0.3s ease",
+                      transition: theme.transitions.create(["transform", "box-shadow"], {
+                        duration: theme.transitions.duration.short,
+                      }),
                       "&:hover": {
                         transform: "translateY(-2px)",
                         boxShadow: theme.shadows[6],
@@ -351,6 +426,4 @@ const SignUpPage = () => {
       </motion.div>
     </Box>
   );
-};
-
-export default SignUpPage;
+}

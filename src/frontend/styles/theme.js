@@ -3,17 +3,19 @@ import { createTheme } from '@mui/material/styles';
 
 // Luxury Base Configuration
 const config = {
-  primary: '#0A2540',        // Deep Navy (primary brand color, serious and secure)
-  secondary: '#3C5A80',      // Muted Indigo (for secondary actions, calm and corporate)
-  background: '#F5F7FA',     // Very Light Gray-Blue (for main background)
-  paperBackground: '#FFFFFF', // Pure White (cards and elevated surfaces)
-  titleColor: '#0A2540',      // Deep Navy again for titles (consistent, serious)
-  appBarBackground: '#0A2540', // Match primary for App Bar (strong and clean)
-  ctaColor: '#1D72B8',        // Bold Blue (clear CTA action button color)
-  ctaHoverColor: '#155D8B',   // Slightly darker blue for hover (UX expectation)
-  fontFamily: "'Poppins', sans-serif", // Modern sans-serif (good choice, stick with it)
-  borderRadius: 6,            // Slight rounding (enough for softness but still "sharp" for SaaS)
+  primary: '#5C4033',        // Deep Mocha (luxury, earthy, modern)
+  secondary: '#7D5A50',      // Warm Clay (for subtle accents)
+  background: '#FAF9F6',     // Light Linen (airy but not blue/gray)
+  paperBackground: '#FFFFFF', // True White (cards, modal surfaces)
+  titleColor: '#2E2E2E',      // Almost Black (for high-contrast headings)
+  textPrimary: '#4B4B4B',     // Mid Charcoal (comfortable for body text)
+  appBarBackground: '#5C4033', // Match primary (strong and grounded)
+  ctaColor: '#B7791F',        // Rich Amber (CTAs pop with warmth)
+  ctaHoverColor: '#975A16',   // Darker Amber for hover (bold but serious)
+  fontFamily: "'Poppins', sans-serif", // Keep it clean and professional
+  borderRadius:4
 };
+
 
 
 
