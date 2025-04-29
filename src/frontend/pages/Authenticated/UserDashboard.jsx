@@ -7,6 +7,7 @@ import LoadingModal from "../../components/LoadingModal";  // Import LoadingModa
 const UserDashboard = () => {
 
     const userId = useUserStore(state => state.userId);
+    console.log(userId)
     const isLoggedIn = useUserStore(state => state.isLoggedIn);
   
 

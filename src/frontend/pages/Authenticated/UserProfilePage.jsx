@@ -8,92 +8,207 @@ import {
   CircularProgress,
   Paper,
   Divider,
-  useTheme
+  useTheme,
+  useMediaQuery
 } from "@mui/material";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../../store/userStore";
 import { putData } from "../../utils/BackendRequestHelper";
-import { motion, AnimatePresence } from "framer-motion";
-
-const profileSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
-});
 
 const UserProfilePage = () => {
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  // Core state
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    date_of_birth: ""
+  });
+  const [originalData, setOriginalData] = useState({});
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Hooks
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const navigate = useNavigate();
   const profile = useUserStore((state) => state.profile);
   const setProfile = useUserStore((state) => state.setProfile);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      date_of_birth: "",
-    },
-  });
-
+  // Load profile data when available or when edit mode changes
   useEffect(() => {
-    if (profile && isEditing) {
-      reset({
+    if (profile) {
+      const formattedData = {
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
-        date_of_birth: formatDateForInput(profile.date_of_birth) || "",
-      });
+        date_of_birth: formatDateForInput(profile.date_of_birth) || ""
+      };
+      
+      setFormData(formattedData);
+      setOriginalData(formattedData);
     }
-  }, [profile, isEditing, reset]);
+  }, [profile]);
 
+  // Date formatting utilities
   const formatDateForInput = (isoDate) => {
     if (!isoDate) return "";
-    const date = new Date(isoDate);
-    return date.toISOString().split("T")[0];
+    try {
+      const date = new Date(isoDate);
+      return date.toISOString().split("T")[0];
+    } catch (e) {
+      console.error("Invalid date format:", e);
+      return "";
+    }
   };
 
   const formatDateForDisplay = (isoDate) => {
     if (!isoDate) return "";
-    const date = new Date(isoDate);
-    return `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date
-      .getDate()
-      .toString()
-      .padStart(2, "0")}/${date.getFullYear()}`;
-  };
-
-  const onSubmit = async (data) => {
-    setSubmitting(true);
-    setError("");
-
     try {
-      const response = await putData(`/profile`, data);
-
-      if (response && response.profile) {
-        setProfile(response.profile);
-        setIsEditing(false);
-      } else {
-        setError("Failed to update profile. Please try again.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong. Please try again later.");
-    } finally {
-      setSubmitting(false);
+      const date = new Date(isoDate);
+      return `${(date.getMonth() + 1).toString().padStart(2, "0")}/${date
+        .getDate()
+        .toString()
+        .padStart(2, "0")}/${date.getFullYear()}`;
+    } catch (e) {
+      console.error("Invalid date format:", e);
+      return "";
     }
   };
 
-  const toggleEditMode = () => setIsEditing(!isEditing);
+  // Form handling
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
+    // Clear API error when user makes any change
+    if (apiError) {
+      setApiError("");
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    const { first_name, last_name, date_of_birth } = formData;
+    
+    if (!first_name.trim()) {
+      newErrors.first_name = "First name is required";
+    }
+    
+    if (!last_name.trim()) {
+      newErrors.last_name = "Last name is required";
+    }
+    
+    if (!date_of_birth) {
+      newErrors.date_of_birth = "Date of birth is required";
+    } else {
+      // Basic date validation
+      const dob = new Date(date_of_birth);
+      const today = new Date();
+      
+      if (isNaN(dob.getTime())) {
+        newErrors.date_of_birth = "Invalid date format";
+      } else if (dob > today) {
+        newErrors.date_of_birth = "Date of birth cannot be in the future";
+      } else if (today.getFullYear() - dob.getFullYear() > 120) {
+        newErrors.date_of_birth = "Please enter a valid date of birth";
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    setApiError("");
+    
+    try {
+      const response = await putData(`/profile`, formData);
+      
+      if (response && response.profile) {
+        setProfile(response.profile);
+        setIsEditing(false);
+        setOriginalData({ ...formData });
+      } else {
+        setApiError("Failed to update profile. Please try again.");
+      }
+    } catch (err) {
+      console.error(err);
+      setApiError(err.message || "Something went wrong. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Toggle edit mode
+  const toggleEditMode = () => {
+    if (isEditing) {
+      // Reset form data to original values when cancelling
+      setFormData({ ...originalData });
+      setErrors({});
+    }
+    setIsEditing(!isEditing);
+    setApiError("");
+  };
+
+  // Check if form has changes to enable/disable save button
+  const hasChanges = () => {
+    return Object.keys(originalData).some(key => originalData[key] !== formData[key]);
+  };
+
+  // Styles derived from theme
+  const borderRadius = theme.shape.borderRadius;
+  const fieldStyles = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius,
+      backgroundColor: "rgba(255,255,255,0.04)",
+    }
+  };
+  
+  const buttonTransition = theme.transitions.create(["transform", "box-shadow"], {
+    duration: theme.transitions.duration.short,
+  });
+  
+  const buttonHoverStyles = {
+    transform: "translateY(-2px)",
+    boxShadow: theme.shadows[4],
+  };
+  
+  const mainBgGradient = `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`;
+
+  // Field configurations for easier mapping
+  const fields = [
+    { 
+      name: "first_name", 
+      label: "First Name", 
+      type: "text" 
+    },
+    { 
+      name: "last_name", 
+      label: "Last Name", 
+      type: "text" 
+    },
+    { 
+      name: "date_of_birth", 
+      label: "Date of Birth", 
+      type: "date",
+      formatter: formatDateForDisplay
+    }
+  ];
 
   return (
     <Box
@@ -103,7 +218,7 @@ const UserProfilePage = () => {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        p: { xs: 2, md: theme.spacing(6) },
+        p: { xs: 2, md: 6 },
       }}
     >
       {/* Header */}
@@ -112,170 +227,199 @@ const UserProfilePage = () => {
           width: "100%",
           maxWidth: theme.breakpoints.values.md,
           textAlign: "left",
-          mb: theme.spacing(4),
+          mb: 4,
         }}
       >
-        <Typography variant="h3" fontWeight="bold" mb={1}>
+        <Typography 
+          variant="h3" 
+          fontWeight="bold" 
+          mb={1}
+          sx={{
+            fontSize: { xs: "2.2rem", md: "3rem" },
+            transition: "fontSize 0.3s ease",
+          }}
+        >
           {isEditing ? "Edit Your Profile" : "Your Profile"}
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
+        >
           {isEditing
             ? "Update your details below."
             : "Review your personal information."}
         </Typography>
       </Box>
 
-      {/* Form */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        style={{ width: "100%" }}
+      {/* Profile Container */}
+      <Paper
+        elevation={10}
+        sx={{
+          width: "100%",
+          maxWidth: theme.breakpoints.values.md,
+          mx: "auto",
+          p: { xs: 3, md: 5 },
+          borderRadius,
+          background: mainBgGradient,
+          boxShadow: theme.shadows[10],
+          transform: "translateY(0)",
+          transition: "transform 0.5s ease-out",
+          "&:hover": {
+            transform: "translateY(-5px)",
+          }
+        }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            width: "100%",
-            maxWidth: theme.breakpoints.values.md,
-            mx: "auto",
-            p: { xs: 3, md: 5 },
-            borderRadius: theme.shape.borderRadius,
-            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
-            boxShadow: theme.shadows[10],
-          }}
-        >
-          {error && (
-            <Alert severity="error" sx={{ mb: theme.spacing(3) }}>
-              {error}
-            </Alert>
-          )}
+        {apiError && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3, 
+              borderRadius,
+              '& .MuiAlert-icon': { alignSelf: 'center' }
+            }}
+          >
+            {apiError}
+          </Alert>
+        )}
 
-          {profile ? (
-            <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-              <AnimatePresence mode="wait">
-                {["first_name", "last_name", "date_of_birth"].map(
-                  (field, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                    >
-                      <Box mb={theme.spacing(3)}>
-                        <Typography
-                          variant="subtitle2"
-                          color="text.secondary"
-                          gutterBottom
-                        >
-                          {field
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase())}
-                        </Typography>
-                        {isEditing ? (
-                          <TextField
-                            {...register(field)}
-                            type={field === "date_of_birth" ? "date" : "text"}
-                            fullWidth
-                            error={!!errors[field]}
-                            helperText={errors[field]?.message}
-                            disabled={submitting}
-                            InputLabelProps={{ shrink: true }}
-                            sx={{
-                              "& .MuiOutlinedInput-root": {
-                                borderRadius: theme.shape.borderRadius,
-                                backgroundColor: "rgba(255,255,255,0.04)",
-                              },
-                            }}
-                          />
-                        ) : (
-                          <Typography variant="h6" fontWeight="500">
-                            {field === "date_of_birth"
-                              ? formatDateForDisplay(profile[field])
-                              : profile[field]}
-                          </Typography>
-                        )}
-                      </Box>
-                    </motion.div>
-                  )
-                )}
-              </AnimatePresence>
-
-              <Divider sx={{ my: theme.spacing(4) }} />
-
-              <Box display="flex" justifyContent="center" gap={2}>
+        {profile ? (
+          <Box 
+            component="form" 
+            onSubmit={handleSubmit} 
+            noValidate
+            sx={{ width: "100%" }}
+          >
+            {fields.map((field, index) => (
+              <Box 
+                key={field.name}
+                mb={3}
+                sx={{
+                  opacity: 1,
+                  transform: "translateY(0)",
+                  transition: `all 0.3s ease ${index * 0.1}s`,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  {field.label}
+                </Typography>
+                
                 {isEditing ? (
-                  <>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={toggleEditMode}
-                      disabled={submitting}
-                      sx={{
-                        textTransform: "none",
-                        borderRadius: theme.shape.borderRadius,
-                        transition: theme.transitions.create(["transform", "box-shadow"], {
-                          duration: theme.transitions.duration.short,
-                        }),
-                        "&:hover": {
-                          transform: "translateY(-1px)",
-                          boxShadow: theme.shadows[6],
-                        },
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="contained"
-                      type="submit"
-                      disabled={submitting}
-                      sx={{
-                        textTransform: "none",
-                        borderRadius: theme.shape.borderRadius,
-                        transition: theme.transitions.create(["transform", "box-shadow"], {
-                          duration: theme.transitions.duration.short,
-                        }),
-                        "&:hover": {
-                          transform: "translateY(-1px)",
-                          boxShadow: theme.shadows[6],
-                        },
-                      }}
-                    >
-                      {submitting ? (
-                        <CircularProgress size={24} color="inherit" />
-                      ) : (
-                        "Save Changes"
-                      )}
-                    </Button>
-                  </>
+                  <TextField
+                    name={field.name}
+                    type={field.type}
+                    value={formData[field.name]}
+                    onChange={handleChange}
+                    fullWidth
+                    error={!!errors[field.name]}
+                    helperText={errors[field.name]}
+                    disabled={isSubmitting}
+                    InputLabelProps={{ shrink: true }}
+                    sx={fieldStyles}
+                  />
                 ) : (
-                  <Button
-                    variant="contained"
-                    onClick={toggleEditMode}
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="500"
                     sx={{
-                      textTransform: "none",
-                      borderRadius: theme.shape.borderRadius,
-                      transition: theme.transitions.create(["transform", "box-shadow"], {
-                        duration: theme.transitions.duration.short,
-                      }),
-                      "&:hover": {
-                        transform: "translateY(-1px)",
-                        boxShadow: theme.shadows[6],
-                      },
+                      minHeight: "40px",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                   >
-                    Edit Profile
-                  </Button>
+                    {field.formatter
+                      ? field.formatter(profile[field.name])
+                      : profile[field.name] || "—"}
+                  </Typography>
                 )}
               </Box>
+            ))}
+
+            <Divider sx={{ my: 4 }} />
+
+            <Box 
+              display="flex" 
+              justifyContent="center" 
+              gap={2}
+              sx={{ mt: 2 }}
+            >
+              {isEditing ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    onClick={toggleEditMode}
+                    disabled={isSubmitting}
+                    sx={{
+                      px: 3,
+                      py: 1,
+                      borderRadius,
+                      textTransform: "none",
+                      transition: buttonTransition,
+                      "&:hover": buttonHoverStyles,
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="contained"
+                    type="submit"
+                    disabled={isSubmitting || !hasChanges()}
+                    sx={{
+                      px: 3,
+                      py: 1,
+                      borderRadius,
+                      textTransform: "none",
+                      position: "relative",
+                      transition: buttonTransition,
+                      "&:hover": buttonHoverStyles,
+                    }}
+                  >
+                    {isSubmitting ? (
+                      <CircularProgress
+                        size={24}
+                        color="inherit"
+                        sx={{ position: "absolute" }}
+                      />
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="contained"
+                  onClick={toggleEditMode}
+                  sx={{
+                    px: 3,
+                    py: 1,
+                    borderRadius,
+                    textTransform: "none",
+                    transition: buttonTransition,
+                    "&:hover": buttonHoverStyles,
+                  }}
+                >
+                  Edit Profile
+                </Button>
+              )}
             </Box>
-          ) : (
-            <Box textAlign="center">
-              <CircularProgress />
-            </Box>
-          )}
-        </Paper>
-      </motion.div>
+          </Box>
+        ) : (
+          <Box 
+            sx={{ 
+              display: "flex", 
+              justifyContent: "center", 
+              alignItems: "center",
+              minHeight: "300px"
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 };

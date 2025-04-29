@@ -3,15 +3,15 @@ import { createTheme } from '@mui/material/styles';
 
 // Luxury Base Configuration
 const config = {
-  primary: '#5C4033',        // Deep Mocha (luxury, earthy, modern)
-  secondary: '#7D5A50',      // Warm Clay (for subtle accents)
-  background: '#FAF9F6',     // Light Linen (airy but not blue/gray)
+  primary: '#634832',        // Mocha Mousse (Pantone Color of 2025)
+  secondary: '#A67F5D',      // Caramel Latte (warm complementary)
+  background: '#F8F6F2',     // Warm Cream Linen
   paperBackground: '#FFFFFF', // True White (cards, modal surfaces)
-  titleColor: '#2E2E2E',      // Almost Black (for high-contrast headings)
-  textPrimary: '#4B4B4B',     // Mid Charcoal (comfortable for body text)
-  appBarBackground: '#5C4033', // Match primary (strong and grounded)
+  titleColor: '#2D2A26',      // Rich Charcoal (for high-contrast headings)
+  textPrimary: '#3F3A36',     // Deep Charcoal (comfortable for body text)
+  appBarBackground: '#634832', // Match primary (strong and grounded)
   ctaColor: '#B7791F',        // Rich Amber (CTAs pop with warmth)
-  ctaHoverColor: '#975A16',   // Darker Amber for hover (bold but serious)
+  ctaHoverColor: '#9A6417',   // Darker Amber for hover (bold but serious)
   fontFamily: "'Poppins', sans-serif", // Keep it clean and professional
   borderRadius:4
 };
@@ -23,13 +23,13 @@ const theme = createTheme({
   palette: {
     primary: {
       main: config.primary,
-      light: '#5ABEFF',
-      dark: '#0066CC',
+      light: '#8B6E53',      // Lighter mocha
+      dark: '#4A3526',       // Deeper brown
     },
     secondary: {
       main: config.secondary,
-      light: '#5CF0D8',
-      dark: '#009e8f',
+      light: '#C2A588',      // Lighter caramel
+      dark: '#7E5F44',       // Deeper caramel
     },
     background: {
       default: config.background,
@@ -37,12 +37,12 @@ const theme = createTheme({
     },
     text: {
       primary: config.titleColor,
-      secondary: '#A5B4FC', // Soft Indigo
+      secondary: '#6E655B', // Warm Grey
     },
-    success: { main: '#2E7D32' },
-    warning: { main: '#FF9800' },
+    success: { main: '#3E6B45' },  // Rich forest green
+    warning: { main: '#D28B31' },  // Warm amber
     action: {
-      hover: 'rgba(255, 255, 255, 0.05)', // ✅ Subtle hover glow
+      hover: 'rgba(166, 127, 93, 0.08)', // Subtle caramel hover
       selected: config.primary,
     },
   },
@@ -72,7 +72,7 @@ const theme = createTheme({
     body2: {
       fontSize: '0.9rem',
       fontWeight: 400,
-      color: '#B0BEC5',
+      color: '#6E655B',
     },
     button: {
       textTransform: 'none',
@@ -88,20 +88,20 @@ const theme = createTheme({
           borderRadius: config.borderRadius,
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 8px 20px rgba(10, 132, 255, 0.35)', // Subtle blue glow
+            boxShadow: '0 8px 20px rgba(99, 72, 50, 0.25)', // Mocha shadow
           },
         },
         containedPrimary: {
           backgroundColor: config.primary,
           '&:hover': {
-            backgroundColor: '#0066CC',
+            backgroundColor: '#4A3526',
           },
         },
         containedSecondary: {
           backgroundColor: config.secondary,
           color: '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#009e8f',
+            backgroundColor: '#7E5F44',
           },
         },
         containedRocket: {
@@ -120,7 +120,7 @@ const theme = createTheme({
           borderRadius: config.borderRadius,
           boxShadow: '0 8px 30px rgba(0, 0, 0, 0.2)',
           transition: 'all 0.4s ease',
-          background: 'linear-gradient(145deg, #1B263B, #0D1B2A)', // ✅ Soft luxurious card background
+          background: 'linear-gradient(145deg, #634832, #4A3526)', // Mocha gradient
           '&:hover': {
             transform: 'scale(1.015)',
           },

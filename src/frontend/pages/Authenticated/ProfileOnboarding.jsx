@@ -5,61 +5,130 @@ import {
   TextField,
   Button,
   Alert,
-  CircularProgress,
   Paper,
   useTheme,
+  useMediaQuery,
+  CircularProgress
 } from "@mui/material";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
-import { motion } from "framer-motion";
-
-const profileSchema = z.object({
-  first_name: z.string().min(1, "First name is required"),
-  last_name: z.string().min(1, "Last name is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
-});
 
 const ProfileOnboarding = () => {
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: "",
-      last_name: "",
-      date_of_birth: "",
-    },
+  // Core state
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    date_of_birth: ""
   });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
+  
+  // Hooks
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const navigate = useNavigate();
+  
+  // Form handling
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
+    // Clear API error when user makes any change
+    if (apiError) {
+      setApiError("");
+    }
+  };
 
-  const onSubmit = async (data) => {
-    setSubmitting(true);
-    setError("");
+  const validateForm = () => {
+    const newErrors = {};
+    const { first_name, last_name, date_of_birth } = formData;
+    
+    if (!first_name.trim()) {
+      newErrors.first_name = "First name is required";
+    }
+    
+    if (!last_name.trim()) {
+      newErrors.last_name = "Last name is required";
+    }
+    
+    if (!date_of_birth) {
+      newErrors.date_of_birth = "Date of birth is required";
+    } else {
+      // Basic date validation
+      const dob = new Date(date_of_birth);
+      const today = new Date();
+      
+      if (isNaN(dob.getTime())) {
+        newErrors.date_of_birth = "Invalid date format";
+      } else if (dob > today) {
+        newErrors.date_of_birth = "Date of birth cannot be in the future";
+      } else if (today.getFullYear() - dob.getFullYear() > 120) {
+        newErrors.date_of_birth = "Please enter a valid date of birth";
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
+  // Form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setIsSubmitting(true);
+    setApiError("");
+    
     try {
-      const response = await postData(`/profile`, data);
-
+      const response = await postData(`/profile`, formData);
+      
       if (response && (response.status === 201 || response.message === "Profile created successfully")) {
         if (response.profile) {
           useUserStore.getState().setProfile(response.profile);
         }
         navigate("/dashboard");
       } else {
-        setError("Unable to save your profile. Please try again.");
+        setApiError("Unable to save your profile. Please try again.");
       }
     } catch (err) {
       console.error(err);
-      setError("Something went wrong. Please try again later.");
+      setApiError(err.message || "Something went wrong. Please try again later.");
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
+
+  // Styles derived from theme
+  const borderRadius = theme.shape.borderRadius;
+  const inputStyles = {
+    "& .MuiOutlinedInput-root": {
+      borderRadius,
+      backgroundColor: "rgba(255,255,255,0.04)",
+    }
+  };
+  
+  const buttonTransition = theme.transitions.create(["transform", "box-shadow"], {
+    duration: theme.transitions.duration.short,
+  });
+  
+  const buttonHoverStyles = {
+    transform: "translateY(-2px)",
+    boxShadow: theme.shadows[6],
+  };
+  
+  const mainBgGradient = `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`;
 
   return (
     <Box
@@ -81,130 +150,136 @@ const ProfileOnboarding = () => {
           mb: 4,
         }}
       >
-        <Typography variant="h3" fontWeight="bold" mb={1}>
+        <Typography 
+          variant="h3" 
+          fontWeight="bold" 
+          mb={1}
+          sx={{
+            fontSize: { xs: "2.2rem", md: "3rem" },
+            transition: "fontSize 0.3s ease",
+          }}
+        >
           Welcome Aboard
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+          sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
+        >
           Let's personalize your experience
         </Typography>
       </Box>
 
-      {/* Form */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        style={{ width: "100%" }}
+      {/* Form Container */}
+      <Paper
+        elevation={10}
+        sx={{
+          width: "100%",
+          maxWidth: "800px",
+          mx: "auto",
+          p: { xs: 3, md: 5 },
+          borderRadius,
+          background: mainBgGradient,
+          boxShadow: theme.shadows[10],
+          transform: "translateY(0)",
+          transition: "transform 0.5s ease-out",
+          "&:hover": {
+            transform: "translateY(-5px)",
+          }
+        }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            width: "100%",
-            maxWidth: "800px",
-            mx: "auto",
-            p: { xs: 3, md: 5 },
-            borderRadius: 4,
-            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
-            boxShadow: theme.shadows[10],
-          }}
-        >
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box
-            component="form"
-            onSubmit={handleSubmit(onSubmit)}
-            noValidate
-            sx={{ width: "100%" }}
+        {apiError && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3, 
+              borderRadius,
+              '& .MuiAlert-icon': { alignSelf: 'center' }
+            }}
           >
-            {/* First Name */}
-            <TextField
-              {...register("first_name")}
-              label="First Name"
-              fullWidth
-              margin="normal"
-              error={!!errors.first_name}
-              helperText={errors.first_name?.message}
-              disabled={submitting}
-              InputProps={{
-                sx: {
-                  borderRadius: 2,
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                },
-              }}
-            />
+            {apiError}
+          </Alert>
+        )}
 
-            {/* Last Name */}
-            <TextField
-              {...register("last_name")}
-              label="Last Name"
-              fullWidth
-              margin="normal"
-              error={!!errors.last_name}
-              helperText={errors.last_name?.message}
-              disabled={submitting}
-              InputProps={{
-                sx: {
-                  borderRadius: 2,
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                },
-              }}
-            />
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          noValidate
+          sx={{ width: "100%" }}
+        >
+          {/* First Name */}
+          <TextField
+            name="first_name"
+            label="First Name"
+            value={formData.first_name}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            error={!!errors.first_name}
+            helperText={errors.first_name}
+            disabled={isSubmitting}
+            sx={inputStyles}
+          />
 
-            {/* Date of Birth */}
-            <TextField
-              {...register("date_of_birth")}
-              label="Date of Birth"
-              type="date"
-              fullWidth
-              margin="normal"
-              error={!!errors.date_of_birth}
-              helperText={errors.date_of_birth?.message}
-              disabled={submitting}
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                sx: {
-                  borderRadius: 2,
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                },
-              }}
-            />
+          {/* Last Name */}
+          <TextField
+            name="last_name"
+            label="Last Name"
+            value={formData.last_name}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            error={!!errors.last_name}
+            helperText={errors.last_name}
+            disabled={isSubmitting}
+            sx={inputStyles}
+          />
 
-            {/* Submit */}
-            <Button
-              variant="contained"
-              type="submit"
-              fullWidth
-              disabled={submitting}
-              sx={{
-                mt: 4,
-                py: 1.5,
-                borderRadius: 3,
-                fontWeight: 600,
-                textTransform: "none",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  transform: "translateY(-2px)",
-                  boxShadow: theme.shadows[6],
-                },
-              }}
-            >
-              {submitting ? (
-                <CircularProgress
-                  size={24}
-                  color="inherit"
-                  sx={{ position: "absolute" }}
-                />
-              ) : (
-                "Save & Continue"
-              )}
-            </Button>
-          </Box>
-        </Paper>
-      </motion.div>
+          {/* Date of Birth */}
+          <TextField
+            name="date_of_birth"
+            label="Date of Birth"
+            type="date"
+            value={formData.date_of_birth}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            error={!!errors.date_of_birth}
+            helperText={errors.date_of_birth}
+            disabled={isSubmitting}
+            InputLabelProps={{ shrink: true }}
+            sx={inputStyles}
+          />
+
+          {/* Submit Button */}
+          <Button
+            variant="contained"
+            type="submit"
+            fullWidth
+            disabled={isSubmitting}
+            sx={{
+              mt: 4,
+              py: 1.5,
+              borderRadius,
+              fontWeight: 600,
+              textTransform: "none",
+              position: 'relative',
+              transition: buttonTransition,
+              "&:hover": buttonHoverStyles,
+            }}
+          >
+            {isSubmitting ? (
+              <CircularProgress
+                size={24}
+                color="inherit"
+                sx={{ position: "absolute" }}
+              />
+            ) : (
+              "Save & Continue"
+            )}
+          </Button>
+        </Box>
+      </Paper>
     </Box>
   );
 };
