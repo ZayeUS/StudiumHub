@@ -1,20 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  IconButton, 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  useMediaQuery, 
-  useTheme,
-  Box,
-  Container,
-  Divider,
-  alpha
+  AppBar, Toolbar, Typography, Button, IconButton, Drawer, 
+  List, ListItem, ListItemText, useMediaQuery, useTheme,
+  Box, Container, Divider, alpha
 } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,8 +14,10 @@ const NavBar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Toggle Drawer (Hamburger menu)
-  const toggleDrawer = () => setOpenDrawer(!openDrawer);
+  // Close drawer when navigating
+  const handleNavigation = () => {
+    setOpenDrawer(false);
+  };
 
   // Animation variants
   const navItemVariants = {
@@ -51,7 +41,7 @@ const NavBar = () => {
       position="sticky" 
       elevation={0}
       sx={{ 
-        backgroundColor: theme.palette.background.paper, // Use theme colors
+        backgroundColor: theme.palette.background.paper,
         borderBottom: `1px solid ${theme.palette.divider}`,
         color: theme.palette.text.primary
       }}
@@ -66,7 +56,8 @@ const NavBar = () => {
           >
             <Typography 
               variant="h5" 
-              component="div"
+              component={Link}
+              to="/"
               sx={{ 
                 flexGrow: 1, 
                 fontWeight: 700,
@@ -76,7 +67,8 @@ const NavBar = () => {
                 WebkitTextFillColor: 'transparent',
                 display: 'flex',
                 alignItems: 'center',
-                mr: 4
+                mr: 4,
+                textDecoration: 'none'
               }}
             >
               <Zap size={24} color={theme.palette.primary.main} style={{ marginRight: 8 }} />
@@ -180,6 +172,7 @@ const NavBar = () => {
                   <Button 
                     component={Link}
                     to="/login"
+                    onClick={handleNavigation}
                     size="small"
                     variant="outlined" 
                     color="primary"
@@ -200,7 +193,7 @@ const NavBar = () => {
                 <IconButton
                   edge="end"
                   color="inherit"
-                  onClick={toggleDrawer}
+                  onClick={() => setOpenDrawer(!openDrawer)}
                   aria-label="menu"
                   sx={{
                     '&:hover': {
@@ -220,14 +213,13 @@ const NavBar = () => {
               <Drawer 
                 anchor="right" 
                 open={openDrawer} 
-                onClose={toggleDrawer}
-                transitionDuration={{ enter: 400, exit: 300 }}
+                onClose={() => setOpenDrawer(false)}
                 PaperProps={{
                   sx: {
                     width: isSmallMobile ? '100%' : 280,
                     p: 2,
-                    backgroundColor: theme.palette.background.paper, // Solid background color for Drawer
-                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`, // Optional: Adds slight shadow
+                    backgroundColor: theme.palette.background.paper,
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`,
                   }
                 }}
               >
@@ -239,11 +231,23 @@ const NavBar = () => {
                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6" component="div" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
+                    <Typography 
+                      variant="h6" 
+                      component={Link}
+                      to="/"
+                      onClick={handleNavigation}
+                      sx={{ 
+                        fontWeight: 700, 
+                        color: theme.palette.primary.main,
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
                       <Zap size={20} style={{ marginRight: 6 }} />
                       SaaSify
                     </Typography>
-                    <IconButton onClick={toggleDrawer} size="small">
+                    <IconButton onClick={() => setOpenDrawer(false)} size="small">
                       <X size={20} />
                     </IconButton>
                   </Box>
@@ -261,10 +265,12 @@ const NavBar = () => {
                         <ListItem 
                           component={Link}
                           to={item.path}
-                          onClick={toggleDrawer}
+                          onClick={handleNavigation}
                           sx={{ 
                             borderRadius: 2,
                             mb: 1,
+                            textDecoration: 'none',
+                            color: 'inherit',
                             '&:hover': {
                               backgroundColor: alpha(theme.palette.primary.main, 0.1),
                             }
@@ -294,6 +300,7 @@ const NavBar = () => {
                       <Button 
                         component={Link}
                         to="/login"
+                        onClick={handleNavigation}
                         fullWidth
                         variant="outlined" 
                         color="primary"
@@ -318,6 +325,7 @@ const NavBar = () => {
                       <Button 
                         component={Link}
                         to="/signup"
+                        onClick={handleNavigation}
                         fullWidth
                         variant="contained" 
                         color="primary"

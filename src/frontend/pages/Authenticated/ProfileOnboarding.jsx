@@ -29,6 +29,7 @@ const ProfileOnboarding = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
+  const { clearUser } = useUserStore();
   
   // Form handling
   const handleChange = (e) => {
@@ -110,6 +111,12 @@ const ProfileOnboarding = () => {
     }
   };
 
+  // Logout handler
+  const handleLogout = () => {
+    clearUser();
+    navigate("/login");
+  };
+
   // Styles derived from theme
   const borderRadius = theme.shape.borderRadius;
   const inputStyles = {
@@ -141,33 +148,59 @@ const ProfileOnboarding = () => {
         p: { xs: 2, md: 6 },
       }}
     >
-      {/* Header */}
+      {/* Header with Logout */}
       <Box
         sx={{
           width: "100%",
           maxWidth: "800px",
-          textAlign: "left",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           mb: 4,
         }}
       >
-        <Typography 
-          variant="h3" 
-          fontWeight="bold" 
-          mb={1}
+        <Box>
+          <Typography 
+            variant="h3" 
+            fontWeight="bold" 
+            mb={1}
+            sx={{
+              fontSize: { xs: "2.2rem", md: "3rem" },
+              transition: "fontSize 0.3s ease",
+            }}
+          >
+            Welcome Aboard
+          </Typography>
+          <Typography 
+            variant="body1" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
+          >
+            Let's personalize your experience
+          </Typography>
+        </Box>
+        
+        {/* Logout Button */}
+        <Button
+          variant="outlined"
+          onClick={handleLogout}
           sx={{
-            fontSize: { xs: "2.2rem", md: "3rem" },
-            transition: "fontSize 0.3s ease",
+            borderRadius,
+            textTransform: "none",
+            px: 2,
+            py: 0.75,
+            transition: buttonTransition,
+            borderColor: theme.palette.error.main,
+            color: theme.palette.error.main,
+            "&:hover": {
+              borderColor: theme.palette.error.dark,
+              backgroundColor: `${theme.palette.error.main}10`,
+              ...buttonHoverStyles
+            },
           }}
         >
-          Welcome Aboard
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-          sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
-        >
-          Let's personalize your experience
-        </Typography>
+          Logout
+        </Button>
       </Box>
 
       {/* Form Container */}

@@ -2,67 +2,82 @@ import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
-// Safe getter for localStorage
-const getFromStorage = (key, defaultValue = null) => {
-  try {
-    return localStorage.getItem(key) || defaultValue;
-  } catch (e) {
-    console.error(`Error reading ${key} from localStorage:`, e);
-    return defaultValue;
+// Simple localStorage helpers with error handling
+const safeStorage = {
+  get: (key, defaultValue = null) => {
+    try {
+      return localStorage.getItem(key) || defaultValue;
+    } catch (e) {
+      console.error(`Error reading ${key} from storage:`, e);
+      return defaultValue;
+    }
+  },
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      console.error(`Error saving ${key} to storage:`, e);
+      return false;
+    }
+  },
+  remove: (key) => {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (e) {
+      console.error(`Error removing ${key} from storage:`, e);
+      return false;
+    }
   }
 };
 
 export const useUserStore = create((set, get) => {
-  const initialFirebaseId = getFromStorage('firebaseId');
-  const initialRoleId = Number(getFromStorage('roleId')) || null;
-  const initialUserId = getFromStorage('userId') || null; // UUID-safe
+  // Initialize from localStorage with safe fallbacks
+  const initialFirebaseId = safeStorage.get('firebaseId');
+  const initialRoleId = Number(safeStorage.get('roleId')) || null;
+  const initialUserId = safeStorage.get('userId');
 
   return {
+    // State
     firebaseId: initialFirebaseId,
     roleId: initialRoleId,
     userId: initialUserId,
     isLoggedIn: Boolean(initialFirebaseId && initialUserId),
     profile: null,
-
-    // UI state
     loading: false,
-    manualLoginInProgress: false,
     authHydrated: false,
 
     // Actions
     setLoading: (loading) => set({ loading }),
-
-    setManualLogin: (status) => set({ manualLoginInProgress: status }),
-
+    
     setUser: (firebaseId, roleId, userId) => {
+      // Normalize values for consistency
       const normalizedRoleId = Number(roleId);
-      const normalizedUserId = String(userId); // UUID-safe
-
-      try {
-        localStorage.setItem('firebaseId', firebaseId);
-        localStorage.setItem('roleId', String(normalizedRoleId));
-        localStorage.setItem('userId', normalizedUserId);
-      } catch (e) {
-        console.error('Error saving user data to localStorage:', e);
-      }
-
+      
+      // Save to localStorage
+      safeStorage.set('firebaseId', firebaseId);
+      safeStorage.set('roleId', String(normalizedRoleId));
+      safeStorage.set('userId', userId);
+      
+      // Update state
       set({
         firebaseId,
         roleId: normalizedRoleId,
-        userId: normalizedUserId,
+        userId,
         isLoggedIn: true,
       });
     },
-
+    
     setProfile: (profileData) => set({ profile: profileData }),
-
+    
     clearUser: () => {
-      try {
-        ['firebaseId', 'roleId', 'userId'].forEach(k => localStorage.removeItem(k));
-      } catch (e) {
-        console.error('Error clearing localStorage:', e);
-      }
-
+      // Remove from localStorage
+      safeStorage.remove('firebaseId');
+      safeStorage.remove('roleId');
+      safeStorage.remove('userId');
+      
+      // Update state
       set({
         firebaseId: null,
         roleId: null,
@@ -71,69 +86,49 @@ export const useUserStore = create((set, get) => {
         profile: null,
       });
     },
-
+    
     listenAuthState: () => {
       set({ loading: true, authHydrated: false });
-      const start = Date.now();
-
-      const waitForBackend = () => {
-        const elapsed = Date.now() - start;
-        const remaining = Math.max(0, 2000 - elapsed);
-        return new Promise(resolve => setTimeout(resolve, remaining));
-      };
-
-      const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      
+      return auth.onAuthStateChanged(async (user) => {
         try {
           if (user) {
+            // Fetch user data and profile in parallel
             const [userData, profileData] = await Promise.all([
               getData(`/users/${user.uid}`),
               getData(`/profile`).catch(() => null)
             ]);
-
-            await waitForBackend();
-
-            if (userData && userData.role_id !== undefined && userData.user_id !== undefined) {
-              const normalizedRoleId = Number(userData.role_id);
-              const normalizedUserId = String(userData.user_id); // UUID-safe
-
-              try {
-                localStorage.setItem('firebaseId', user.uid);
-                localStorage.setItem('roleId', String(normalizedRoleId));
-                localStorage.setItem('userId', normalizedUserId);
-              } catch (e) {
-                console.error('Error saving user data to localStorage:', e);
-              }
-
+            
+            // Validate required user data
+            if (userData && userData.role_id !== undefined && userData.user_id) {
+              // Update user state
+              get().setUser(user.uid, userData.role_id, userData.user_id);
+              
+              // Update profile and finish loading
               set({
-                firebaseId: user.uid,
-                roleId: normalizedRoleId,
-                userId: normalizedUserId,
-                isLoggedIn: true,
-                profile: profileData || null,
+                profile: profileData,
                 loading: false,
                 authHydrated: true,
               });
             } else {
-              throw new Error('Invalid user data received from backend');
+              throw new Error('Invalid user data received');
             }
           } else {
-            await waitForBackend();
+            // No user is signed in
             get().clearUser();
             set({ loading: false, authHydrated: true });
           }
         } catch (err) {
           console.error('Auth listener error:', err);
-          await waitForBackend();
-
+          
+          // Clear user on auth errors
           if (err.code?.includes('auth/') || err.message?.includes('Invalid user')) {
             get().clearUser();
           }
-
+          
           set({ loading: false, authHydrated: true });
         }
       });
-
-      return unsubscribe;
     }
   };
 });
