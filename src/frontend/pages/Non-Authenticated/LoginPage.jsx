@@ -8,23 +8,22 @@ import { Mail, Lock, Eye, EyeOff, ChevronRight, LogIn, KeyRound } from "lucide-r
 import { login as firebaseLogin, resetPassword } from "../../../firebase";
 import { useUserStore } from "../../store/userStore";
 import { useNavigate } from "react-router-dom";
-import LoadingModal from "../../components/LoadingModal";
 
 export default function LoginPage() {
   const loading = useUserStore(state => state.loading);
+  const setLoading = useUserStore(state => state.setLoading);
+
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [resetEmail, setResetEmail] = useState("");
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
-  
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -32,15 +31,14 @@ export default function LoginPage() {
   };
 
   const validateForm = () => {
-    const newErrors = {};
     const { email, password } = formData;
-    
+    const newErrors = {};
     if (!email) newErrors.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email";
-    
+
     if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    
+    else if (password.length < 6) newErrors.password = "Minimum 6 characters";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -48,8 +46,8 @@ export default function LoginPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
-    setIsSubmitting(true);
+
+    setLoading(true);
     try {
       await firebaseLogin(formData.email, formData.password);
       showNotification("Logged in successfully!", "success");
@@ -57,7 +55,7 @@ export default function LoginPage() {
       setErrors({ auth: error.message || "Incorrect email or password" });
       showNotification(error.message || "Login failed", "error");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -67,8 +65,8 @@ export default function LoginPage() {
       setErrors({ resetEmail: "Valid email required" });
       return;
     }
-    
-    setIsResetting(true);
+
+    setLoading(true);
     try {
       await resetPassword(resetEmail);
       showNotification("Password reset email sent", "success");
@@ -76,7 +74,7 @@ export default function LoginPage() {
     } catch (error) {
       setErrors({ resetEmail: error.message || "Failed to send reset email" });
     } finally {
-      setIsResetting(false);
+      setLoading(false);
     }
   };
 
@@ -84,7 +82,6 @@ export default function LoginPage() {
     setNotification({ open: true, message, severity });
   };
 
-  // Reusable styles
   const styles = {
     input: {
       "& .MuiOutlinedInput-root": {
@@ -93,7 +90,7 @@ export default function LoginPage() {
       }
     },
     button: {
-      py: 1.5, 
+      py: 1.5,
       borderRadius: theme.shape.borderRadius,
       textTransform: "none",
       fontWeight: "bold",
@@ -114,8 +111,6 @@ export default function LoginPage() {
       bgcolor: theme.palette.background.default,
       p: { xs: 2, md: 4 },
     }}>
-      <LoadingModal />
-      
       <Snackbar
         open={notification.open}
         autoHideDuration={4000}
@@ -138,9 +133,9 @@ export default function LoginPage() {
           }}
         >
           {/* Header */}
-          <Box sx={{ 
-            bgcolor: theme.palette.primary.main, 
-            p: 3, 
+          <Box sx={{
+            bgcolor: theme.palette.primary.main,
+            p: 3,
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
@@ -175,7 +170,7 @@ export default function LoginPage() {
               margin="normal"
               error={!!errors.email}
               helperText={errors.email}
-              disabled={isSubmitting}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -196,7 +191,7 @@ export default function LoginPage() {
               margin="normal"
               error={!!errors.password}
               helperText={errors.password}
-              disabled={isSubmitting}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -231,11 +226,11 @@ export default function LoginPage() {
               variant="contained"
               fullWidth
               type="submit"
-              disabled={isSubmitting}
-              endIcon={isSubmitting ? null : <ChevronRight size={18} />}
+              disabled={loading}
+              endIcon={!loading ? <ChevronRight size={18} /> : null}
               sx={{ ...styles.button, mt: 3 }}
             >
-              {isSubmitting ? "Signing in..." : "Sign In"}
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
 
             <Box textAlign="center" mt={2}>
@@ -291,15 +286,15 @@ export default function LoginPage() {
               }}
               error={!!errors.resetEmail}
               helperText={errors.resetEmail}
-              disabled={isResetting}
+              disabled={loading}
               sx={styles.input}
             />
             <Box sx={{ textAlign: "right", mt: 3 }}>
               <Button onClick={() => setResetOpen(false)} sx={{ mr: 2 }}>
                 Cancel
               </Button>
-              <Button variant="contained" type="submit" disabled={isResetting}>
-                {isResetting ? "Sending..." : "Send Reset Email"}
+              <Button variant="contained" type="submit" disabled={loading}>
+                {loading ? "Sending..." : "Send Reset Email"}
               </Button>
             </Box>
           </form>

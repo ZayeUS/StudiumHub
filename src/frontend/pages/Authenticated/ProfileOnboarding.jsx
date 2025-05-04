@@ -8,98 +8,75 @@ import {
   Paper,
   useTheme,
   useMediaQuery,
-  CircularProgress
+  Snackbar
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
 
 const ProfileOnboarding = () => {
-  // Core state
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     date_of_birth: ""
   });
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
-  
-  // Hooks
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
+
   const { clearUser } = useUserStore();
-  
-  // Form handling
+  const loading = useUserStore(state => state.loading);
+  const setLoading = useUserStore(state => state.setLoading);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user types
     if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+      const newErrors = { ...errors };
+      delete newErrors[name];
+      setErrors(newErrors);
     }
-    
-    // Clear API error when user makes any change
-    if (apiError) {
-      setApiError("");
-    }
+    if (apiError) setApiError("");
   };
 
   const validateForm = () => {
-    const newErrors = {};
     const { first_name, last_name, date_of_birth } = formData;
-    
-    if (!first_name.trim()) {
-      newErrors.first_name = "First name is required";
-    }
-    
-    if (!last_name.trim()) {
-      newErrors.last_name = "Last name is required";
-    }
-    
+    const newErrors = {};
+    if (!first_name.trim()) newErrors.first_name = "First name is required";
+    if (!last_name.trim()) newErrors.last_name = "Last name is required";
+
     if (!date_of_birth) {
       newErrors.date_of_birth = "Date of birth is required";
     } else {
-      // Basic date validation
       const dob = new Date(date_of_birth);
       const today = new Date();
-      
-      if (isNaN(dob.getTime())) {
-        newErrors.date_of_birth = "Invalid date format";
-      } else if (dob > today) {
-        newErrors.date_of_birth = "Date of birth cannot be in the future";
-      } else if (today.getFullYear() - dob.getFullYear() > 120) {
-        newErrors.date_of_birth = "Please enter a valid date of birth";
-      }
+      if (isNaN(dob.getTime())) newErrors.date_of_birth = "Invalid date format";
+      else if (dob > today) newErrors.date_of_birth = "Date of birth cannot be in the future";
+      else if (today.getFullYear() - dob.getFullYear() > 120) newErrors.date_of_birth = "Please enter a valid date of birth";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
-    setIsSubmitting(true);
+
+    setLoading(true);
     setApiError("");
-    
+
     try {
       const response = await postData(`/profile`, formData);
-      
+
       if (response && (response.status === 201 || response.message === "Profile created successfully")) {
-        if (response.profile) {
-          useUserStore.getState().setProfile(response.profile);
-        }
-        navigate("/dashboard");
+        if (response.profile) useUserStore.getState().setProfile(response.profile);
+        showNotification("Profile created successfully!", "success");
+        setTimeout(() => navigate("/dashboard"), 800);
       } else {
         setApiError("Unable to save your profile. Please try again.");
       }
@@ -107,17 +84,19 @@ const ProfileOnboarding = () => {
       console.error(err);
       setApiError(err.message || "Something went wrong. Please try again later.");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  // Logout handler
   const handleLogout = () => {
     clearUser();
     navigate("/login");
   };
 
-  // Styles derived from theme
+  const showNotification = (message, severity = "success") => {
+    setNotification({ open: true, message, severity });
+  };
+
   const borderRadius = theme.shape.borderRadius;
   const inputStyles = {
     "& .MuiOutlinedInput-root": {
@@ -125,16 +104,16 @@ const ProfileOnboarding = () => {
       backgroundColor: "rgba(255,255,255,0.04)",
     }
   };
-  
+
   const buttonTransition = theme.transitions.create(["transform", "box-shadow"], {
     duration: theme.transitions.duration.short,
   });
-  
+
   const buttonHoverStyles = {
     transform: "translateY(-2px)",
     boxShadow: theme.shadows[6],
   };
-  
+
   const mainBgGradient = `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`;
 
   return (
@@ -148,6 +127,16 @@ const ProfileOnboarding = () => {
         p: { xs: 2, md: 6 },
       }}
     >
+      {/* Notification */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={4000}
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert severity={notification.severity}>{notification.message}</Alert>
+      </Snackbar>
+
       {/* Header with Logout */}
       <Box
         sx={{
@@ -160,9 +149,9 @@ const ProfileOnboarding = () => {
         }}
       >
         <Box>
-          <Typography 
-            variant="h3" 
-            fontWeight="bold" 
+          <Typography
+            variant="h3"
+            fontWeight="bold"
             mb={1}
             sx={{
               fontSize: { xs: "2.2rem", md: "3rem" },
@@ -171,16 +160,15 @@ const ProfileOnboarding = () => {
           >
             Welcome Aboard
           </Typography>
-          <Typography 
-            variant="body1" 
+          <Typography
+            variant="body1"
             color="text.secondary"
             sx={{ fontSize: { xs: "1rem", md: "1.1rem" } }}
           >
             Let's personalize your experience
           </Typography>
         </Box>
-        
-        {/* Logout Button */}
+
         <Button
           variant="outlined"
           onClick={handleLogout}
@@ -203,7 +191,7 @@ const ProfileOnboarding = () => {
         </Button>
       </Box>
 
-      {/* Form Container */}
+      {/* Form */}
       <Paper
         elevation={10}
         sx={{
@@ -222,10 +210,10 @@ const ProfileOnboarding = () => {
         }}
       >
         {apiError && (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 3, 
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
               borderRadius,
               '& .MuiAlert-icon': { alignSelf: 'center' }
             }}
@@ -240,7 +228,6 @@ const ProfileOnboarding = () => {
           noValidate
           sx={{ width: "100%" }}
         >
-          {/* First Name */}
           <TextField
             name="first_name"
             label="First Name"
@@ -250,11 +237,10 @@ const ProfileOnboarding = () => {
             margin="normal"
             error={!!errors.first_name}
             helperText={errors.first_name}
-            disabled={isSubmitting}
+            disabled={loading}
             sx={inputStyles}
           />
 
-          {/* Last Name */}
           <TextField
             name="last_name"
             label="Last Name"
@@ -264,11 +250,10 @@ const ProfileOnboarding = () => {
             margin="normal"
             error={!!errors.last_name}
             helperText={errors.last_name}
-            disabled={isSubmitting}
+            disabled={loading}
             sx={inputStyles}
           />
 
-          {/* Date of Birth */}
           <TextField
             name="date_of_birth"
             label="Date of Birth"
@@ -279,37 +264,27 @@ const ProfileOnboarding = () => {
             margin="normal"
             error={!!errors.date_of_birth}
             helperText={errors.date_of_birth}
-            disabled={isSubmitting}
+            disabled={loading}
             InputLabelProps={{ shrink: true }}
             sx={inputStyles}
           />
 
-          {/* Submit Button */}
           <Button
             variant="contained"
             type="submit"
             fullWidth
-            disabled={isSubmitting}
+            disabled={loading}
             sx={{
               mt: 4,
               py: 1.5,
               borderRadius,
               fontWeight: 600,
               textTransform: "none",
-              position: 'relative',
               transition: buttonTransition,
               "&:hover": buttonHoverStyles,
             }}
           >
-            {isSubmitting ? (
-              <CircularProgress
-                size={24}
-                color="inherit"
-                sx={{ position: "absolute" }}
-              />
-            ) : (
-              "Save & Continue"
-            )}
+            {loading ? "Saving..." : "Save & Continue"}
           </Button>
         </Box>
       </Paper>

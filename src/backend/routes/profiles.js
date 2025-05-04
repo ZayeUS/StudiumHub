@@ -1,7 +1,7 @@
-// src/backend/routes/profile.js
 import express from 'express';
 import { query } from '../db.js';
 import authenticate from '../middlewares/authenticate.js';
+import {logAudit} from '../utils/auditLogger.js'; // ✅ Correct default import
 
 const router = express.Router();
 
@@ -21,6 +21,14 @@ router.post('/', authenticate, async (req, res) => {
 
   try {
     const result = await query(queryText, values);
+    await logAudit({
+      actorUserId: user_id,
+      targetUserId: user_id,
+      action: 'create_profile',
+      tableName: 'profiles',
+      recordId: result.rows[0].profile_id,
+      metadata: { first_name, last_name, date_of_birth }
+    });
     res.status(201).json({ message: "Profile created successfully", profile: result.rows[0] });
   } catch (error) {
     console.error("Error creating profile:", error);
@@ -37,7 +45,7 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const result = await query(queryText, values);
     if (result.rows.length === 0) {
-      return res.status(200).json({}); // Return empty object instead of null
+      return res.status(200).json({});
     }
     res.status(200).json(result.rows[0]);
   } catch (error) {
@@ -66,6 +74,14 @@ router.put('/', authenticate, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Profile not found' });
     }
+    await logAudit({
+      actorUserId: user_id,
+      targetUserId: user_id,
+      action: 'update_profile',
+      tableName: 'profiles',
+      recordId: result.rows[0].profile_id,
+      metadata: { first_name, last_name, date_of_birth }
+    });
     res.status(200).json({ message: 'Profile updated', profile: result.rows[0] });
   } catch (error) {
     console.error('Error updating profile:', error);
@@ -84,6 +100,13 @@ router.delete('/', authenticate, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Profile not found' });
     }
+    await logAudit({
+      actorUserId: user_id,
+      targetUserId: user_id,
+      action: 'delete_profile',
+      tableName: 'profiles',
+      recordId: result.rows[0].profile_id
+    });
     res.status(200).json({ message: 'Profile deleted successfully' });
   } catch (error) {
     console.error('Error deleting profile:', error);

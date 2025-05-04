@@ -1,19 +1,18 @@
 import React from "react";
-import { useUserStore } from "../store/userStore";
-import AdminDashboard from "../pages/Authenticated/AdminDashboard";
-import UserDashboard from "./pages/Authenticated/UserDashboard";
+import { useUserStore } from "../../store/userStore";
+import AdminDashboard from "../Authenticated/AdminDashboard";
+import UserDashboard from "../Authenticated/UserDashboard";
 import { Navigate } from "react-router-dom";
 
 const Dashboard = () => {
   const { roleId, isLoggedIn, profile } = useUserStore();
   
-  // Redirect logic for incomplete onboarding
+  // Redirect logic
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
   
-  // Critical check: redirect to onboarding if profile doesn't exist
-  if (!profile) {
+  if (isLoggedIn && !profile) {
     return <Navigate to="/profile-onboarding" replace />;
   }
   

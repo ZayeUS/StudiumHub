@@ -9,48 +9,43 @@ import { useNavigate } from "react-router-dom";
 import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../../firebase";
 import { getData, postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
-import LoadingModal from "../../components/LoadingModal";
 
 export default function SignUpPage() {
-  // Core state - using individual selectors to prevent infinite loops
   const loading = useUserStore(state => state.loading);
+  const setLoading = useUserStore(state => state.setLoading);
   const isLoggedIn = useUserStore(state => state.isLoggedIn);
   const roleId = useUserStore(state => state.roleId);
   const setUser = useUserStore(state => state.setUser);
-  
+
   const [formData, setFormData] = useState({ email: "", password: "", confirm: "", role: "" });
   const [roles, setRoles] = useState([]);
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
 
-  // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
       navigate(roleId === 1 ? "/admin-dashboard" : "/dashboard");
     }
   }, [isLoggedIn, roleId, navigate]);
 
-  // Fetch roles on mount
   useEffect(() => {
     const fetchRoles = async () => {
       try {
         const data = await getData("/roles");
         setRoles(data);
-      } catch (error) {
+      } catch {
         showNotification("Failed to load roles. Please refresh and try again.", "error");
       }
     };
     fetchRoles();
   }, []);
 
-  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -58,20 +53,19 @@ export default function SignUpPage() {
   };
 
   const validateForm = () => {
-    const newErrors = {};
     const { email, password, confirm, role } = formData;
-    
+    const newErrors = {};
     if (!email) newErrors.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email address";
-    
+
     if (!password) newErrors.password = "Password is required";
     else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
-    
+
     if (!confirm) newErrors.confirm = "Please confirm your password";
     else if (confirm !== password) newErrors.confirm = "Passwords must match";
-    
+
     if (!role) newErrors.role = "Please select a role";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -79,40 +73,31 @@ export default function SignUpPage() {
   const handleSignUp = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-    
-    setIsSubmitting(true);
-    useUserStore.getState().setLoading(true);
-    
+
+    setLoading(true);
     try {
-      // Check if email exists
       const emailExists = await checkEmailExists(formData.email);
       if (emailExists) {
         setErrors(prev => ({ ...prev, email: "Email already in use" }));
-        setIsSubmitting(false);
-        useUserStore.getState().setLoading(false);
+        setLoading(false);
         return;
       }
-      
-      // Create account and sign in
+
       const user = await firebaseSignUp(formData.email, formData.password);
       await firebaseLogin(formData.email, formData.password);
-      
-      // Find role ID
+
       const selectedRole = roles.find(r => r.role_name === formData.role);
       if (!selectedRole) throw new Error("Invalid role selected");
-      
-      // Create backend user
+
       const backendUser = await postData("/users", {
         firebase_uid: user.uid,
         email: user.email,
         role_id: selectedRole.role_id,
       });
-      
-      // Update store
+
       setUser(user.uid, selectedRole.role_id, backendUser.user.user_id);
-      
-      // Success and redirect
       showNotification("Account created successfully! Redirecting...", "success");
+
       setTimeout(() => {
         navigate(selectedRole.role_id === 1 ? "/admin-dashboard" : "/dashboard");
       }, 1000);
@@ -121,8 +106,7 @@ export default function SignUpPage() {
       setErrors(prev => ({ ...prev, general: error.message || "Sign-up failed. Please try again." }));
       showNotification(error.message || "Sign-up failed. Please try again.", "error");
     } finally {
-      setIsSubmitting(false);
-      useUserStore.getState().setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -130,7 +114,6 @@ export default function SignUpPage() {
     setNotification({ open: true, message, severity });
   };
 
-  // Reusable styles
   const styles = {
     input: {
       "& .MuiOutlinedInput-root": {
@@ -160,8 +143,6 @@ export default function SignUpPage() {
       bgcolor: theme.palette.background.default,
       p: { xs: 2, md: 4 },
     }}>
-      <LoadingModal />
-      
       <Snackbar
         open={notification.open}
         autoHideDuration={4000}
@@ -184,9 +165,9 @@ export default function SignUpPage() {
           }}
         >
           {/* Header */}
-          <Box sx={{ 
-            bgcolor: theme.palette.primary.main, 
-            p: 3, 
+          <Box sx={{
+            bgcolor: theme.palette.primary.main,
+            p: 3,
             textAlign: "center",
             position: "relative",
             overflow: "hidden",
@@ -221,7 +202,7 @@ export default function SignUpPage() {
               margin="normal"
               error={!!errors.email}
               helperText={errors.email}
-              disabled={isSubmitting}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -242,7 +223,7 @@ export default function SignUpPage() {
               margin="normal"
               error={!!errors.password}
               helperText={errors.password}
-              disabled={isSubmitting}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -251,15 +232,14 @@ export default function SignUpPage() {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => setShowPassword(!showPassword)} 
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
                       edge="end"
                       size="small"
                     >
-                      {showPassword ? 
-                        <EyeOff color={theme.palette.primary.main} size={20} /> : 
-                        <Eye color={theme.palette.primary.main} size={20} />
-                      }
+                      {showPassword
+                        ? <EyeOff color={theme.palette.primary.main} size={20} />
+                        : <Eye color={theme.palette.primary.main} size={20} />}
                     </IconButton>
                   </InputAdornment>
                 ),
@@ -277,7 +257,7 @@ export default function SignUpPage() {
               margin="normal"
               error={!!errors.confirm}
               helperText={errors.confirm}
-              disabled={isSubmitting}
+              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -286,15 +266,14 @@ export default function SignUpPage() {
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => setShowConfirm(!showConfirm)} 
+                    <IconButton
+                      onClick={() => setShowConfirm(!showConfirm)}
                       edge="end"
                       size="small"
                     >
-                      {showConfirm ? 
-                        <EyeOff color={theme.palette.primary.main} size={20} /> : 
-                        <Eye color={theme.palette.primary.main} size={20} />
-                      }
+                      {showConfirm
+                        ? <EyeOff color={theme.palette.primary.main} size={20} />
+                        : <Eye color={theme.palette.primary.main} size={20} />}
                     </IconButton>
                   </InputAdornment>
                 ),
@@ -302,29 +281,20 @@ export default function SignUpPage() {
               sx={styles.input}
             />
 
-            <FormControl 
-              fullWidth 
-              margin="normal" 
-              error={!!errors.role}
-              sx={styles.input}
-            >
+            <FormControl fullWidth margin="normal" error={!!errors.role} sx={styles.input}>
               <InputLabel>Role</InputLabel>
               <Select
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
                 label="Role"
-                disabled={isSubmitting || !roles.length}
+                disabled={loading || !roles.length}
               >
-                {roles.length ? (
-                  roles.map(r => (
-                    <MenuItem key={r.role_id} value={r.role_name}>
-                      {r.role_name}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="">Loading roles...</MenuItem>
-                )}
+                {roles.map(r => (
+                  <MenuItem key={r.role_id} value={r.role_name}>
+                    {r.role_name}
+                  </MenuItem>
+                ))}
               </Select>
               {errors.role && (
                 <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
@@ -343,11 +313,11 @@ export default function SignUpPage() {
               variant="contained"
               fullWidth
               type="submit"
-              disabled={isSubmitting}
-              endIcon={isSubmitting ? null : <ChevronRight size={18} />}
+              disabled={loading}
+              endIcon={!loading && <ChevronRight size={18} />}
               sx={{ ...styles.button, mt: 3 }}
             >
-              {isSubmitting ? "Creating Account..." : "Sign Up"}
+              {loading ? "Creating Account..." : "Sign Up"}
             </Button>
 
             <Divider sx={{ my: 3 }}>

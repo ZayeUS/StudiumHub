@@ -2,13 +2,12 @@ import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
-// Simple localStorage helpers with error handling
+// Safe localStorage utilities
 const safeStorage = {
   get: (key, defaultValue = null) => {
     try {
       return localStorage.getItem(key) || defaultValue;
-    } catch (e) {
-      console.error(`Error reading ${key} from storage:`, e);
+    } catch {
       return defaultValue;
     }
   },
@@ -16,8 +15,7 @@ const safeStorage = {
     try {
       localStorage.setItem(key, value);
       return true;
-    } catch (e) {
-      console.error(`Error saving ${key} to storage:`, e);
+    } catch {
       return false;
     }
   },
@@ -25,42 +23,38 @@ const safeStorage = {
     try {
       localStorage.removeItem(key);
       return true;
-    } catch (e) {
-      console.error(`Error removing ${key} from storage:`, e);
+    } catch {
       return false;
     }
   }
 };
 
 export const useUserStore = create((set, get) => {
-  // Initialize from localStorage with safe fallbacks
   const initialFirebaseId = safeStorage.get('firebaseId');
   const initialRoleId = Number(safeStorage.get('roleId')) || null;
   const initialUserId = safeStorage.get('userId');
 
   return {
-    // State
+    // STATE
     firebaseId: initialFirebaseId,
     roleId: initialRoleId,
     userId: initialUserId,
     isLoggedIn: Boolean(initialFirebaseId && initialUserId),
     profile: null,
-    loading: false,
-    authHydrated: false,
+    loading: false,       // For general UI (form/API)
+    authLoading: false,   // For auth-specific logic
+    authHydrated: false,  // When Firebase auth has finished
 
-    // Actions
+    // ACTIONS
     setLoading: (loading) => set({ loading }),
-    
+    setAuthLoading: (authLoading) => set({ authLoading }),
+
     setUser: (firebaseId, roleId, userId) => {
-      // Normalize values for consistency
       const normalizedRoleId = Number(roleId);
-      
-      // Save to localStorage
       safeStorage.set('firebaseId', firebaseId);
       safeStorage.set('roleId', String(normalizedRoleId));
       safeStorage.set('userId', userId);
-      
-      // Update state
+
       set({
         firebaseId,
         roleId: normalizedRoleId,
@@ -68,16 +62,13 @@ export const useUserStore = create((set, get) => {
         isLoggedIn: true,
       });
     },
-    
+
     setProfile: (profileData) => set({ profile: profileData }),
-    
+
     clearUser: () => {
-      // Remove from localStorage
       safeStorage.remove('firebaseId');
       safeStorage.remove('roleId');
       safeStorage.remove('userId');
-      
-      // Update state
       set({
         firebaseId: null,
         roleId: null,
@@ -86,47 +77,37 @@ export const useUserStore = create((set, get) => {
         profile: null,
       });
     },
-    
+
     listenAuthState: () => {
-      set({ loading: true, authHydrated: false });
-      
+      set({ authLoading: true, authHydrated: false });
+
       return auth.onAuthStateChanged(async (user) => {
         try {
           if (user) {
-            // Fetch user data and profile in parallel
             const [userData, profileData] = await Promise.all([
               getData(`/users/${user.uid}`),
               getData(`/profile`).catch(() => null)
             ]);
-            
-            // Validate required user data
+
             if (userData && userData.role_id !== undefined && userData.user_id) {
-              // Update user state
               get().setUser(user.uid, userData.role_id, userData.user_id);
-              
-              // Update profile and finish loading
+
               set({
                 profile: profileData,
-                loading: false,
+                authLoading: false,
                 authHydrated: true,
               });
             } else {
-              throw new Error('Invalid user data received');
+              throw new Error('Invalid user data');
             }
           } else {
-            // No user is signed in
             get().clearUser();
-            set({ loading: false, authHydrated: true });
+            set({ authLoading: false, authHydrated: true });
           }
         } catch (err) {
           console.error('Auth listener error:', err);
-          
-          // Clear user on auth errors
-          if (err.code?.includes('auth/') || err.message?.includes('Invalid user')) {
-            get().clearUser();
-          }
-          
-          set({ loading: false, authHydrated: true });
+          get().clearUser();
+          set({ authLoading: false, authHydrated: true });
         }
       });
     }

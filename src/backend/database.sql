@@ -40,3 +40,23 @@ INSERT INTO roles (role_name) VALUES ('user');
 
 -- Indexes
 CREATE INDEX idx_profiles_user_id ON profiles(user_id);
+
+CREATE TABLE audit_logs (
+  log_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id UUID, -- NULL allowed for system
+  target_user_id UUID,
+  action TEXT NOT NULL,
+  table_name VARCHAR(255),
+  record_id UUID,
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_actor FOREIGN KEY (actor_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+  CONSTRAINT fk_target FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Corrected indexes
+CREATE INDEX idx_audit_actor_user_id ON audit_logs(actor_user_id);
+CREATE INDEX idx_audit_target_user_id ON audit_logs(target_user_id);
+CREATE INDEX idx_audit_table_record ON audit_logs(table_name, record_id);
+
+

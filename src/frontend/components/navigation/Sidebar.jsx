@@ -95,7 +95,7 @@ const Sidebar = ({ isMobile, onClose }) => {
     try {
       await signOut(auth);
       clearUser();
-      navigate("/login");
+      navigate("/");
       if (isMobile) onClose();
     } catch (error) {
       console.error("Error logging out:", error);

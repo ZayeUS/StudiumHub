@@ -50,7 +50,7 @@ const MobileBottomNavigation = () => {
     if (isLoggedIn) {
       navigate(path === "/dashboard" ? (userRole === "admin" ? "/admin-dashboard" : "/user-dashboard") : path);
     } else {
-      navigate("/login");
+      navigate("/");
     }
   };
 
@@ -59,7 +59,7 @@ const MobileBottomNavigation = () => {
       await signOut(auth);
       clearUser();
       setShowMenu(false);
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       console.error("Error logging out:", error);
     }

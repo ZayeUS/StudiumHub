@@ -1,31 +1,26 @@
-// src/pages/UserDashboard.jsx
 import React from 'react';
 import { Typography, Container } from '@mui/material';
-import { useUserStore } from '../../store/userStore';  // Import Zustand store
-import LoadingModal from "../../components/LoadingModal";  // Import LoadingModal
+import { useUserStore } from '../../store/userStore';
+import LoadingModal from "../../components/LoadingModal";
 
 const UserDashboard = () => {
+  const userId = useUserStore(state => state.userId);
+  const isLoggedIn = useUserStore(state => state.isLoggedIn);
+  const loading = useUserStore(state => state.loading);
 
-    const userId = useUserStore(state => state.userId);
-    console.log(userId)
-    const isLoggedIn = useUserStore(state => state.isLoggedIn);
-  
-
+  if (loading) return <LoadingModal message="Loading your dashboard..." />;
 
   return (
-    <>
-      <LoadingModal />  {/* Modal handles the loading state */}
-      <Container maxWidth="sm" sx={{ paddingTop: 8 }}>
-        <Typography variant="h3" color="primary" align="center" gutterBottom>
-          User Dashboard
-        </Typography>
-        <Typography variant="h6" align="center">
-          {isLoggedIn
-            ? `Welcome, user with ID: ${userId}`
-            : "Please log in to view your information."}
-        </Typography>
-      </Container>
-    </>
+    <Container maxWidth="sm" sx={{ paddingTop: 8 }}>
+      <Typography variant="h3" color="primary" align="center" gutterBottom>
+        User Dashboard
+      </Typography>
+      <Typography variant="h6" align="center">
+        {isLoggedIn
+          ? `Welcome, user with ID: ${userId}`
+          : "Please log in to view your information."}
+      </Typography>
+    </Container>
   );
 };
 
