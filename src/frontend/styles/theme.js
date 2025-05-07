@@ -1,17 +1,18 @@
 import { createTheme } from '@mui/material/styles';
 
 const config = {
-  primary: '#3B4252',
-  secondary: '#5E81AC',
-  background: '#ECEFF4',
-  paper: '#FFFFFF',
-  text: '#2E3440',
+  primary: '#BFA181',
+  secondary: '#3C3C3B',
+  background: '#1E1E1E',
+  paper: '#2A2A2A',
+  text: '#F5F5F5',
   fontFamily: "'Inter', sans-serif",
-  borderRadius: 6,
+  borderRadius: 12,
 };
 
 const theme = createTheme({
   palette: {
+    mode: 'dark',
     primary: { main: config.primary },
     secondary: { main: config.secondary },
     background: {
@@ -20,7 +21,7 @@ const theme = createTheme({
     },
     text: {
       primary: config.text,
-      secondary: '#6C7A96',
+      secondary: '#AAAAAA',
     },
   },
   typography: {
@@ -29,7 +30,7 @@ const theme = createTheme({
     h2: { fontWeight: 700, fontSize: '2.5rem' },
     h3: { fontWeight: 600, fontSize: '2rem' },
     body1: { fontSize: '1rem' },
-    body2: { fontSize: '0.9rem', color: '#6C7A96' },
+    body2: { fontSize: '0.9rem', color: '#AAAAAA' },
     button: { textTransform: 'none', fontWeight: 600 },
   },
   components: {

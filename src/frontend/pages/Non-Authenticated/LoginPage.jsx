@@ -122,7 +122,7 @@ export function LoginPage() {
             <Typography variant="h5" fontWeight={700} mt={1}>
               Welcome Back
             </Typography>
-            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+            <Typography fontSize={15} variant="h5" sx={{ opacity: 0.9 }}>
               Sign in to continue
             </Typography>
           </Box>

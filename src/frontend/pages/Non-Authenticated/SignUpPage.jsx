@@ -164,7 +164,7 @@ export function SignUpPage() {
           }}>
             <UserPlus size={36} />
             <Typography variant="h5" fontWeight={700} mt={1}>Create Account</Typography>
-            <Typography variant="body2">Join us and get started</Typography>
+            <Typography fontSize={15} variant="h5" sx={{ opacity: 0.9 }}>Join us and get started</Typography>
           </Box>
 
           <Box component="form" onSubmit={handleSignUp} sx={{ p: 3 }}>
