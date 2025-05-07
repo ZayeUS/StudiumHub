@@ -1,27 +1,24 @@
 import React from 'react';
-import { Typography, Container } from '@mui/material';
+import { Typography, Container, Box } from '@mui/material';
 import { useUserStore } from '../../store/userStore';
-import LoadingModal from "../../components/LoadingModal";
+import {LoadingModal} from '../../components/LoadingModal';
 
-const UserDashboard = () => {
+export function UserDashboard() {
   const userId = useUserStore(state => state.userId);
-  const isLoggedIn = useUserStore(state => state.isLoggedIn);
   const loading = useUserStore(state => state.loading);
 
   if (loading) return <LoadingModal message="Loading your dashboard..." />;
 
   return (
-    <Container maxWidth="sm" sx={{ paddingTop: 8 }}>
-      <Typography variant="h3" color="primary" align="center" gutterBottom>
-        User Dashboard
-      </Typography>
-      <Typography variant="h6" align="center">
-        {isLoggedIn
-          ? `Welcome, user with ID: ${userId}`
-          : "Please log in to view your information."}
-      </Typography>
+    <Container maxWidth="md">
+      <Box sx={{ pt: 8, textAlign: 'center' }}>
+        <Typography variant="h3" color="primary" gutterBottom>
+          User Dashboard
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Welcome, user with ID: {userId}
+        </Typography>
+      </Box>
     </Container>
   );
-};
-
-export default UserDashboard;
+}

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
-// Safe localStorage utilities
+// Safe localStorage wrapper
 const safeStorage = {
   get: (key, defaultValue = null) => {
     try {
@@ -29,87 +29,86 @@ const safeStorage = {
   }
 };
 
-export const useUserStore = create((set, get) => {
-  const initialFirebaseId = safeStorage.get('firebaseId');
-  const initialRoleId = Number(safeStorage.get('roleId')) || null;
-  const initialUserId = safeStorage.get('userId');
+export const useUserStore = create((set, get) => ({
+  // Initial state — assume unauthenticated
+  firebaseId: null,
+  roleId: null,
+  userId: null,
+  isLoggedIn: false,
+  profile: null,
+  loading: false,
+  authLoading: false,
+  authHydrated: false, // ← becomes true only after Firebase confirms
 
-  return {
-    // STATE
-    firebaseId: initialFirebaseId,
-    roleId: initialRoleId,
-    userId: initialUserId,
-    isLoggedIn: Boolean(initialFirebaseId && initialUserId),
-    profile: null,
-    loading: false,       // For general UI (form/API)
-    authLoading: false,   // For auth-specific logic
-    authHydrated: false,  // When Firebase auth has finished
+  // Setters
+  setLoading: (loading) => set({ loading }),
+  setAuthLoading: (authLoading) => set({ authLoading }),
 
-    // ACTIONS
-    setLoading: (loading) => set({ loading }),
-    setAuthLoading: (authLoading) => set({ authLoading }),
+  setUser: (firebaseId, roleId, userId) => {
+    const normalizedRoleId = Number(roleId);
+    safeStorage.set('firebaseId', firebaseId);
+    safeStorage.set('roleId', String(normalizedRoleId));
+    safeStorage.set('userId', userId);
 
-    setUser: (firebaseId, roleId, userId) => {
-      const normalizedRoleId = Number(roleId);
-      safeStorage.set('firebaseId', firebaseId);
-      safeStorage.set('roleId', String(normalizedRoleId));
-      safeStorage.set('userId', userId);
+    set({
+      firebaseId,
+      roleId: normalizedRoleId,
+      userId,
+      isLoggedIn: true,
+    });
+  },
 
-      set({
-        firebaseId,
-        roleId: normalizedRoleId,
-        userId,
-        isLoggedIn: true,
-      });
-    },
+  setProfile: (profile) => set({ profile }),
 
-    setProfile: (profileData) => set({ profile: profileData }),
+  clearUser: () => {
+    safeStorage.remove('firebaseId');
+    safeStorage.remove('roleId');
+    safeStorage.remove('userId');
 
-    clearUser: () => {
-      safeStorage.remove('firebaseId');
-      safeStorage.remove('roleId');
-      safeStorage.remove('userId');
-      set({
-        firebaseId: null,
-        roleId: null,
-        userId: null,
-        isLoggedIn: false,
-        profile: null,
-      });
-    },
+    set({
+      firebaseId: null,
+      roleId: null,
+      userId: null,
+      isLoggedIn: false,
+      profile: null,
+    });
+  },
 
-    listenAuthState: () => {
-      set({ authLoading: true, authHydrated: false });
+  // Firebase Auth Listener
+  listenAuthState: () => {
+    set({ authHydrated: false, authLoading: true, isLoggedIn: false });
 
-      return auth.onAuthStateChanged(async (user) => {
-        try {
-          if (user) {
-            const [userData, profileData] = await Promise.all([
-              getData(`/users/${user.uid}`),
-              getData(`/profile`).catch(() => null)
-            ]);
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      try {
+        if (user) {
+          const [userData, profileData] = await Promise.all([
+            getData(`/users/${user.uid}`),
+            getData(`/profile`).catch(() => null),
+          ]);
 
-            if (userData && userData.role_id !== undefined && userData.user_id) {
-              get().setUser(user.uid, userData.role_id, userData.user_id);
-
-              set({
-                profile: profileData,
-                authLoading: false,
-                authHydrated: true,
-              });
-            } else {
-              throw new Error('Invalid user data');
-            }
-          } else {
+          if (!userData?.user_id || userData?.role_id === undefined) {
+            console.warn("Invalid user data, clearing session.");
             get().clearUser();
-            set({ authLoading: false, authHydrated: true });
+            return set({ authLoading: false, authHydrated: true });
           }
-        } catch (err) {
-          console.error('Auth listener error:', err);
+
+          get().setUser(user.uid, userData.role_id, userData.user_id);
+          set({
+            profile: profileData || null,
+            authLoading: false,
+            authHydrated: true,
+          });
+        } else {
           get().clearUser();
           set({ authLoading: false, authHydrated: true });
         }
-      });
-    }
-  };
-});
+      } catch (err) {
+        console.error("Auth listener error:", err);
+        get().clearUser();
+        set({ authLoading: false, authHydrated: true });
+      }
+    });
+
+    return unsubscribe;
+  }
+}));

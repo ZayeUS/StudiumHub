@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Typography, 
+  Typography,
   Container,
   Table,
   TableHead,
@@ -14,106 +14,76 @@ import {
   Tooltip,
   IconButton,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
 } from "@mui/material";
-import InfoIcon from '@mui/icons-material/Info';
+import InfoIcon from "@mui/icons-material/Info";
 import { useUserStore } from "../../store/userStore";
-import LoadingModal from "../../components/LoadingModal";
+import { LoadingModal } from "../../components/LoadingModal";
 import { getData } from "../../utils/BackendRequestHelper";
 
-// Format timestamp (now consistently in UTC from the backend)
+// Helpers
 const formatTimestamp = (isoTimestamp) => {
   if (!isoTimestamp) return "—";
-  
   try {
-    // Parse the UTC timestamp
     const date = new Date(isoTimestamp);
-    
-    if (isNaN(date.getTime())) {
-      console.error("Invalid timestamp:", isoTimestamp);
-      return "Invalid date";
-    }
-    
-    // Format in user's local timezone
+    if (isNaN(date.getTime())) return "Invalid date";
     return new Intl.DateTimeFormat(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZoneName: 'short'
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZoneName: "short",
     }).format(date);
-  } catch (err) {
-    console.error("Error formatting timestamp:", err);
+  } catch {
     return "Format error";
   }
 };
 
-// Format metadata for display
 const formatMetadata = (metadata) => {
   if (!metadata) return "—";
-  
   try {
-    // Handle both string and object formats
-    const data = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
-    
-    if (!data || Object.keys(data).length === 0) {
-      return "No data";
-    }
-    
-    // Create a more readable summary
+    const data = typeof metadata === "string" ? JSON.parse(metadata) : metadata;
+    if (!data || Object.keys(data).length === 0) return "No data";
     return Object.entries(data)
       .map(([key, value]) => {
-        const displayValue = 
-          typeof value === 'object' ? '[Object]' :
-          typeof value === 'string' && value.length > 15 ? 
-            value.substring(0, 12) + '...' : 
-            String(value);
-            
+        const displayValue =
+          typeof value === "object"
+            ? "[Object]"
+            : typeof value === "string" && value.length > 15
+            ? value.substring(0, 12) + "..."
+            : String(value);
         return `${key}: ${displayValue}`;
       })
       .join(", ");
-  } catch (err) {
-    console.error("Error formatting metadata:", err);
+  } catch {
     return "Invalid format";
   }
 };
 
-// Determine action chip color
 const getActionColor = (action) => {
   if (!action) return "default";
-  
-  const actionMap = {
-    "create": "success",
-    "update": "info",
-    "delete": "error",
-    "login": "primary",
-    "logout": "default"
+  const map = {
+    create: "success",
+    update: "info",
+    delete: "error",
+    login: "primary",
+    logout: "default",
   };
-  
-  const actionLower = action.toLowerCase();
-  for (const [key, value] of Object.entries(actionMap)) {
-    if (actionLower.includes(key)) {
-      return value;
-    }
-  }
-  
-  return "secondary";
+  const key = Object.keys(map).find((k) => action.toLowerCase().includes(k));
+  return key ? map[key] : "secondary";
 };
 
-// Format UUID to be more readable
-const formatUuid = (uuid) => {
-  if (!uuid) return "—";
-  return uuid.substring(0, 8) + "..."; // Show first 8 characters
-};
+const formatUuid = (uuid) => (uuid ? uuid.substring(0, 8) + "..." : "—");
 
-const AdminDashboard = () => {
+export const AdminDashboard = () => {
   const userId = useUserStore((state) => state.userId);
   const isLoggedIn = useUserStore((state) => state.isLoggedIn);
   const loading = useUserStore((state) => state.loading);
+
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(true);
@@ -122,21 +92,17 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       if (!isLoggedIn) return;
-      
       try {
         setLoadingAudit(true);
         setError(null);
-        
         const data = await getData("/audit");
         setAuditLogs(data);
-      } catch (err) {
-        console.error("Failed to fetch audit logs:", err);
+      } catch {
         setError("Unable to load audit logs. Please try again later.");
       } finally {
         setLoadingAudit(false);
       }
     };
-    
     fetchLogs();
   }, [isLoggedIn]);
 
@@ -175,7 +141,6 @@ const AdminDashboard = () => {
             </IconButton>
           </Tooltip>
         </Box>
-        
         <Typography variant="caption" color="text.secondary">
           Times displayed in: {Intl.DateTimeFormat().resolvedOptions().timeZone}
         </Typography>
@@ -186,48 +151,22 @@ const AdminDashboard = () => {
           <CircularProgress />
         </Box>
       ) : error ? (
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 3, 
-            bgcolor: "error.light", 
-            color: "error.contrastText",
-            borderRadius: 2 
-          }}
-        >
+        <Paper elevation={0} sx={{ p: 3, bgcolor: "error.light", color: "error.contrastText", borderRadius: 2 }}>
           <Typography>{error}</Typography>
         </Paper>
       ) : auditLogs.length === 0 ? (
-        <Paper 
-          elevation={1} 
-          sx={{ 
-            p: 3, 
-            bgcolor: "grey.100", 
-            borderRadius: 2,
-            textAlign: "center"
-          }}
-        >
+        <Paper elevation={1} sx={{ p: 3, bgcolor: "grey.100", borderRadius: 2, textAlign: "center" }}>
           <Typography>No audit logs found</Typography>
         </Paper>
       ) : (
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            overflowX: "auto", 
-            borderRadius: 2, 
-          }}
-        >
+        <Paper elevation={3} sx={{ overflowX: "auto", borderRadius: 2 }}>
           <Table size={isMobile ? "small" : "medium"}>
             <TableHead sx={{ bgcolor: "primary.main" }}>
               <TableRow>
                 <TableCell sx={{ color: "white", fontWeight: 600 }}>User</TableCell>
                 <TableCell sx={{ color: "white", fontWeight: 600 }}>Action</TableCell>
-                {!isMobile && (
-                  <TableCell sx={{ color: "white", fontWeight: 600 }}>Table</TableCell>
-                )}
-                {!isMobile && (
-                  <TableCell sx={{ color: "white", fontWeight: 600 }}>Record ID</TableCell>
-                )}
+                {!isMobile && <TableCell sx={{ color: "white", fontWeight: 600 }}>Table</TableCell>}
+                {!isMobile && <TableCell sx={{ color: "white", fontWeight: 600 }}>Record ID</TableCell>}
                 <TableCell sx={{ color: "white", fontWeight: 600 }}>
                   {isMobile ? "Meta" : "Metadata"}
                 </TableCell>
@@ -236,12 +175,10 @@ const AdminDashboard = () => {
             </TableHead>
             <TableBody>
               {auditLogs.map((log) => (
-                <TableRow 
+                <TableRow
                   key={log.log_id}
                   hover
-                  sx={{ 
-                    '&:nth-of-type(odd)': { bgcolor: 'rgba(0, 0, 0, 0.03)' },
-                  }}
+                  sx={{ "&:nth-of-type(odd)": { bgcolor: "rgba(0, 0, 0, 0.03)" } }}
                 >
                   <TableCell>{log.email || "System"}</TableCell>
                   <TableCell>
@@ -252,20 +189,16 @@ const AdminDashboard = () => {
                       sx={{ fontWeight: 500 }}
                     />
                   </TableCell>
-                  {!isMobile && (
-                    <TableCell>{log.table_name || "—"}</TableCell>
-                  )}
+                  {!isMobile && <TableCell>{log.table_name || "—"}</TableCell>}
                   {!isMobile && (
                     <TableCell>
                       <Tooltip title={log.record_id || "None"}>
-                        <span>
-                          {formatUuid(log.record_id)}
-                        </span>
+                        <span>{formatUuid(log.record_id)}</span>
                       </Tooltip>
                     </TableCell>
                   )}
                   <TableCell>
-                    <Tooltip 
+                    <Tooltip
                       title={
                         <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
                           {JSON.stringify(log.metadata, null, 2)}
@@ -278,9 +211,7 @@ const AdminDashboard = () => {
                       </Box>
                     </Tooltip>
                   </TableCell>
-                  <TableCell>
-                    {formatTimestamp(log.created_at)}
-                  </TableCell>
+                  <TableCell>{formatTimestamp(log.created_at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -290,5 +221,3 @@ const AdminDashboard = () => {
     </Container>
   );
 };
-
-export default AdminDashboard;

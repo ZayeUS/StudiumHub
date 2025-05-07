@@ -1,10 +1,14 @@
 import React from 'react';
-import { Dialog, DialogContent, CircularProgress, Typography } from '@mui/material';
-import { useUserStore } from '../store/userStore';
+import {
+  Dialog,
+  DialogContent,
+  CircularProgress,
+  Typography
+} from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { motion } from 'framer-motion';
+import { useUserStore } from '../store/userStore';
 
-const LoadingModal = ({ message = "Loading..." }) => {
+export const LoadingModal = ({ message = "Loading..." }) => {
   const loading = useUserStore(state => state.loading);
   const theme = useTheme();
 
@@ -41,43 +45,52 @@ const LoadingModal = ({ message = "Loading..." }) => {
           justifyContent: 'center',
           textAlign: 'center',
           gap: 3,
+          animation: 'fadeIn 1s ease-out both',
         }}
       >
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-        >
-          <CircularProgress
-            thickness={5}
-            size={80}
-            sx={{
-              color: theme.palette.primary.main,
-            }}
-          />
-        </motion.div>
+        <CircularProgress
+          thickness={5}
+          size={80}
+          sx={{
+            color: theme.palette.primary.main,
+            animation: 'spinnerFade 1.2s ease-out both',
+          }}
+        />
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: 'easeOut', delay: 0.2 }}
+        <Typography
+          variant="h6"
+          sx={{
+            textTransform: 'uppercase',
+            letterSpacing: 2,
+            fontWeight: 500,
+            fontSize: '1rem',
+            color: theme.palette.text.primary,
+            opacity: 0,
+            animation: 'slideFadeIn 1s ease-out 0.3s forwards',
+          }}
         >
-          <Typography
-            variant="h6"
-            sx={{
-              textTransform: 'uppercase',
-              letterSpacing: 2,
-              fontWeight: 500,
-              fontSize: '1rem',
-              color: theme.palette.text.primary,
-            }}
-          >
-            {message}
-          </Typography>
-        </motion.div>
+          {message}
+        </Typography>
       </DialogContent>
+
+      <style>
+        {`
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+
+          @keyframes spinnerFade {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+          }
+
+          @keyframes slideFadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}
+      </style>
     </Dialog>
   );
 };
-
-export default LoadingModal;

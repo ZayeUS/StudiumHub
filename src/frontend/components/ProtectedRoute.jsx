@@ -1,24 +1,31 @@
-import React from "react";
-import { useUserStore } from "../store/userStore";
-import AdminDashboard from "../pages/Authenticated/AdminDashboard";
-import UserDashboard from "./pages/Authenticated/UserDashboard";
-import { Navigate } from "react-router-dom";
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useUserStore } from '../store/userStore';
+import {LoadingModal} from '../components/LoadingModal';
 
-const Dashboard = () => {
-  const { roleId, isLoggedIn, profile } = useUserStore();
-  
-  // Redirect logic for incomplete onboarding
+export const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { isLoggedIn, roleId, profile, authHydrated } = useUserStore();
+
+  if (!authHydrated) {
+    return <LoadingModal message="Authenticating..." />;
+  }
+
+  // Not logged in → bounce to login
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
   }
-  
-  // Critical check: redirect to onboarding if profile doesn't exist
+
+  // Logged in but no profile → force onboarding
   if (!profile) {
     return <Navigate to="/profile-onboarding" replace />;
   }
-  
-  // Render the appropriate dashboard based on role
-  return roleId === 1 ? <AdminDashboard /> : <UserDashboard />;
+
+  // Logged in, profile complete, wrong role
+  if (allowedRoles && !allowedRoles.includes(roleId)) {
+    const fallback = roleId === 1 ? '/admin-dashboard' : '/user-dashboard';
+    return <Navigate to={fallback} replace />;
+  }
+
+  return children;
 };
 
-export default Dashboard;

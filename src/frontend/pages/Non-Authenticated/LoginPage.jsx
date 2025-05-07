@@ -9,51 +9,51 @@ import { login as firebaseLogin, resetPassword } from "../../../firebase";
 import { useUserStore } from "../../store/userStore";
 import { useNavigate } from "react-router-dom";
 
-export default function LoginPage() {
-  const loading = useUserStore(state => state.loading);
-  const setLoading = useUserStore(state => state.setLoading);
-
-  const [formData, setFormData] = useState({ email: "", password: "" });
-  const [resetEmail, setResetEmail] = useState("");
-  const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
-  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
-
+export function LoginPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
 
+  const loading = useUserStore(state => state.loading);
+  const setLoading = useUserStore(state => state.setLoading);
+  const listenAuthState = useUserStore(state => state.listenAuthState);
+
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [resetEmail, setResetEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+
+  const showNotification = (message, severity = "success") =>
+    setNotification({ open: true, message, severity });
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
-  const validateForm = () => {
-    const { email, password } = formData;
-    const newErrors = {};
-    if (!email) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email";
-
-    if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Minimum 6 characters";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+    const errs = {};
+    if (!form.email) errs.email = "Email required";
+    if (!form.password) errs.password = "Password required";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
+    if (!validate()) return;
     setLoading(true);
     try {
-      await firebaseLogin(formData.email, formData.password);
-      showNotification("Logged in successfully!", "success");
-    } catch (error) {
-      setErrors({ auth: error.message || "Incorrect email or password" });
-      showNotification(error.message || "Login failed", "error");
+      await firebaseLogin(form.email, form.password);
+      listenAuthState();
+      showNotification("Logged in!");
+      navigate("/dashboard");
+    } catch (err) {
+      showNotification(err.message || "Login failed", "error");
+      setErrors({ auth: "Invalid email or password" });
     } finally {
       setLoading(false);
     }
@@ -62,55 +62,36 @@ export default function LoginPage() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
-      setErrors({ resetEmail: "Valid email required" });
+      setErrors({ resetEmail: "Enter a valid email" });
       return;
     }
-
     setLoading(true);
     try {
       await resetPassword(resetEmail);
-      showNotification("Password reset email sent", "success");
+      showNotification("Reset email sent");
       setResetOpen(false);
-    } catch (error) {
-      setErrors({ resetEmail: error.message || "Failed to send reset email" });
+    } catch (err) {
+      setErrors({ resetEmail: err.message });
     } finally {
       setLoading(false);
     }
   };
 
-  const showNotification = (message, severity = "success") => {
-    setNotification({ open: true, message, severity });
-  };
-
-  const styles = {
-    input: {
-      "& .MuiOutlinedInput-root": {
-        borderRadius: theme.shape.borderRadius,
-        backgroundColor: "rgba(255,255,255,0.04)",
-      }
-    },
-    button: {
-      py: 1.5,
-      borderRadius: theme.shape.borderRadius,
-      textTransform: "none",
-      fontWeight: "bold",
-      transition: theme.transitions.create(["transform", "box-shadow"]),
-      "&:hover": {
-        transform: "translateY(-2px)",
-        boxShadow: theme.shadows[6],
-      }
-    }
-  };
+  const iconStart = (icon) => ({
+    startAdornment: <InputAdornment position="start">{icon}</InputAdornment>,
+  });
 
   return (
-    <Box sx={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      bgcolor: theme.palette.background.default,
-      p: { xs: 2, md: 4 },
-    }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+      }}
+    >
       <Snackbar
         open={notification.open}
         autoHideDuration={4000}
@@ -122,141 +103,96 @@ export default function LoginPage() {
 
       <Container maxWidth="sm">
         <Paper
-          elevation={10}
+          elevation={6}
           sx={{
             borderRadius: theme.shape.borderRadius,
-            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
             overflow: "hidden",
-            transform: "translateY(0)",
-            transition: "transform 0.5s ease-out",
-            "&:hover": { transform: "translateY(-5px)" }
           }}
         >
           {/* Header */}
-          <Box sx={{
-            bgcolor: theme.palette.primary.main,
-            p: 3,
-            textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-            "&::after": {
-              content: '""',
-              position: "absolute",
-              inset: 0,
-              background: `radial-gradient(circle at 70% 30%, ${theme.palette.primary.light}20, transparent 50%)`,
-              zIndex: 1,
-            }
-          }}>
-            <Box position="relative" zIndex={2}>
-              <LogIn size={40} color={theme.palette.common.white} />
-              <Typography variant="h4" sx={{ color: "white", fontWeight: "bold", mt: 1 }}>
-                Welcome Back
-              </Typography>
-              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
-                Sign in to your account
-              </Typography>
-            </Box>
+          <Box
+            sx={{
+              bgcolor: "primary.main",
+              color: "common.white",
+              p: 3,
+              textAlign: "center",
+            }}
+          >
+            <LogIn size={32} />
+            <Typography variant="h5" fontWeight={700} mt={1}>
+              Welcome Back
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Sign in to continue
+            </Typography>
           </Box>
 
-          {/* Form */}
+          {/* Login Form */}
           <Box component="form" onSubmit={handleLogin} sx={{ p: 3 }}>
             <TextField
               name="email"
-              type="email"
-              label="Email Address"
-              value={formData.email}
-              onChange={handleChange}
+              label="Email"
               fullWidth
               margin="normal"
+              value={form.email}
+              onChange={handleChange}
               error={!!errors.email}
               helperText={errors.email}
               disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Mail color={theme.palette.primary.main} size={20} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={styles.input}
+              InputProps={iconStart(<Mail size={18} />)}
             />
 
             <TextField
               name="password"
-              type={showPassword ? "text" : "password"}
               label="Password"
-              value={formData.password}
-              onChange={handleChange}
+              type={showPassword ? "text" : "password"}
               fullWidth
               margin="normal"
+              value={form.password}
+              onChange={handleChange}
               error={!!errors.password}
               helperText={errors.password}
               disabled={loading}
               InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock color={theme.palette.primary.main} size={20} />
-                  </InputAdornment>
-                ),
+                ...iconStart(<Lock size={18} />),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton 
-                      onClick={() => setShowPassword(!showPassword)} 
-                      edge="end"
-                      size="small"
-                    >
-                      {showPassword ? 
-                        <EyeOff color={theme.palette.primary.main} size={20} /> : 
-                        <Eye color={theme.palette.primary.main} size={20} />
-                      }
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </IconButton>
                   </InputAdornment>
                 ),
               }}
-              sx={styles.input}
             />
 
             {errors.auth && (
-              <Typography variant="body2" color="error" sx={{ mt: 1, fontWeight: 500 }}>
+              <Typography variant="body2" color="error" mt={1}>
                 {errors.auth}
               </Typography>
             )}
 
             <Button
               variant="contained"
-              fullWidth
               type="submit"
+              fullWidth
+              sx={{ mt: 3 }}
+              endIcon={!loading && <ChevronRight size={18} />}
               disabled={loading}
-              endIcon={!loading ? <ChevronRight size={18} /> : null}
-              sx={{ ...styles.button, mt: 3 }}
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
             <Box textAlign="center" mt={2}>
-              <Button
-                variant="text"
-                startIcon={<KeyRound size={18} />}
-                onClick={() => setResetOpen(true)}
-                sx={{ textTransform: "none" }}
-              >
-                Forgot your password?
+              <Button variant="text" startIcon={<KeyRound size={18} />} onClick={() => setResetOpen(true)}>
+                Forgot password?
               </Button>
             </Box>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" color="text.secondary">OR</Typography>
-            </Divider>
+            <Divider sx={{ my: 3 }} />
 
             <Box textAlign="center">
-              <Typography variant="body2" color="text.secondary" mb={1}>
-                Don't have an account?
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={() => navigate("/signup")}
-                sx={{ ...styles.button, py: 1 }}
-              >
+              <Typography variant="body2">Don't have an account?</Typography>
+              <Button variant="outlined" sx={{ mt: 1 }} onClick={() => navigate("/signup")}>
                 Create Account
               </Button>
             </Box>
@@ -264,37 +200,32 @@ export default function LoginPage() {
         </Paper>
       </Container>
 
-      {/* Password Reset Dialog */}
-      <Dialog 
-        open={resetOpen} 
+      {/* Reset Password Dialog */}
+      <Dialog
+        open={resetOpen}
         onClose={() => setResetOpen(false)}
-        PaperProps={{ sx: { borderRadius: theme.shape.borderRadius, width: isMobile ? "90%" : "400px" } }}
+        PaperProps={{ sx: { borderRadius: theme.shape.borderRadius, width: isMobile ? "90%" : 400 } }}
       >
-        <DialogTitle>Reset Your Password</DialogTitle>
+        <DialogTitle>Reset Password</DialogTitle>
         <DialogContent>
           <form onSubmit={handleResetPassword}>
             <TextField
-              name="resetEmail"
-              label="Email Address"
+              label="Email"
               type="email"
               fullWidth
               margin="normal"
               value={resetEmail}
-              onChange={(e) => {
-                setResetEmail(e.target.value);
-                if (errors.resetEmail) setErrors(prev => ({ ...prev, resetEmail: "" }));
-              }}
+              onChange={(e) => setResetEmail(e.target.value)}
               error={!!errors.resetEmail}
               helperText={errors.resetEmail}
               disabled={loading}
-              sx={styles.input}
             />
-            <Box sx={{ textAlign: "right", mt: 3 }}>
-              <Button onClick={() => setResetOpen(false)} sx={{ mr: 2 }}>
+            <Box textAlign="right" mt={3}>
+              <Button onClick={() => setResetOpen(false)} sx={{ mr: 1 }}>
                 Cancel
               </Button>
               <Button variant="contained" type="submit" disabled={loading}>
-                {loading ? "Sending..." : "Send Reset Email"}
+                {loading ? "Sending..." : "Send"}
               </Button>
             </Box>
           </form>

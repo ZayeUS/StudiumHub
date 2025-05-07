@@ -37,6 +37,7 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // READ the authenticated user's profile
+// READ the authenticated user's profile
 router.get('/', authenticate, async (req, res) => {
   const { user_id } = req.user;
   const queryText = 'SELECT * FROM profiles WHERE user_id = $1';
@@ -45,14 +46,15 @@ router.get('/', authenticate, async (req, res) => {
   try {
     const result = await query(queryText, values);
     if (result.rows.length === 0) {
-      return res.status(200).json({});
+      return res.status(200).json(null);  // Send null instead of {}
     }
-    res.status(200).json(result.rows[0]);
+    res.status(200).json(result.rows[0]);  // Return the profile if found
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ message: 'Error fetching profile' });
   }
 });
+
 
 // UPDATE the authenticated user's profile
 router.put('/', authenticate, async (req, res) => {

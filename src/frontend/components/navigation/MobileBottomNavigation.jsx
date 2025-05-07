@@ -1,215 +1,181 @@
 import React, { useState } from "react";
-import { Box, Paper, Typography, useTheme, Divider } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Typography,
+  Divider,
+  useTheme,
+  IconButton,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Home, UserCircle, LogOut, ChevronRight,Menu } from "lucide-react";
+import {
+  Home,
+  Menu,
+  LogOut,
+  UserCircle,
+} from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
 
-// Reusable Button Component
 const NavigationButton = ({ icon, label, onClick, active }) => {
   const theme = useTheme();
   return (
-    <motion.div whileTap={{ scale: 0.95 }} onClick={onClick}>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          cursor: "pointer",
-          py: 1,
-          transition: "all 0.3s ease",
-          color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-        }}
-      >
-        {icon}
-        <Typography
-          variant="caption"
-          sx={{
-            fontWeight: active ? 700 : 500,
-            mt: 0.5,
-            letterSpacing: 0.5,
-          }}
-        >
-          {label}
-        </Typography>
-      </Box>
-    </motion.div>
+    <Box
+      onClick={onClick}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        py: 1,
+        cursor: "pointer",
+        color: active ? theme.palette.primary.main : theme.palette.text.secondary,
+        transition: "all 0.3s ease",
+      }}
+    >
+      {icon}
+      <Typography variant="caption" fontWeight={active ? 700 : 500} mt={0.5}>
+        {label}
+      </Typography>
+    </Box>
   );
 };
 
-const MobileBottomNavigation = () => {
-  const navigate = useNavigate();
+export const MobileBottomNavigation = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
   const { isLoggedIn, userRole, clearUser } = useUserStore();
 
   const handleNavigation = (path) => {
     setShowMenu(false);
-    if (isLoggedIn) {
-      navigate(path === "/dashboard" ? (userRole === "admin" ? "/admin-dashboard" : "/user-dashboard") : path);
-    } else {
-      navigate("/");
-    }
+    const finalPath = path === "/dashboard"
+      ? userRole === "admin" ? "/admin-dashboard" : "/user-dashboard"
+      : path;
+    navigate(isLoggedIn ? finalPath : "/");
   };
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
       clearUser();
-      setShowMenu(false);
       navigate("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
+    } catch (err) {
+      console.error("Logout failed:", err);
     }
-  };
-
-  const menuVariants = {
-    hidden: { opacity: 0, y: 80 },
-    visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 160, damping: 20 } },
-    exit: { opacity: 0, y: 80, transition: { duration: 0.2 } },
   };
 
   return (
     <>
-      {/* Bottom Bar */}
+      {/* Bottom Nav */}
       <Box
         sx={{
           display: { xs: "block", sm: "none" },
           position: "fixed",
           bottom: 0,
-          left: 0,
           width: "100%",
           zIndex: 1300,
         }}
       >
         <Paper
-          elevation={8}
+          elevation={6}
           sx={{
             borderRadius: "16px 16px 0 0",
-            background: theme.palette.background.paper,
-            boxShadow: "0px -2px 8px rgba(0,0,0,0.06)",
+            px: 4,
+            py: 1,
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-around",
-              alignItems: "center",
-              padding: "10px 16px",
-            }}
-          >
-            <NavigationButton
-              icon={<Home size={24} />}
-              label="Home"
-              onClick={() => handleNavigation("/dashboard")}
-              active={false}
-            />
-            <NavigationButton
-              icon={<Menu size={24} />}
-              label="Menu"
-              onClick={() => setShowMenu(!showMenu)}
-              active={showMenu}
-            />
-          </Box>
+          <NavigationButton
+            icon={<Home size={24} />}
+            label="Home"
+            onClick={() => handleNavigation("/dashboard")}
+            active={false}
+          />
+          <NavigationButton
+            icon={<Menu size={24} />}
+            label="Menu"
+            onClick={() => setShowMenu(!showMenu)}
+            active={showMenu}
+          />
         </Paper>
       </Box>
 
       {/* Expandable Menu */}
-      <AnimatePresence>
-        {showMenu && (
-          <>
-            {/* Dark backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                backgroundColor: "rgba(0,0,0,0.5)",
-                zIndex: 1200,
-              }}
-              onClick={() => setShowMenu(false)}
-            />
-
-            {/* Floating Menu */}
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              variants={menuVariants}
-              style={{
-                position: "fixed",
-                bottom: "80px",
-                left: 0,
-                width: "100%",
-                padding: "0 16px",
-                zIndex: 1301,
+      {showMenu && (
+        <>
+          {/* Backdrop */}
+          <Box
+            onClick={() => setShowMenu(false)}
+            sx={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              bgcolor: "rgba(0,0,0,0.5)",
+              zIndex: 1299,
+            }}
+          />
+          <Box
+            sx={{
+              position: "fixed",
+              bottom: 80,
+              left: 0,
+              width: "100%",
+              px: 2,
+              zIndex: 1301,
+              transition: "transform 0.3s ease, opacity 0.3s ease",
+            }}
+          >
+            <Paper
+              elevation={8}
+              sx={{
+                borderRadius: 2,
+                overflow: "hidden",
+                backdropFilter: "blur(6px)",
               }}
             >
-              <Paper
-                elevation={12}
+              <Box
                 sx={{
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  backgroundColor: theme.palette.background.paper,
-                  boxShadow: "0px 6px 24px rgba(0,0,0,0.15)",
+                  px: 2,
+                  py: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "action.hover" },
                 }}
+                onClick={() => handleNavigation("/user-profile")}
               >
-                <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: 2,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleNavigation("/user-profile")}
-                  >
-                    <UserCircle size={22} color={theme.palette.text.primary} />
-                    <Typography variant="body2" sx={{ fontWeight: 500, ml: 2 }}>
-                      Profile
-                    </Typography>
-                  </Box>
-                </motion.div>
-
-                <Divider />
-
-                <motion.div whileHover={{ backgroundColor: theme.palette.action.hover }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      padding: 2,
-                      cursor: "pointer",
-                    }}
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={22} color={theme.palette.error.main} />
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 500,
-                        color: theme.palette.error.main,
-                        ml: 2,
-                      }}
-                    >
-                      Logout
-                    </Typography>
-                  </Box>
-                </motion.div>
-              </Paper>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                <UserCircle size={20} />
+                <Typography variant="body2" fontWeight={500} ml={2}>
+                  Profile
+                </Typography>
+              </Box>
+              <Divider />
+              <Box
+                sx={{
+                  px: 2,
+                  py: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  color: theme.palette.error.main,
+                  "&:hover": { bgcolor: "rgba(244,67,54,0.08)" },
+                }}
+                onClick={handleLogout}
+              >
+                <LogOut size={20} />
+                <Typography variant="body2" fontWeight={500} ml={2}>
+                  Logout
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
+        </>
+      )}
     </>
   );
 };
-
-export default MobileBottomNavigation;

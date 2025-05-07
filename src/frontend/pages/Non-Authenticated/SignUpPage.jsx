@@ -6,133 +6,135 @@ import {
 } from "@mui/material";
 import { Eye, EyeOff, Mail, Lock, ChevronRight, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../../firebase";
+import { signUp, login, checkEmailExists } from "../../../firebase";
 import { getData, postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
 
-export default function SignUpPage() {
+export function SignUpPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const navigate = useNavigate();
+
   const loading = useUserStore(state => state.loading);
   const setLoading = useUserStore(state => state.setLoading);
   const isLoggedIn = useUserStore(state => state.isLoggedIn);
   const roleId = useUserStore(state => state.roleId);
   const setUser = useUserStore(state => state.setUser);
 
-  const [formData, setFormData] = useState({ email: "", password: "", confirm: "", role: "" });
+  const [form, setForm] = useState({ email: "", password: "", confirm: "", role: "" });
   const [roles, setRoles] = useState([]);
   const [errors, setErrors] = useState({});
+  const [visibility, setVisibility] = useState({ password: false, confirm: false });
   const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (isLoggedIn) {
       navigate(roleId === 1 ? "/admin-dashboard" : "/dashboard");
     }
-  }, [isLoggedIn, roleId, navigate]);
+  }, [isLoggedIn, roleId]);
 
   useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        const data = await getData("/roles");
-        setRoles(data);
-      } catch {
-        showNotification("Failed to load roles. Please refresh and try again.", "error");
-      }
-    };
-    fetchRoles();
+    getData("/roles")
+      .then(setRoles)
+      .catch(() => showNotification("Failed to load roles", "error"));
   }, []);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
-  };
-
-  const validateForm = () => {
-    const { email, password, confirm, role } = formData;
-    const newErrors = {};
-    if (!email) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email address";
-
-    if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
-
-    if (!confirm) newErrors.confirm = "Please confirm your password";
-    else if (confirm !== password) newErrors.confirm = "Passwords must match";
-
-    if (!role) newErrors.role = "Please select a role";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      const emailExists = await checkEmailExists(formData.email);
-      if (emailExists) {
-        setErrors(prev => ({ ...prev, email: "Email already in use" }));
-        setLoading(false);
-        return;
-      }
-
-      const user = await firebaseSignUp(formData.email, formData.password);
-      await firebaseLogin(formData.email, formData.password);
-
-      const selectedRole = roles.find(r => r.role_name === formData.role);
-      if (!selectedRole) throw new Error("Invalid role selected");
-
-      const backendUser = await postData("/users", {
-        firebase_uid: user.uid,
-        email: user.email,
-        role_id: selectedRole.role_id,
-      });
-
-      setUser(user.uid, selectedRole.role_id, backendUser.user.user_id);
-      showNotification("Account created successfully! Redirecting...", "success");
-
-      setTimeout(() => {
-        navigate(selectedRole.role_id === 1 ? "/admin-dashboard" : "/dashboard");
-      }, 1000);
-    } catch (error) {
-      console.error(error);
-      setErrors(prev => ({ ...prev, general: error.message || "Sign-up failed. Please try again." }));
-      showNotification(error.message || "Sign-up failed. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const showNotification = (message, severity = "success") => {
     setNotification({ open: true, message, severity });
   };
 
-  const styles = {
-    input: {
-      "& .MuiOutlinedInput-root": {
-        borderRadius: theme.shape.borderRadius,
-        backgroundColor: "rgba(255,255,255,0.04)",
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+
+  const validate = () => {
+    const { email, password, confirm, role } = form;
+    const errs = {};
+    if (!email) errs.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email)) errs.email = "Invalid email";
+
+    if (!password) errs.password = "Password required";
+    else if (password.length < 6) errs.password = "Minimum 6 characters";
+
+    if (!confirm) errs.confirm = "Confirm password";
+    else if (confirm !== password) errs.confirm = "Passwords must match";
+
+    if (!role) errs.role = "Select a role";
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      if (await checkEmailExists(form.email)) {
+        setErrors(prev => ({ ...prev, email: "Email already in use" }));
+        return;
       }
-    },
-    button: {
-      py: 1.5,
-      borderRadius: theme.shape.borderRadius,
-      textTransform: "none",
-      fontWeight: "bold",
-      transition: theme.transitions.create(["transform", "box-shadow"]),
-      "&:hover": {
-        transform: "translateY(-2px)",
-        boxShadow: theme.shadows[6],
-      }
+
+      const user = await signUp(form.email, form.password);
+      await login(form.email, form.password);
+
+      const role = roles.find(r => r.role_name === form.role);
+      if (!role) throw new Error("Invalid role");
+
+      const backendUser = await postData("/users", {
+        firebase_uid: user.uid,
+        email: user.email,
+        role_id: role.role_id,
+      });
+
+      setUser(user.uid, role.role_id, backendUser.user.user_id);
+      showNotification("Account created!");
+      setTimeout(() => {
+        navigate(role.role_id === 1 ? "/admin-dashboard" : "/dashboard");
+      }, 1000);
+    } catch (err) {
+      showNotification(err.message || "Signup failed", "error");
+      setErrors(prev => ({ ...prev, general: err.message }));
+    } finally {
+      setLoading(false);
     }
   };
+
+  const renderPasswordField = (name, label, visible) => (
+    <TextField
+      name={name}
+      label={label}
+      type={visible ? "text" : "password"}
+      value={form[name]}
+      onChange={handleChange}
+      error={!!errors[name]}
+      helperText={errors[name]}
+      disabled={loading}
+      fullWidth
+      margin="normal"
+      InputProps={{
+        startAdornment: (
+          <InputAdornment position="start">
+            <Lock color={theme.palette.primary.main} size={20} />
+          </InputAdornment>
+        ),
+        endAdornment: (
+          <InputAdornment position="end">
+            <IconButton onClick={() =>
+              setVisibility(prev => ({ ...prev, [name]: !visible }))
+            } edge="end" size="small">
+              {visible
+                ? <EyeOff color={theme.palette.primary.main} size={20} />
+                : <Eye color={theme.palette.primary.main} size={20} />}
+            </IconButton>
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
 
   return (
     <Box sx={{
@@ -140,8 +142,8 @@ export default function SignUpPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      bgcolor: theme.palette.background.default,
-      p: { xs: 2, md: 4 },
+      bgcolor: "background.default",
+      p: 2,
     }}>
       <Snackbar
         open={notification.open}
@@ -153,158 +155,63 @@ export default function SignUpPage() {
       </Snackbar>
 
       <Container maxWidth="sm">
-        <Paper
-          elevation={10}
-          sx={{
-            borderRadius: theme.shape.borderRadius,
-            background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
-            overflow: "hidden",
-            transform: "translateY(0)",
-            transition: "transform 0.5s ease-out",
-            "&:hover": { transform: "translateY(-5px)" }
-          }}
-        >
-          {/* Header */}
+        <Paper elevation={8} sx={{ borderRadius: 2, overflow: "hidden" }}>
           <Box sx={{
-            bgcolor: theme.palette.primary.main,
+            bgcolor: "primary.main",
             p: 3,
             textAlign: "center",
-            position: "relative",
-            overflow: "hidden",
-            "&::after": {
-              content: '""',
-              position: "absolute",
-              inset: 0,
-              background: `radial-gradient(circle at 70% 30%, ${theme.palette.primary.light}20, transparent 50%)`,
-              zIndex: 1,
-            }
+            color: "white"
           }}>
-            <Box position="relative" zIndex={2}>
-              <UserPlus size={40} color={theme.palette.common.white} />
-              <Typography variant="h4" sx={{ color: "white", fontWeight: "bold", mt: 1 }}>
-                Create Account
-              </Typography>
-              <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.8)" }}>
-                Join our platform and get started
-              </Typography>
-            </Box>
+            <UserPlus size={36} />
+            <Typography variant="h5" fontWeight={700} mt={1}>Create Account</Typography>
+            <Typography variant="body2">Join us and get started</Typography>
           </Box>
 
-          {/* Form */}
           <Box component="form" onSubmit={handleSignUp} sx={{ p: 3 }}>
             <TextField
               name="email"
-              type="email"
-              label="Email Address"
-              value={formData.email}
+              label="Email"
+              value={form.email}
               onChange={handleChange}
-              fullWidth
-              margin="normal"
               error={!!errors.email}
               helperText={errors.email}
               disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Mail color={theme.palette.primary.main} size={20} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={styles.input}
-            />
-
-            <TextField
-              name="password"
-              type={showPassword ? "text" : "password"}
-              label="Password"
-              value={formData.password}
-              onChange={handleChange}
               fullWidth
               margin="normal"
-              error={!!errors.password}
-              helperText={errors.password}
-              disabled={loading}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color={theme.palette.primary.main} size={20} />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                      size="small"
-                    >
-                      {showPassword
-                        ? <EyeOff color={theme.palette.primary.main} size={20} />
-                        : <Eye color={theme.palette.primary.main} size={20} />}
-                    </IconButton>
+                    <Mail size={20} color={theme.palette.primary.main} />
                   </InputAdornment>
                 ),
               }}
-              sx={styles.input}
             />
 
-            <TextField
-              name="confirm"
-              type={showConfirm ? "text" : "password"}
-              label="Confirm Password"
-              value={formData.confirm}
-              onChange={handleChange}
-              fullWidth
-              margin="normal"
-              error={!!errors.confirm}
-              helperText={errors.confirm}
-              disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock color={theme.palette.primary.main} size={20} />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      edge="end"
-                      size="small"
-                    >
-                      {showConfirm
-                        ? <EyeOff color={theme.palette.primary.main} size={20} />
-                        : <Eye color={theme.palette.primary.main} size={20} />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              sx={styles.input}
-            />
+            {renderPasswordField("password", "Password", visibility.password)}
+            {renderPasswordField("confirm", "Confirm Password", visibility.confirm)}
 
-            <FormControl fullWidth margin="normal" error={!!errors.role} sx={styles.input}>
+            <FormControl fullWidth margin="normal" error={!!errors.role}>
               <InputLabel>Role</InputLabel>
               <Select
                 name="role"
-                value={formData.role}
+                value={form.role}
                 onChange={handleChange}
                 label="Role"
                 disabled={loading || !roles.length}
               >
                 {roles.map(r => (
-                  <MenuItem key={r.role_id} value={r.role_name}>
-                    {r.role_name}
-                  </MenuItem>
+                  <MenuItem key={r.role_id} value={r.role_name}>{r.role_name}</MenuItem>
                 ))}
               </Select>
               {errors.role && (
-                <Typography variant="caption" color="error" sx={{ ml: 2, mt: 0.5 }}>
+                <Typography variant="caption" color="error" sx={{ ml: 2 }}>
                   {errors.role}
                 </Typography>
               )}
             </FormControl>
 
             {errors.general && (
-              <Typography variant="body2" color="error" sx={{ mt: 1, fontWeight: 500 }}>
+              <Typography variant="body2" color="error" mt={1}>
                 {errors.general}
               </Typography>
             )}
@@ -315,24 +222,16 @@ export default function SignUpPage() {
               type="submit"
               disabled={loading}
               endIcon={!loading && <ChevronRight size={18} />}
-              sx={{ ...styles.button, mt: 3 }}
+              sx={{ mt: 3 }}
             >
-              {loading ? "Creating Account..." : "Sign Up"}
+              {loading ? "Creating..." : "Sign Up"}
             </Button>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" color="text.secondary">OR</Typography>
-            </Divider>
+            <Divider sx={{ my: 3 }} />
 
             <Box textAlign="center">
-              <Typography variant="body2" color="text.secondary" mb={1}>
-                Already have an account?
-              </Typography>
-              <Button
-                variant="outlined"
-                onClick={() => navigate("/login")}
-                sx={{ ...styles.button, py: 1 }}
-              >
+              <Typography variant="body2" color="text.secondary">Already have an account?</Typography>
+              <Button variant="outlined" sx={{ mt: 1 }} onClick={() => navigate("/login")}>
                 Log In
               </Button>
             </Box>

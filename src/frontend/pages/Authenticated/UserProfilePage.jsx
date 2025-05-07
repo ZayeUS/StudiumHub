@@ -6,7 +6,7 @@ import {
 import { useUserStore } from "../../store/userStore";
 import { putData } from "../../utils/BackendRequestHelper";
 
-const UserProfilePage = () => {
+export function UserProfilePage() {
   const [formData, setFormData] = useState({ first_name: "", last_name: "", date_of_birth: "" });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
@@ -16,18 +16,16 @@ const UserProfilePage = () => {
   const setProfile = useUserStore(state => state.setProfile);
   const loading = useUserStore(state => state.loading);
   const setLoading = useUserStore(state => state.setLoading);
-
   const theme = useTheme();
 
   useEffect(() => {
     if (profile) {
-      const date = profile.date_of_birth
-        ? new Date(profile.date_of_birth).toISOString().split("T")[0]
-        : "";
       setFormData({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
-        date_of_birth: date
+        date_of_birth: profile.date_of_birth
+          ? new Date(profile.date_of_birth).toISOString().split("T")[0]
+          : ""
       });
     }
   }, [profile]);
@@ -36,30 +34,27 @@ const UserProfilePage = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      const newErrors = { ...errors };
-      delete newErrors[name];
-      setErrors(newErrors);
+      const updated = { ...errors };
+      delete updated[name];
+      setErrors(updated);
     }
     if (apiError) setApiError("");
   };
 
   const validateForm = () => {
-    const { first_name, last_name, date_of_birth } = formData;
-    const newErrors = {};
+    const errs = {};
+    if (!formData.first_name.trim()) errs.first_name = "Required";
+    if (!formData.last_name.trim()) errs.last_name = "Required";
 
-    if (!first_name.trim()) newErrors.first_name = "Required";
-    if (!last_name.trim()) newErrors.last_name = "Required";
-
-    if (date_of_birth) {
-      const dob = new Date(date_of_birth);
-      const today = new Date();
-      if (dob > today) newErrors.date_of_birth = "Cannot be in the future";
+    if (!formData.date_of_birth) {
+      errs.date_of_birth = "Required";
     } else {
-      newErrors.date_of_birth = "Required";
+      const dob = new Date(formData.date_of_birth);
+      if (dob > new Date()) errs.date_of_birth = "Cannot be in the future";
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
 
   const handleSubmit = async (e) => {
@@ -89,7 +84,7 @@ const UserProfilePage = () => {
       name: "date_of_birth",
       label: "Date of Birth",
       type: "date",
-      format: (val) => val ? new Date(val).toLocaleDateString() : "—"
+      format: val => val ? new Date(val).toLocaleDateString() : "—"
     }
   ];
 
@@ -111,38 +106,35 @@ const UserProfilePage = () => {
         elevation={4}
         sx={{
           p: 3,
-          borderRadius: 2,
-          bgcolor: theme.palette.background.paper,
-          transition: "transform 0.3s ease",
-          "&:hover": { transform: "translateY(-5px)" }
+          borderRadius: theme.shape.borderRadius,
+          bgcolor: "background.paper",
+          "&:hover": { transform: "translateY(-5px)" },
+          transition: "transform 0.3s ease"
         }}
       >
         {apiError && <Alert severity="error" sx={{ mb: 3 }}>{apiError}</Alert>}
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          {fields.map((field) => (
-            <Box key={field.name} mb={3}>
+          {fields.map(({ name, label, type = "text", format }) => (
+            <Box key={name} mb={3}>
               <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                {field.label}
+                {label}
               </Typography>
-
               {isEditing ? (
                 <TextField
-                  name={field.name}
-                  type={field.type || "text"}
-                  value={formData[field.name]}
+                  name={name}
+                  type={type}
+                  value={formData[name]}
                   onChange={handleChange}
                   fullWidth
-                  error={!!errors[field.name]}
-                  helperText={errors[field.name]}
+                  error={!!errors[name]}
+                  helperText={errors[name]}
                   disabled={loading}
                   InputLabelProps={{ shrink: true }}
                 />
               ) : (
                 <Typography variant="body1" fontWeight="500">
-                  {field.format
-                    ? field.format(profile[field.name])
-                    : profile[field.name] || "—"}
+                  {format ? format(profile[name]) : profile[name] || "—"}
                 </Typography>
               )}
             </Box>
@@ -153,26 +145,15 @@ const UserProfilePage = () => {
           <Box display="flex" justifyContent="center" gap={2}>
             {isEditing ? (
               <>
-                <Button
-                  variant="outlined"
-                  onClick={() => setIsEditing(false)}
-                  disabled={loading}
-                >
+                <Button variant="outlined" onClick={() => setIsEditing(false)} disabled={loading}>
                   Cancel
                 </Button>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  disabled={loading}
-                >
+                <Button variant="contained" type="submit" disabled={loading}>
                   {loading ? "Saving..." : "Save"}
                 </Button>
               </>
             ) : (
-              <Button
-                variant="contained"
-                onClick={() => setIsEditing(true)}
-              >
+              <Button variant="contained" onClick={() => setIsEditing(true)}>
                 Edit Profile
               </Button>
             )}
@@ -181,6 +162,4 @@ const UserProfilePage = () => {
       </Paper>
     </Box>
   );
-};
-
-export default UserProfilePage;
+}
