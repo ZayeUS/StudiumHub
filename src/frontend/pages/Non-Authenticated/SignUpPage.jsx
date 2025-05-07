@@ -155,7 +155,7 @@ export function SignUpPage() {
       </Snackbar>
 
       <Container maxWidth="sm">
-        <Paper elevation={8} sx={{ borderRadius: 2, overflow: "hidden" }}>
+      <Paper elevation={8} sx={{ borderRadius: theme.shape.borderRadius, overflow: "hidden" }}>
           <Box sx={{
             bgcolor: "primary.main",
             p: 3,

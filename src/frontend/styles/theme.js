@@ -7,7 +7,7 @@ const config = {
   paper: '#2A2A2A',
   text: '#F5F5F5',
   fontFamily: "'Inter', sans-serif",
-  borderRadius: 12,
+  borderRadius: 6,
 };
 
 const theme = createTheme({

@@ -78,8 +78,13 @@ export function LoginPage() {
   };
 
   const iconStart = (icon) => ({
-    startAdornment: <InputAdornment position="start">{icon}</InputAdornment>,
+    startAdornment: (
+      <InputAdornment position="start">
+        {React.cloneElement(icon, { color: theme.palette.primary.main })}
+      </InputAdornment>
+    ),
   });
+  
 
   return (
     <Box
