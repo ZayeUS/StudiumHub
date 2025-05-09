@@ -2,6 +2,8 @@ import express from 'express';
 import { query } from '../db.js';
 import authenticate from '../middlewares/authenticate.js';
 import {logAudit} from '../utils/auditLogger.js'; // ✅ Correct default import
+import { uploadAvatar } from '../middlewares/multer.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
@@ -35,6 +37,56 @@ router.post('/', authenticate, async (req, res) => {
     res.status(500).json({ message: "Error creating profile" });
   }
 });
+
+router.post('/avatar', authenticate, uploadAvatar, async (req, res) => {
+  const { user_id } = req.user;
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'No image file uploaded.' });
+  }
+
+  try {
+    // 1. Upload to Cloudinary
+    const uploadResult = await uploadToCloudinary(req.file.path);
+
+    // 2. Ensure profile exists before updating
+    const checkProfileQuery = 'SELECT * FROM profiles WHERE user_id = $1';
+    const profileCheckResult = await query(checkProfileQuery, [user_id]);
+
+    if (profileCheckResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    // 3. Update profile with avatar URL
+    const updateQuery = `
+      UPDATE profiles
+      SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = $2
+      RETURNING *`;
+    const values = [uploadResult.secure_url, user_id];
+
+    const result = await query(updateQuery, values);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    // 4. Audit
+    await logAudit({
+      actorUserId: user_id,
+      targetUserId: user_id,
+      action: 'upload_avatar',
+      tableName: 'profiles',
+      recordId: result.rows[0].profile_id,
+      metadata: { avatar_url: uploadResult.secure_url }
+    });
+
+    res.status(200).json({ message: 'Avatar uploaded successfully', profile: result.rows[0] });
+  } catch (error) {
+    console.error('Error uploading avatar:', error);
+    res.status(500).json({ message: 'Failed to upload avatar' });
+  }
+});
+
 
 // READ the authenticated user's profile
 // READ the authenticated user's profile

@@ -5,6 +5,8 @@ import usersRouter from './routes/users.js';
 import rolesRouter from './routes/roles.js'; // Import the roles router
 import profileRouter from './routes/profiles.js'; // Import the profile routes
 import auditRouter from './routes/auditRoutes.js';
+import testEmailRoutes from './routes/testEmail.js';
+
 
 
 dotenv.config();
@@ -26,6 +28,8 @@ app.use("/api/users", usersRouter);  // Users routes
 app.use("/api/roles", rolesRouter);  // Roles routes
 app.use("/api/profile", profileRouter);  // Profile routes
 app.use("/api/audit", auditRouter);
+app.use('/api/email', testEmailRoutes);
+
 
 // Server
 const PORT = process.env.PORT || 5000;
