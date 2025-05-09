@@ -1,19 +1,7 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Paper,
-  Typography,
-  Divider,
-  useTheme,
-  IconButton,
-} from "@mui/material";
+import { Box, Paper, Typography, Divider, IconButton, Switch,useTheme } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import {
-  Home,
-  Menu,
-  LogOut,
-  UserCircle,
-} from "lucide-react";
+import { Home, Menu, LogOut, UserCircle, Moon, Sun, FileText } from "lucide-react"; // Added FileText for Leads icon
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
@@ -41,7 +29,7 @@ const NavigationButton = ({ icon, label, onClick, active }) => {
   );
 };
 
-export const MobileBottomNavigation = () => {
+export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [showMenu, setShowMenu] = useState(false);
@@ -94,6 +82,8 @@ export const MobileBottomNavigation = () => {
             onClick={() => handleNavigation("/dashboard")}
             active={false}
           />
+          {/* Added Leads button */}
+          
           <NavigationButton
             icon={<Menu size={24} />}
             label="Menu"
@@ -154,7 +144,41 @@ export const MobileBottomNavigation = () => {
                   Profile
                 </Typography>
               </Box>
+              
               <Divider />
+              
+              {/* Theme Toggle */}
+              <Box
+                sx={{
+                  px: 2,
+                  py: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "action.hover" },
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  {isDarkMode ? (
+                    <Moon size={20} color={theme.palette.primary.main} />
+                  ) : (
+                    <Sun size={20} color={theme.palette.primary.main} />
+                  )}
+                  <Typography variant="body2" fontWeight={500} ml={2}>
+                    {isDarkMode ? "Dark Mode" : "Light Mode"}
+                  </Typography>
+                </Box>
+                <Switch
+                  checked={isDarkMode}
+                  onChange={toggleTheme}
+                  color="primary"
+                  size="small"
+                />
+              </Box>
+              
+              <Divider />
+              
               <Box
                 sx={{
                   px: 2,

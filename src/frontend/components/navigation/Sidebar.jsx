@@ -9,9 +9,10 @@ import {
   Tooltip,
   Divider,
   useTheme,
+  Button,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, User, LogOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, User, LogOut, ChevronLeft, ChevronRight, Moon, Sun, Users } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
@@ -62,7 +63,64 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
   );
 };
 
-export const Sidebar = ({ isMobile, onClose }) => {
+const ThemeToggle = ({ isExpanded, isDarkMode, toggleTheme }) => {
+  const theme = useTheme();
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: isExpanded ? "space-between" : "center",
+        px: isExpanded ? 2 : 1,
+        py: 1.5,
+        borderRadius: 2,
+      }}
+    >
+      {isExpanded && (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 500,
+            letterSpacing: 0.5,
+            color: theme.palette.text.primary,
+          }}
+        >
+          {isDarkMode ? "Dark Mode" : "Light Mode"}
+        </Typography>
+      )}
+
+      {isExpanded ? (
+        <Button
+          onClick={toggleTheme}
+          variant="outlined"
+          color="primary"
+          size="small"
+          startIcon={isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+          sx={{
+            borderRadius: 2,
+            minWidth: "auto",
+            px: 1.5,
+          }}
+        >
+          {isDarkMode ? "Light" : "Dark"}
+        </Button>
+      ) : (
+        <Tooltip title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+          <IconButton
+            onClick={toggleTheme}
+            color="primary"
+            sx={{ p: 1 }}
+          >
+            {isDarkMode ? <Sun size={22} strokeWidth={2} /> : <Moon size={22} strokeWidth={2} />}
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
+  );
+};
+
+export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -118,7 +176,6 @@ export const Sidebar = ({ isMobile, onClose }) => {
       }}
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Header */}
         <Box
           display="flex"
           alignItems="center"
@@ -163,8 +220,19 @@ export const Sidebar = ({ isMobile, onClose }) => {
           </List>
         </Box>
 
+        {/* Theme Toggle - now with buttons in both states */}
+        <Box px={isExpanded ? 2 : 1} mb={2}>
+          <ThemeToggle 
+            isExpanded={isExpanded} 
+            isDarkMode={isDarkMode} 
+            toggleTheme={toggleTheme} 
+          />
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
         {/* Logout */}
-        <Box px={isExpanded ? 2.5 : 1} pb={4}>
+        <Box px={isExpanded ? 2 : 1} pb={4}>
           <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
             <ListItem
               onClick={handleLogout}

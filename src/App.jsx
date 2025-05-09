@@ -1,7 +1,13 @@
-import React, { useEffect } from "react";
-import { CssBaseline, Box, useMediaQuery, useTheme } from "@mui/material";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  CssBaseline,
+  Box,
+  useMediaQuery,
+  ThemeProvider,
+} from "@mui/material";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useUserStore } from "./frontend/store/userStore";
+import { createAppTheme } from "./frontend/styles/theme"; // ✅ ensure this path is correct
 
 // Pages
 import { LoginPage } from "./frontend/pages/Non-Authenticated/LoginPage";
@@ -29,13 +35,27 @@ export const App = () => {
     loading,
   } = useUserStore();
 
-  const theme = useTheme();
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
+
+  const theme = useMemo(() => createAppTheme(isDarkMode ? "dark" : "light"), [isDarkMode]);
+
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      localStorage.setItem("theme", next ? "dark" : "light");
+      return next;
+    });
+  };
+
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = listenAuthState();
-    return unsubscribe;
+    return () => unsubscribe();
   }, [listenAuthState]);
 
   const showSidebar = isLoggedIn && !isMobile && location.pathname !== "/profile-onboarding";
@@ -47,31 +67,36 @@ export const App = () => {
     return "/";
   };
 
-  // 🛡️ Don't render anything until auth is hydrated
   if (!authHydrated) {
     return (
-      <>
+      <ThemeProvider theme={theme}>
         <CssBaseline />
         <LoadingModal message="Loading..." />
-      </>
+      </ThemeProvider>
     );
   }
 
-  // 🌀 Still loading state
   if (loading) {
     return (
-      <>
+      <ThemeProvider theme={theme}>
         <CssBaseline />
         <LoadingModal message="Just a moment..." />
-      </>
+      </ThemeProvider>
     );
   }
 
   return (
-    <>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ display: "flex" }}>
-        {showSidebar && <Sidebar />}
+        {showSidebar && (
+          <Sidebar
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+            isMobile={isMobile}
+            onClose={() => {}}
+          />
+        )}
         <Box
           component="main"
           sx={{
@@ -150,8 +175,13 @@ export const App = () => {
             <Route path="*" element={<Navigate to={isLoggedIn ? getRedirect() : "/"} />} />
           </Routes>
         </Box>
-        {showMobileNav && <MobileBottomNavigation />}
+        {showMobileNav && (
+          <MobileBottomNavigation
+            isDarkMode={isDarkMode}
+            toggleTheme={toggleTheme}
+          />
+        )}
       </Box>
-    </>
+    </ThemeProvider>
   );
 };
