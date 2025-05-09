@@ -1,31 +1,21 @@
+// ProtectedRoute.js - Simplified Authentication Guard
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
-import {LoadingModal} from '../components/LoadingModal';
+import { LoadingModal } from '../components/LoadingModal';
 
 export const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isLoggedIn, roleId, profile, authHydrated } = useUserStore();
 
-  if (!authHydrated) {
-    return <LoadingModal message="Authenticating..." />;
-  }
-
-  // Not logged in → bounce to login
-  if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Logged in but no profile → force onboarding
-  if (!profile) {
-    return <Navigate to="/profile-onboarding" replace />;
-  }
-
-  // Logged in, profile complete, wrong role
+  // Always show loading until auth is confirmed
+  if (!authHydrated) return <LoadingModal message="Authenticating..." />;
+  
+  // Auth checks with early returns
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (!profile) return <Navigate to="/profile-onboarding" replace />;
   if (allowedRoles && !allowedRoles.includes(roleId)) {
-    const fallback = roleId === 1 ? '/admin-dashboard' : '/user-dashboard';
-    return <Navigate to={fallback} replace />;
+    return <Navigate to={roleId === 1 ? '/admin-dashboard' : '/user-dashboard'} replace />;
   }
 
   return children;
 };
-

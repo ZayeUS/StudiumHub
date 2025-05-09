@@ -1,36 +1,26 @@
+// userStore.js - Optimized Global State
 import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
 
-// Safe localStorage wrapper
-const safeStorage = {
-  get: (key, defaultValue = null) => {
-    try {
-      return localStorage.getItem(key) || defaultValue;
-    } catch {
-      return defaultValue;
-    }
+// Safe localStorage with error handling
+const storage = {
+  get: (key) => {
+    try { return localStorage.getItem(key); } 
+    catch { return null; }
   },
   set: (key, value) => {
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch {
-      return false;
-    }
+    try { localStorage.setItem(key, value); return true; } 
+    catch { return false; }
   },
   remove: (key) => {
-    try {
-      localStorage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
+    try { localStorage.removeItem(key); return true; } 
+    catch { return false; }
   }
 };
 
 export const useUserStore = create((set, get) => ({
-  // Initial state — assume unauthenticated
+  // State
   firebaseId: null,
   roleId: null,
   userId: null,
@@ -38,18 +28,21 @@ export const useUserStore = create((set, get) => ({
   profile: null,
   loading: false,
   authLoading: false,
-  authHydrated: false, // ← becomes true only after Firebase confirms
+  authHydrated: false,
 
-  // Setters
+  // Actions
   setLoading: (loading) => set({ loading }),
-  setAuthLoading: (authLoading) => set({ authLoading }),
+  setProfile: (profile) => set({ profile }),
 
   setUser: (firebaseId, roleId, userId) => {
     const normalizedRoleId = Number(roleId);
-    safeStorage.set('firebaseId', firebaseId);
-    safeStorage.set('roleId', String(normalizedRoleId));
-    safeStorage.set('userId', userId);
+    
+    // Update storage
+    storage.set('firebaseId', firebaseId);
+    storage.set('roleId', String(normalizedRoleId));
+    storage.set('userId', userId);
 
+    // Update state
     set({
       firebaseId,
       roleId: normalizedRoleId,
@@ -58,13 +51,13 @@ export const useUserStore = create((set, get) => ({
     });
   },
 
-  setProfile: (profile) => set({ profile }),
-
   clearUser: () => {
-    safeStorage.remove('firebaseId');
-    safeStorage.remove('roleId');
-    safeStorage.remove('userId');
+    // Clear storage
+    storage.remove('firebaseId');
+    storage.remove('roleId');
+    storage.remove('userId');
 
+    // Reset state
     set({
       firebaseId: null,
       roleId: null,
@@ -78,37 +71,33 @@ export const useUserStore = create((set, get) => ({
   listenAuthState: () => {
     set({ authHydrated: false, authLoading: true, isLoggedIn: false });
 
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    return auth.onAuthStateChanged(async (user) => {
       try {
         if (user) {
+          // Parallel requests for user and profile data
           const [userData, profileData] = await Promise.all([
             getData(`/users/${user.uid}`),
             getData(`/profile`).catch(() => null),
           ]);
 
+          // Validate user data
           if (!userData?.user_id || userData?.role_id === undefined) {
             console.warn("Invalid user data, clearing session.");
             get().clearUser();
-            return set({ authLoading: false, authHydrated: true });
+          } else {
+            // Set user data
+            get().setUser(user.uid, userData.role_id, userData.user_id);
+            set({ profile: profileData || null });
           }
-
-          get().setUser(user.uid, userData.role_id, userData.user_id);
-          set({
-            profile: profileData || null,
-            authLoading: false,
-            authHydrated: true,
-          });
         } else {
           get().clearUser();
-          set({ authLoading: false, authHydrated: true });
         }
       } catch (err) {
         console.error("Auth listener error:", err);
         get().clearUser();
+      } finally {
         set({ authLoading: false, authHydrated: true });
       }
     });
-
-    return unsubscribe;
   }
 }));
