@@ -7,7 +7,7 @@ import {
 } from "@mui/material";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useUserStore } from "./frontend/store/userStore";
-import { createAppTheme } from "./frontend/styles/theme"; // ✅ ensure this path is correct
+import { createAppTheme } from "./frontend/styles/theme";
 
 // Pages
 import { LoginPage } from "./frontend/pages/Non-Authenticated/LoginPage";
@@ -16,12 +16,16 @@ import { AdminDashboard } from "./frontend/pages/Authenticated/AdminDashboard";
 import { UserDashboard } from "./frontend/pages/Authenticated/UserDashboard";
 import { ProfileOnboarding } from "./frontend/pages/Authenticated/ProfileOnboarding";
 import { UserProfilePage } from "./frontend/pages/Authenticated/UserProfilePage";
+import { StripeDashboard } from "./frontend/pages/Authenticated/StripeDashboard"; // Import StripeDashboard
 
 // Components
 import { Sidebar } from "./frontend/components/navigation/Sidebar";
 import { MobileBottomNavigation } from "./frontend/components/navigation/MobileBottomNavigation";
 import { ProtectedRoute } from "./frontend/components/ProtectedRoute";
 import { LoadingModal } from "./frontend/components/LoadingModal";
+
+// Import PaymentSuccessPage
+import { PaymentSuccessPage } from "./frontend/pages/Authenticated/PaymentSuccessPage";
 
 const drawerWidth = 60;
 
@@ -62,6 +66,12 @@ export const App = () => {
   const showMobileNav = isLoggedIn && isMobile && location.pathname !== "/profile-onboarding";
 
   const getRedirect = () => {
+    // First check if user is new and should be directed to StripeDashboard
+    if (profile && profile.is_new_user) {
+      return "/stripe-dashboard";
+    }
+    
+    // Then check role for other redirects
     if (roleId === 1) return "/admin-dashboard";
     if (roleId === 2) return "/user-dashboard";
     return "/";
@@ -171,6 +181,24 @@ export const App = () => {
                   <UserDashboard />
                 </ProtectedRoute>
               }
+            />
+            {/* Add StripeDashboard route */}
+            <Route
+              path="/stripe-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[1, 2]}>
+                  <StripeDashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* Payment Success route */}
+            <Route 
+              path="/payment-success" 
+              element={
+                <ProtectedRoute allowedRoles={[1, 2]}>
+                  <PaymentSuccessPage />
+                </ProtectedRoute>
+              } 
             />
             <Route path="*" element={<Navigate to={isLoggedIn ? getRedirect() : "/"} />} />
           </Routes>

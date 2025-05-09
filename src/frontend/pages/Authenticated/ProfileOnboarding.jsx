@@ -13,7 +13,8 @@ export const ProfileOnboarding = () => {
   const [form, setForm] = useState({ 
     first_name: "", 
     last_name: "", 
-    date_of_birth: "" 
+    date_of_birth: "",
+    is_new_user: true // Add this flag to indicate a new user
   });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
@@ -113,7 +114,9 @@ export const ProfileOnboarding = () => {
         }
 
         showNotification("Profile saved successfully!");
-        setTimeout(() => navigate("/dashboard"), 800);
+        
+        // Redirect to the stripe dashboard instead of regular dashboard
+        setTimeout(() => navigate("/stripe-dashboard"), 800);
       } else {
         setApiError("Unable to save profile");
       }
@@ -338,6 +341,14 @@ export const ProfileOnboarding = () => {
             sx={{ ...inputStyle, mt: 2 }}
           />
 
+          {/* Next Step Alert */}
+          <Alert 
+            severity="info" 
+            sx={{ mt: 3, borderRadius }}
+          >
+            After completing your profile, you'll be directed to set up your subscription.
+          </Alert>
+
           {/* Submit Button */}
           <Button
             type="submit"
@@ -358,7 +369,7 @@ export const ProfileOnboarding = () => {
               }
             }}
           >
-            {loading ? "Saving..." : "Save & Continue"}
+            {loading ? "Saving..." : "Save & Continue to Subscription"}
           </Button>
         </Box>
       </Paper>

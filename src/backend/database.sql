@@ -56,7 +56,29 @@ CREATE TABLE audit_logs (
   CONSTRAINT fk_target FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+CREATE TABLE payments (
+  payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  stripe_customer_id VARCHAR(255),
+  stripe_subscription_id VARCHAR(255),
+  stripe_status VARCHAR(50), -- E.g., 'active', 'past_due', 'canceled'
+  subscription_plan VARCHAR(255), -- E.g., 'basic', 'premium'
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
 -- Audit log indexes
 CREATE INDEX idx_audit_actor_user_id ON audit_logs(actor_user_id);
 CREATE INDEX idx_audit_target_user_id ON audit_logs(target_user_id);
 CREATE INDEX idx_audit_table_record ON audit_logs(table_name, record_id);
+
+
+ALTER TABLE payments 
+ADD CONSTRAINT unique_subscription 
+UNIQUE (stripe_subscription_id);
+
+ALTER TABLE payments
+    ALTER COLUMN stripe_customer_id TYPE TEXT;
+
+ALTER TABLE payments
+    ALTER COLUMN stripe_subscription_id TYPE TEXT;

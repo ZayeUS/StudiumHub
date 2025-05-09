@@ -6,8 +6,7 @@ import rolesRouter from './routes/roles.js'; // Import the roles router
 import profileRouter from './routes/profiles.js'; // Import the profile routes
 import auditRouter from './routes/auditRoutes.js';
 import testEmailRoutes from './routes/testEmail.js';
-
-
+import stripeRouter from './routes/stripeRoutes.js'; // Import the Stripe routes
 
 dotenv.config();
 
@@ -21,15 +20,15 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json()); // Middleware to parse incoming JSON data
 
 // Routes
 app.use("/api/users", usersRouter);  // Users routes
 app.use("/api/roles", rolesRouter);  // Roles routes
 app.use("/api/profile", profileRouter);  // Profile routes
-app.use("/api/audit", auditRouter);
-app.use('/api/email', testEmailRoutes);
-
+app.use("/api/audit", auditRouter); // Audit log routes
+app.use('/api/email', testEmailRoutes); // Email routes
+app.use("/api/stripe", stripeRouter);  // Stripe routes (subscription, payment handling)
 
 // Server
 const PORT = process.env.PORT || 5000;
