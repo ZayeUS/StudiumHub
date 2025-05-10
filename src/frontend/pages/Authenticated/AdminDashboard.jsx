@@ -15,8 +15,14 @@ import {
   IconButton,
   useTheme,
   useMediaQuery,
+  Fade,
+  Button
 } from "@mui/material";
-import InfoIcon from "@mui/icons-material/Info";
+import { 
+  Info as InfoIcon,
+  Refresh as RefreshIcon,
+  Download as DownloadIcon 
+} from "@mui/icons-material";
 import { useUserStore } from "../../store/userStore";
 import { LoadingModal } from "../../components/LoadingModal";
 import { getData } from "../../utils/BackendRequestHelper";
@@ -78,10 +84,7 @@ const getActionColor = (action) => {
 const formatUuid = (uuid) => (uuid ? uuid.substring(0, 8) + "..." : "—");
 
 export const AdminDashboard = () => {
-  const userId = useUserStore((state) => state.userId);
-  const isLoggedIn = useUserStore((state) => state.isLoggedIn);
-  const loading = useUserStore((state) => state.loading);
-
+  const { userId, isLoggedIn, loading } = useUserStore();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -89,20 +92,21 @@ export const AdminDashboard = () => {
   const [loadingAudit, setLoadingAudit] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchLogs = async () => {
+    if (!isLoggedIn) return;
+    try {
+      setLoadingAudit(true);
+      setError(null);
+      const data = await getData("/audit");
+      setAuditLogs(data);
+    } catch {
+      setError("Unable to load audit logs. Please try again later.");
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLogs = async () => {
-      if (!isLoggedIn) return;
-      try {
-        setLoadingAudit(true);
-        setError(null);
-        const data = await getData("/audit");
-        setAuditLogs(data);
-      } catch {
-        setError("Unable to load audit logs. Please try again later.");
-      } finally {
-        setLoadingAudit(false);
-      }
-    };
     fetchLogs();
   }, [isLoggedIn]);
 
@@ -122,102 +126,213 @@ export const AdminDashboard = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ pt: 8, pb: 6 }}>
-      <Typography variant="h4" color="primary" align="center" gutterBottom>
-        Admin Dashboard
-      </Typography>
-      <Typography variant="subtitle1" align="center" gutterBottom>
-        {`Admin ID: ${userId}`}
-      </Typography>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: theme.palette.background.default,
+        position: "relative",
+        overflow: "hidden",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: theme.palette.mode === 'dark'
+            ? `radial-gradient(circle at 20% 80%, ${theme.palette.primary.dark}20 0%, transparent 50%),
+               radial-gradient(circle at 80% 20%, ${theme.palette.secondary.dark}15 0%, transparent 50%)`
+            : `radial-gradient(circle at 20% 80%, ${theme.palette.primary.light}20 0%, transparent 50%),
+               radial-gradient(circle at 80% 20%, ${theme.palette.secondary.light}15 0%, transparent 50%)`,
+          animation: "drift 20s ease-in-out infinite",
+          zIndex: 0,
+        },
+        "@keyframes drift": {
+          "0%, 100%": { transform: "translate(0, 0)" },
+          "50%": { transform: "translate(-20px, -20px)" },
+        }
+      }}
+    >
+      <Container maxWidth="lg" sx={{ pt: 4, pb: 6, position: "relative", zIndex: 1 }}>
+        <Fade in timeout={500}>
+          <Box>
+            <Typography 
+              variant="h4" 
+              fontWeight="bold"
+              sx={{
+                mb: 1,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: "text",
+                textFillColor: "transparent",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Admin Dashboard
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 5 }}>
+              System Activity Logs
+            </Typography>
+          </Box>
+        </Fade>
 
-      <Box sx={{ mt: 6, mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Box display="flex" alignItems="center">
-          <Typography variant="h5" component="h2">
-            Audit Logs
-          </Typography>
-          <Tooltip title="Shows the last 100 system activities">
-            <IconButton size="small" sx={{ ml: 1 }}>
-              <InfoIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-        <Typography variant="caption" color="text.secondary">
-          Times displayed in: {Intl.DateTimeFormat().resolvedOptions().timeZone}
-        </Typography>
-      </Box>
+      
 
-      {loadingAudit ? (
-        <Box display="flex" justifyContent="center" py={4}>
-          <CircularProgress />
-        </Box>
-      ) : error ? (
-        <Paper elevation={0} sx={{ p: 3, bgcolor: "error.light", color: "error.contrastText", borderRadius: 2 }}>
-          <Typography>{error}</Typography>
-        </Paper>
-      ) : auditLogs.length === 0 ? (
-        <Paper elevation={1} sx={{ p: 3, bgcolor: "grey.100", borderRadius: 2, textAlign: "center" }}>
-          <Typography>No audit logs found</Typography>
-        </Paper>
-      ) : (
-        <Paper elevation={3} sx={{ overflowX: "auto", borderRadius: 2 }}>
-          <Table size={isMobile ? "small" : "medium"}>
-            <TableHead sx={{ bgcolor: "primary.main" }}>
-              <TableRow>
-                <TableCell sx={{ color: "white", fontWeight: 600 }}>User</TableCell>
-                <TableCell sx={{ color: "white", fontWeight: 600 }}>Action</TableCell>
-                {!isMobile && <TableCell sx={{ color: "white", fontWeight: 600 }}>Table</TableCell>}
-                {!isMobile && <TableCell sx={{ color: "white", fontWeight: 600 }}>Record ID</TableCell>}
-                <TableCell sx={{ color: "white", fontWeight: 600 }}>
-                  {isMobile ? "Meta" : "Metadata"}
-                </TableCell>
-                <TableCell sx={{ color: "white", fontWeight: 600 }}>Timestamp (UTC)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {auditLogs.map((log) => (
-                <TableRow
-                  key={log.log_id}
-                  hover
-                  sx={{ "&:nth-of-type(odd)": { bgcolor: "rgba(0, 0, 0, 0.03)" } }}
-                >
-                  <TableCell>{log.email || "System"}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={log.action}
-                      size="small"
-                      color={getActionColor(log.action)}
-                      sx={{ fontWeight: 500 }}
-                    />
-                  </TableCell>
-                  {!isMobile && <TableCell>{log.table_name || "—"}</TableCell>}
-                  {!isMobile && (
-                    <TableCell>
-                      <Tooltip title={log.record_id || "None"}>
-                        <span>{formatUuid(log.record_id)}</span>
-                      </Tooltip>
+        {loadingAudit ? (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Fade in timeout={800}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 3, 
+                bgcolor: theme.palette.error.main + '20',
+                color: theme.palette.error.main,
+                borderRadius: 3, 
+                textAlign: "center",
+                border: `1px solid ${theme.palette.error.main}40`
+              }}
+            >
+              <Typography>{error}</Typography>
+            </Paper>
+          </Fade>
+        ) : auditLogs.length === 0 ? (
+          <Fade in timeout={800}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 3, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                borderRadius: 3, 
+                textAlign: "center",
+                border: `1px solid ${theme.palette.divider}`
+              }}
+            >
+              <Typography color="text.secondary">No audit logs found</Typography>
+            </Paper>
+          </Fade>
+        ) : (
+          <Fade in timeout={800}>
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                overflowX: "auto", 
+                borderRadius: 3,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: `1px solid ${theme.palette.divider}`
+              }}
+            >
+              <Table size={isMobile ? "small" : "medium"}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      fontWeight: 600 
+                    }}>
+                      User
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <Tooltip
-                      title={
-                        <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                          {JSON.stringify(log.metadata, null, 2)}
-                        </pre>
-                      }
-                      arrow
+                    <TableCell sx={{ 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      fontWeight: 600 
+                    }}>
+                      Action
+                    </TableCell>
+                    {!isMobile && (
+                      <TableCell sx={{ 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        fontWeight: 600 
+                      }}>
+                        Table
+                      </TableCell>
+                    )}
+                    {!isMobile && (
+                      <TableCell sx={{ 
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        fontWeight: 600 
+                      }}>
+                        Record ID
+                      </TableCell>
+                    )}
+                    <TableCell sx={{ 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      fontWeight: 600 
+                    }}>
+                      {isMobile ? "Meta" : "Metadata"}
+                    </TableCell>
+                    <TableCell sx={{ 
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      fontWeight: 600 
+                    }}>
+                      Timestamp
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {auditLogs.map((log) => (
+                    <TableRow
+                      key={log.log_id}
+                      hover
+                      sx={{ 
+                        "&:nth-of-type(odd)": { 
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
+                        },
+                        "&:hover": {
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
+                        }
+                      }}
                     >
-                      <Box component="span" sx={{ cursor: "pointer" }}>
-                        {formatMetadata(log.metadata)}
-                      </Box>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>{formatTimestamp(log.created_at)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
-      )}
-    </Container>
+                      <TableCell>{log.email || "System"}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={log.action}
+                          size="small"
+                          color={getActionColor(log.action)}
+                          sx={{ 
+                            fontWeight: 500,
+                            borderRadius: 2
+                          }}
+                        />
+                      </TableCell>
+                      {!isMobile && <TableCell>{log.table_name || "—"}</TableCell>}
+                      {!isMobile && (
+                        <TableCell>
+                          <Tooltip title={log.record_id || "None"}>
+                            <span>{formatUuid(log.record_id)}</span>
+                          </Tooltip>
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <Tooltip
+                          title={
+                            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                              {JSON.stringify(log.metadata, null, 2)}
+                            </pre>
+                          }
+                          arrow
+                        >
+                          <Box component="span" sx={{ cursor: "pointer" }}>
+                            {formatMetadata(log.metadata)}
+                          </Box>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>{formatTimestamp(log.created_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          </Fade>
+        )}
+      </Container>
+    </Box>
   );
 };

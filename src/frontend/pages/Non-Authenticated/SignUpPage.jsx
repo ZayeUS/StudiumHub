@@ -2,353 +2,389 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Container,
-  Paper,
   TextField,
   Button,
-  InputAdornment,
-  IconButton,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Divider,
-  Snackbar,
+  Link,
   Alert,
+  CircularProgress,
   useTheme,
-  useMediaQuery
+  Paper,
+  Divider,
+  InputAdornment,
+  IconButton
 } from "@mui/material";
-import { Eye, EyeOff, Mail, Lock, ChevronRight, UserPlus } from "lucide-react";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { signUp as firebaseSignUp, login as firebaseLogin, checkEmailExists } from "../../../firebase";
-import { getData, postData } from "../../utils/BackendRequestHelper";
+import { signUp as firebaseSignUp, checkEmailExists } from "../../../firebase";
+import { postData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
 
 export function SignUpPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const navigate = useNavigate();
-
-  const loading = useUserStore(state => state.loading);
-  const setLoading = useUserStore(state => state.setLoading);
-  const isLoggedIn = useUserStore(state => state.isLoggedIn);
-  const roleId = useUserStore(state => state.roleId);
-  const setUser = useUserStore(state => state.setUser);
-
-  const [formData, setFormData] = useState({ email: "", password: "", confirm: "", role: "" });
-  const [roles, setRoles] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);  // Track submission state
-  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+  // State
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
-  // Fetch roles on component mount
-  useEffect(() => {
-    const fetchRoles = async () => {
-      try {
-        const data = await getData("/roles");
-        setRoles(data);
-      } catch (error) {
-        showNotification("Failed to load roles. Please refresh and try again.", "error");
-      }
-    };
-    fetchRoles();
-  }, []);
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const { isLoggedIn, setUser } = useUserStore();
 
   // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
-      navigate(roleId === 1 ? "/admin-dashboard" : "/dashboard");
+      navigate("/dashboard");
     }
-  }, [isLoggedIn, roleId, navigate]);
+  }, [isLoggedIn, navigate]);
 
-  // Display notifications
-  const showNotification = (message, severity = "success") => {
-    setNotification({ open: true, message, severity });
+  // Password strength calculation
+  const calculatePasswordStrength = (pwd) => {
+    const checks = {
+      length: pwd.length >= 8,
+      uppercase: /[A-Z]/.test(pwd),
+      lowercase: /[a-z]/.test(pwd),
+      number: /\d/.test(pwd),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+    };
+    const passed = Object.values(checks).filter(Boolean).length;
+    const strength = Math.round((passed / Object.keys(checks).length) * 100);
+
+    let color = theme.palette.error.main;
+    if (strength >= 80) {
+      color = theme.palette.success.main;
+    } else if (strength >= 60) {
+      color = theme.palette.warning.main;
+    }
+
+    return { strength, color, checks };
   };
 
-  // Validate form inputs
+  // Form validation
   const validateForm = () => {
-    const { email, password, confirm, role } = formData;
-    const newErrors = {};
+    const errors = {};
+    const { checks } = calculatePasswordStrength(password);
 
-    if (!email) newErrors.email = "Email is required";
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Invalid email address";
+    // Email
+    if (!email) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = "Please enter a valid email address";
+    }
 
-    if (!password) newErrors.password = "Password is required";
-    else if (password.length < 6) newErrors.password = "Password must be at least 6 characters";
+    // Password
+    if (!password) {
+      errors.password = "Password is required";
+    } else if (!checks.length) {
+      errors.password = "Password must be at least 8 characters";
+    } else if (!checks.uppercase) {
+      errors.password = "Include at least one uppercase letter";
+    } else if (!checks.lowercase) {
+      errors.password = "Include at least one lowercase letter";
+    } else if (!checks.number) {
+      errors.password = "Include at least one number";
+    } else if (!checks.special) {
+      errors.password = "Include at least one special character";
+    }
 
-    if (!confirm) newErrors.confirm = "Please confirm your password";
-    else if (confirm !== password) newErrors.confirm = "Passwords do not match";
+    // Confirm Password
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
 
-    if (!role) newErrors.role = "Please select a role";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  // Handle sign-up form submission
+  // Handle sign up
   const handleSignUp = async (e) => {
-    e.preventDefault();  // Prevent default form submission
+    e.preventDefault();
+    setError("");
 
-    if (!validateForm()) return;  // Validate form before submitting
+    if (!validateForm()) return;
 
-    setIsSubmitting(true);  // Set submitting state to true
-
+    setIsSubmitting(true);
     try {
-      // Check if email already exists
-      const emailExists = await checkEmailExists(formData.email);
+      const emailExists = await checkEmailExists(email);
       if (emailExists) {
-        setErrors(prev => ({ ...prev, email: "Email already in use" }));
+        setFieldErrors(prev => ({ ...prev, email: "An account with this email already exists" }));
+        setIsSubmitting(false);
         return;
       }
 
-      // Sign up the user with Firebase
-      const user = await firebaseSignUp(formData.email, formData.password);
-      await firebaseLogin(formData.email, formData.password);
-
-      // Find selected role
-      const selectedRole = roles.find(r => r.role_name === formData.role);
-      if (!selectedRole) throw new Error("Invalid role selected");
-
-      // Create backend user
+      const user = await firebaseSignUp(email, password);
       const { user: backendUser } = await postData("/users", {
         firebase_uid: user.uid,
         email: user.email,
-        role_id: selectedRole.role_id
+        role_id: 1
       });
 
-      // Set user data in the store
-      const { user_id } = backendUser;
-      setUser(user.uid, selectedRole.role_id, user_id);
-
-      // Show success and redirect
-      showNotification("Account created successfully! Redirecting...", "success");
-      setTimeout(() => {
-        navigate(selectedRole.role_id === 1 ? "/admin-dashboard" : "/dashboard");
-      }, 1000);
+      setUser(user.uid, 1, backendUser.user_id);
+      navigate("/profile-onboarding");
     } catch (err) {
-      // Handle Firebase error
-      const errorMessage = err.message || "Sign-up failed";
-      setErrors(prev => ({ ...prev, general: errorMessage }));
-      showNotification(errorMessage, "error");
+      switch (err.code) {
+        case "auth/email-already-in-use":
+          setFieldErrors(prev => ({ ...prev, email: "Email is already registered" }));
+          break;
+        case "auth/invalid-email":
+          setFieldErrors(prev => ({ ...prev, email: "Invalid email format" }));
+          break;
+        case "auth/operation-not-allowed":
+          setError("Sign up is currently disabled. Please try again later.");
+          break;
+        case "auth/weak-password":
+          setFieldErrors(prev => ({ ...prev, password: "Password is too weak" }));
+          break;
+        default:
+          setError("Failed to create account. Please try again.");
+      }
     } finally {
-      setIsSubmitting(false);  // Set submitting state to false
+      setIsSubmitting(false);
     }
   };
 
+  // Handle field changes
+  const handleFieldChange = (field, value) => {
+    if (field === "email") setEmail(value);
+    if (field === "password") setPassword(value);
+    if (field === "confirmPassword") setConfirmPassword(value);
 
-  // Handle field value changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(f => ({ ...f, [name]: value }));
-    if (errors[name]) {
-      setErrors(e => {
-        const copy = { ...e };
-        delete copy[name];
-        return copy;
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
       });
     }
+    if (error) setError("");
   };
 
-  const iconStart = (icon) => ({
-    startAdornment: (
-      <InputAdornment position="start">
-        {React.cloneElement(icon, {
-          color: theme.palette.primary.main
-        })}
-      </InputAdornment>
-    )
-  });
+  const passwordStrength = calculatePasswordStrength(password);
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        p: 2
+        position: "relative",
+        overflow: "hidden",
+        bgcolor: theme.palette.background.default,
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            theme.palette.mode === "dark"
+              ? `radial-gradient(circle at 30% 20%, ${theme.palette.primary.dark}15 0%, transparent 50%),
+                 radial-gradient(circle at 70% 80%, ${theme.palette.secondary.dark}10 0%, transparent 50%)`
+              : `radial-gradient(circle at 30% 20%, ${theme.palette.primary.light}15 0%, transparent 50%),
+                 radial-gradient(circle at 70% 80%, ${theme.palette.secondary.light}10 0%, transparent 50%)`,
+          zIndex: 0
+        }
       }}
     >
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={() => setNotification(n => ({ ...n, open: false }))}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert severity={notification.severity}>
-          {notification.message}
-        </Alert>
-      </Snackbar>
-
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" sx={{ position: "relative", zIndex: 1 }}>
         <Paper
-          elevation={8}
+          elevation={0}
           sx={{
-            borderRadius: theme.shape.borderRadius,
-            overflow: "hidden"
+            p: { xs: 3, sm: 5 },
+            borderRadius: 3,
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "rgba(255, 255, 255, 0.05)"
+                : "rgba(255, 255, 255, 0.9)",
+            backdropFilter: "blur(10px)",
+            border: `1px solid ${theme.palette.divider}`
           }}
         >
           {/* Header */}
-          <Box
-            sx={{
-              bgcolor: "primary.main",
-              color: "common.white",
-              p: 3,
-              textAlign: "center"
-            }}
-          >
-            <UserPlus size={32} />
-            <Typography variant="h5" fontWeight={700} mt={1}>
+          <Box sx={{ textAlign: "center", mb: 4 }}>
+            <Typography variant="h3" fontWeight="bold" gutterBottom>
               Create Account
             </Typography>
-            <Typography sx={{ opacity: 0.9 }}>
-              Join us and get started
+            <Typography variant="body1" color="text.secondary">
+              Join Cofoundless and start your journey
             </Typography>
           </Box>
 
-          {/* Actual form */}
-          <form noValidate onSubmit={handleSignUp}>
-            <Box sx={{ p: 3 }}>
-              {/* Global error */}
-              {errors.general && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {errors.general}
-                </Alert>
-              )}
+          {/* Form */}
+          <Box component="form" onSubmit={handleSignUp} noValidate>
+            {/* General Error */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
 
-              {/* Email */}
-              <TextField
-                name="email"
-                label="Email"
-                fullWidth
-                margin="normal"
-                value={formData.email}
-                onChange={handleChange}
-                error={!!errors.email}
-                helperText={errors.email}
-                disabled={isSubmitting}
-                InputProps={iconStart(<Mail size={18} />)}
-              />
+            {/* Email Field */}
+            <TextField
+              label="Email"
+              type="email"
+              fullWidth
+              value={email}
+              onChange={(e) => handleFieldChange("email", e.target.value)}
+              error={!!fieldErrors.email}
+              helperText={fieldErrors.email}
+              margin="normal"
+              required
+              autoComplete="email"
+              autoFocus
+              disabled={isSubmitting}
+            />
 
-              {/* Password */}
-              <TextField
-                name="password"
-                label="Password"
-                type={showPassword ? "text" : "password"}
-                fullWidth
-                margin="normal"
-                value={formData.password}
-                onChange={handleChange}
-                error={!!errors.password}
-                helperText={errors.password}
-                disabled={isSubmitting}
-                InputProps={{
-                  ...iconStart(<Lock size={18} />),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setShowPassword(v => !v)}
-                      >
-                        {showPassword ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
+            {/* Password Field */}
+            <TextField
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              fullWidth
+              value={password}
+              onChange={(e) => handleFieldChange("password", e.target.value)}
+              error={!!fieldErrors.password}
+              helperText={fieldErrors.password}
+              margin="normal"
+              required
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setShowPassword(!showPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                      size="small"
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
 
-              {/* Confirm Password */}
-              <TextField
-                name="confirm"
-                label="Confirm"
-                type={showConfirm ? "text" : "password"}
-                fullWidth
-                margin="normal"
-                value={formData.confirm}
-                onChange={handleChange}
-                error={!!errors.confirm}
-                helperText={errors.confirm}
-                disabled={isSubmitting}
-                InputProps={{
-                  ...iconStart(<Lock size={18} />),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setShowConfirm(v => !v)}
-                      >
-                        {showConfirm ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  )
-                }}
-              />
-
-              {/* Role */}
-              <FormControl
-                fullWidth
-                margin="normal"
-                error={!!errors.role}
-              >
-                <InputLabel>Role</InputLabel>
-                <Select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  label="Role"
-                  disabled={isSubmitting || !roles.length}
-                >
-                  {roles.map(r => (
-                    <MenuItem key={r.role_id} value={r.role_name}>
-                      {r.role_name}
-                    </MenuItem>
+            {/* Password Strength Indicator */}
+            {password && (
+              <Box sx={{ mt: 1, mb: 2 }}>
+                <Box sx={{ display: "flex", gap: 0.5, mb: 1 }}>
+                  {[0, 20, 40, 60, 80].map((threshold) => (
+                    <Box
+                      key={threshold}
+                      sx={{
+                        height: 4,
+                        flex: 1,
+                        bgcolor:
+                          passwordStrength.strength > threshold
+                            ? passwordStrength.color
+                            : theme.palette.grey[300],
+                        borderRadius: 2,
+                        transition: "background-color 0.3s"
+                      }}
+                    />
                   ))}
-                </Select>
-                {errors.role && (
-                  <Typography color="error" variant="caption">
-                    {errors.role}
-                  </Typography>
-                )}
-              </FormControl>
-
-              {/* Submit Button */}
-              <Button
-                variant="contained"
-                type="submit"
-                fullWidth
-                endIcon={!isSubmitting && <ChevronRight size={18} />}
-                disabled={isSubmitting}
-                sx={{ mt: 3 }}
-              >
-                {isSubmitting ? "Creating…" : "Sign Up"}
-              </Button>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Box textAlign="center">
-                <Typography>Already have an account?</Typography>
-                <Button
-                  variant="outlined"
-                  sx={{ mt: 1 }}
-                  onClick={() => navigate("/login")}
+                </Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: passwordStrength.color,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5
+                  }}
                 >
-                  Log In
-                </Button>
+                  {passwordStrength.strength < 80
+                    ? `Include: ${!passwordStrength.checks.length ? "8+ chars, " : ""}${
+                        !passwordStrength.checks.uppercase ? "uppercase, " : ""
+                      }${!passwordStrength.checks.lowercase ? "lowercase, " : ""}${
+                        !passwordStrength.checks.number ? "number, " : ""
+                      }${!passwordStrength.checks.special ? "special char" : ""}`
+                    : "Strong password"}
+                </Typography>
               </Box>
+            )}
+
+            {/* Confirm Password Field */}
+            <TextField
+              label="Confirm Password"
+              type={showConfirmPassword ? "text" : "password"}
+              fullWidth
+              value={confirmPassword}
+              onChange={(e) => handleFieldChange("confirmPassword", e.target.value)}
+              error={!!fieldErrors.confirmPassword}
+              helperText={fieldErrors.confirmPassword}
+              margin="normal"
+              required
+              autoComplete="new-password"
+              disabled={isSubmitting}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle confirm password visibility"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      edge="end"
+                      size="small"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
+            />
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              disabled={isSubmitting}
+              sx={{ py: 1.5, mt: 3, position: "relative" }}
+            >
+              {isSubmitting && (
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    position: "absolute",
+                    left: "50%",
+                    marginLeft: "-12px"
+                  }}
+                />
+              )}
+              Create Account
+            </Button>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Sign In Link */}
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                Already have an account?{" "}
+                <Link
+                  component="button"
+                  variant="body2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/login");
+                  }}
+                  sx={{ textDecoration: "none", fontWeight: 600 }}
+                >
+                  Sign in
+                </Link>
+              </Typography>
             </Box>
-          </form>
+          </Box>
         </Paper>
       </Container>
     </Box>

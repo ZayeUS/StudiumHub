@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Box, Typography, TextField, Button, Alert, Paper, 
-  Divider, useTheme, CircularProgress, Avatar, useMediaQuery,
-  Snackbar
+  useTheme, CircularProgress, Avatar, useMediaQuery,
+  Snackbar, Fade, Divider
 } from "@mui/material";
 import { CloudUpload, Edit, Save, Cancel } from "@mui/icons-material";
 import { useUserStore } from "../../store/userStore";
@@ -70,6 +70,22 @@ export function UserProfilePage() {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // File type validation
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        showNotification("Only JPEG and PNG images are allowed", "error");
+        e.target.value = null;
+        return;
+      }
+
+      // File size validation (5MB limit)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        showNotification("Image size should be less than 5MB", "error");
+        e.target.value = null;
+        return;
+      }
+
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
     }
@@ -106,9 +122,14 @@ export function UserProfilePage() {
       if (avatarFile) {
         const formData = new FormData();
         formData.append("avatar", avatarFile);
-        const avatarResponse = await uploadFile("/profile/avatar", formData);
-        if (avatarResponse?.profile?.avatar_url) {
-          profileData.avatar_url = avatarResponse.profile.avatar_url;
+        
+        try {
+          const avatarResponse = await uploadFile("/profile/avatar", formData);
+          if (avatarResponse?.profile?.avatar_url) {
+            profileData.avatar_url = avatarResponse.profile.avatar_url;
+          }
+        } catch (uploadError) {
+          showNotification("Profile updated but avatar upload failed", "warning");
         }
       }
 
@@ -118,7 +139,7 @@ export function UserProfilePage() {
         setProfile(response.profile);
         setIsEditing(false);
         showNotification("Profile updated successfully!");
-        setAvatarFile(null); // Reset after successful upload
+        setAvatarFile(null);
       } else {
         setApiError("Update failed");
       }
@@ -150,46 +171,42 @@ export function UserProfilePage() {
     }
   };
 
-  // Field definitions
-  const fields = [
-    { name: "first_name", label: "First Name" },
-    { name: "last_name", label: "Last Name" },
-    {
-      name: "date_of_birth",
-      label: "Date of Birth",
-      type: "date",
-      format: val => val ? new Date(val).toLocaleDateString() : "—"
-    }
-  ];
-
   // Loading state
   if (!profile) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
         <CircularProgress />
       </Box>
     );
   }
 
-  // Common styles
-  const borderRadius = theme.shape.borderRadius;
-  
-  const inputStyle = {
-    "& .MuiOutlinedInput-root": {
-      borderRadius,
-      backgroundColor: "rgba(255,255,255,0.04)"
-    }
-  };
-
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "background.default",
-        p: { xs: 2, sm: 3 },
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
+        bgcolor: theme.palette.background.default,
+        position: "relative",
+        overflow: "hidden",
+        // Same animated background as onboarding
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: theme.palette.mode === 'dark'
+            ? `radial-gradient(circle at 20% 80%, ${theme.palette.primary.dark}20 0%, transparent 50%),
+               radial-gradient(circle at 80% 20%, ${theme.palette.secondary.dark}15 0%, transparent 50%)`
+            : `radial-gradient(circle at 20% 80%, ${theme.palette.primary.light}20 0%, transparent 50%),
+               radial-gradient(circle at 80% 20%, ${theme.palette.secondary.light}15 0%, transparent 50%)`,
+          animation: "drift 20s ease-in-out infinite",
+          zIndex: 0,
+        },
+        "@keyframes drift": {
+          "0%, 100%": { transform: "translate(0, 0)" },
+          "50%": { transform: "translate(-20px, -20px)" },
+        }
       }}
     >
       {/* Notification */}
@@ -203,215 +220,217 @@ export function UserProfilePage() {
       </Snackbar>
 
       {/* Header */}
-      <Box
-        sx={{
-          width: "100%",
-          maxWidth: "800px",
-          mb: 3
-        }}
-      >
-        <Typography 
-          variant="h3" 
-          fontWeight="bold" 
-          sx={{ fontSize: { xs: "1.75rem", sm: "2rem", md: "2.5rem" } }}
-        >
-          {isEditing ? "Edit Profile" : "Your Profile"}
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-          sx={{ mt: 0.5 }}
-        >
-          {isEditing ? "Update your personal information" : "View and manage your personal information"}
-        </Typography>
+      <Box sx={{ p: { xs: 2, sm: 3 }, position: "relative", zIndex: 1 }}>
+        <Box sx={{ maxWidth: 800, mx: "auto" }}>
+          <Fade in timeout={500}>
+            <Typography 
+              variant="h4" 
+              fontWeight="bold"
+              sx={{
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: "text",
+                textFillColor: "transparent",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              {isEditing ? "Edit Profile" : "Your Profile"}
+            </Typography>
+          </Fade>
+          <Fade in timeout={700}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {isEditing ? "Update your personal information" : "Manage your account settings"}
+            </Typography>
+          </Fade>
+        </Box>
       </Box>
 
-      {/* Main Profile Card */}
-      <Paper
-        elevation={6}
-        sx={{
-          p: { xs: 2.5, sm: 3, md: 4 },
-          width: "100%",
-          maxWidth: "800px",
-          borderRadius,
-          background: `linear-gradient(145deg, ${theme.palette.background.paper}, ${theme.palette.background.default})`,
-          boxShadow: theme.shadows[10],
-          transition: "transform 0.3s ease",
-          "&:hover": { transform: "translateY(-5px)" }
-        }}
-      >
-        {/* API Error Alert */}
-        {apiError && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 3, borderRadius }}
-            onClose={() => setApiError("")}
-          >
-            {apiError}
-          </Alert>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          {/* Avatar Section */}
-          <Box 
+      {/* Main Content */}
+      <Box sx={{ p: { xs: 2, sm: 3 }, position: "relative", zIndex: 1 }}>
+        <Fade in timeout={800}>
+          <Paper
+            elevation={0}
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              mb: 4,
-              mt: 1
+              maxWidth: 800,
+              mx: "auto",
+              p: { xs: 3, sm: 5 },
+              borderRadius: 3,
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${theme.palette.divider}`,
             }}
           >
-            {/* Avatar Preview */}
-            <Avatar
-              src={avatarPreview || "https://via.placeholder.com/150"}
-              alt="Profile Avatar"
-              sx={{
-                width: 130,
-                height: 130,
-                mb: 2,
-                boxShadow: theme.shadows[3],
-                border: `2px solid ${theme.palette.primary.main}`
-              }}
-            />
-            
-            {/* Upload Button - only show in edit mode */}
-            {isEditing && (
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<CloudUpload />}
-                sx={{ 
-                  textTransform: "none", 
-                  borderRadius,
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: theme.shadows[2]
-                  }
-                }}
-              >
-                {avatarFile ? "Change Photo" : "Upload Profile Picture"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  hidden
-                />
-              </Button>
+            {apiError && (
+              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setApiError("")}>
+                {apiError}
+              </Alert>
             )}
-          </Box>
 
-          {/* Form Fields */}
-          <Box sx={{ mb: 4 }}>
-            {fields.map(({ name, label, type = "text", format }) => (
-              <Box key={name} mb={3}>
-                <Typography 
-                  variant="subtitle2" 
-                  color="text.secondary" 
-                  gutterBottom
-                  fontWeight={500}
-                >
-                  {label}
-                </Typography>
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              {/* Avatar Section */}
+              <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 5 }}>
+                <Avatar
+                  src={avatarPreview}
+                  sx={{
+                    width: 120,
+                    height: 120,
+                    mb: 3,
+                    border: `4px solid ${theme.palette.primary.main}`,
+                    boxShadow: `0 0 20px ${theme.palette.primary.main}40`,
+                  }}
+                />
                 
-                {isEditing ? (
-                  <TextField
-                    name={name}
-                    type={type}
-                    value={formData[name]}
-                    onChange={handleChange}
-                    fullWidth
-                    error={!!errors[name]}
-                    helperText={errors[name]}
-                    disabled={loading}
-                    InputLabelProps={{ shrink: true }}
-                    sx={inputStyle}
-                  />
-                ) : (
-                  <Typography 
-                    variant="body1" 
-                    fontWeight={500}
-                    sx={{ py: 1 }}
-                  >
-                    {format ? format(profile[name]) : profile[name] || "—"}
-                  </Typography>
+                {isEditing && (
+                  <>
+                    <Button
+                      component="label"
+                      variant={avatarFile ? "outlined" : "contained"}
+                      startIcon={<CloudUpload />}
+                      sx={{ mb: 1 }}
+                    >
+                      {avatarFile ? "Change Photo" : "Upload Profile Picture"}
+                      <input
+                        type="file"
+                        accept="image/jpeg, image/jpg, image/png"
+                        onChange={handleAvatarChange}
+                        hidden
+                      />
+                    </Button>
+                    <Typography variant="caption" color="text.secondary">
+                      JPEG or PNG only, max 5MB
+                    </Typography>
+                  </>
                 )}
               </Box>
-            ))}
-          </Box>
 
-          <Divider sx={{ my: 3 }} />
+              {/* Form Fields */}
+              <Box sx={{ mb: 4 }}>
+                {/* First Name */}
+                <Box mb={3}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    First Name
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      fullWidth
+                      error={!!errors.first_name}
+                      helperText={errors.first_name}
+                      disabled={loading}
+                    />
+                  ) : (
+                    <Typography variant="body1" fontWeight={500}>
+                      {profile.first_name || "—"}
+                    </Typography>
+                  )}
+                </Box>
 
-          {/* Action Buttons */}
-          <Box 
-            display="flex" 
-            justifyContent="center" 
-            gap={2}
-            flexDirection={isMobile ? "column" : "row"}
-          >
-            {isEditing ? (
-              <>
-                <Button 
-                  variant="outlined" 
-                  onClick={handleCancel} 
-                  disabled={loading}
-                  startIcon={<Cancel />}
-                  fullWidth={isMobile}
-                  sx={{
-                    borderRadius,
-                    py: 1,
-                    textTransform: "none",
-                    "&:hover": {
-                      transform: "translateY(-2px)",
-                      boxShadow: theme.shadows[2]
-                    }
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  variant="contained" 
-                  type="submit" 
-                  disabled={loading}
-                  startIcon={<Save />}
-                  fullWidth={isMobile}
-                  sx={{
-                    borderRadius,
-                    py: 1,
-                    textTransform: "none",
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                    "&:hover": {
-                      transform: "translateY(-2px)",
-                      boxShadow: `0 8px 20px rgba(99, 102, 241, 0.3)`
-                    }
-                  }}
-                >
-                  {loading ? "Saving..." : "Save Changes"}
-                </Button>
-              </>
-            ) : (
-              <Button 
-                variant="contained" 
-                onClick={() => setIsEditing(true)}
-                startIcon={<Edit />}
-                sx={{
-                  borderRadius,
-                  py: 1.2,
-                  px: 3,
-                  textTransform: "none",
-                  background: theme.palette.primary.main,
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: theme.shadows[4]
-                  }
-                }}
-              >
-                Edit Profile
-              </Button>
-            )}
-          </Box>
-        </Box>
-      </Paper>
+                {/* Last Name */}
+                <Box mb={3}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Last Name
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      fullWidth
+                      error={!!errors.last_name}
+                      helperText={errors.last_name}
+                      disabled={loading}
+                    />
+                  ) : (
+                    <Typography variant="body1" fontWeight={500}>
+                      {profile.last_name || "—"}
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* Date of Birth */}
+                <Box mb={3}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                    Date of Birth
+                  </Typography>
+                  {isEditing ? (
+                    <TextField
+                      name="date_of_birth"
+                      type="date"
+                      value={formData.date_of_birth}
+                      onChange={handleChange}
+                      fullWidth
+                      error={!!errors.date_of_birth}
+                      helperText={errors.date_of_birth}
+                      disabled={loading}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  ) : (
+                    <Typography variant="body1" fontWeight={500}>
+                      {profile.date_of_birth 
+                        ? new Date(profile.date_of_birth).toLocaleDateString() 
+                        : "—"}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Action Buttons */}
+              <Box display="flex" justifyContent="center" gap={2}>
+                {isEditing ? (
+                  <>
+                    <Button
+                      variant="outlined"
+                      onClick={handleCancel}
+                      disabled={loading}
+                      startIcon={<Cancel />}
+                      sx={{ px: 3 }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="contained"
+                      type="submit"
+                      disabled={loading}
+                      startIcon={<Save />}
+                      sx={{
+                        px: 3,
+                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        '&:hover': {
+                          background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                        }
+                      }}
+                    >
+                      {loading ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="contained"
+                    onClick={() => setIsEditing(true)}
+                    startIcon={<Edit />}
+                    sx={{
+                      px: 4,
+                      py: 1.2,
+                      background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                      '&:hover': {
+                        background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                      }
+                    }}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </Box>
+            </Box>
+          </Paper>
+        </Fade>
+      </Box>
     </Box>
   );
 }
