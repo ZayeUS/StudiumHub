@@ -8,7 +8,6 @@ import profileRouter from './routes/profiles.js';
 import auditRouter from './routes/auditRoutes.js';
 import testEmailRoutes from './routes/testEmail.js';
 import stripeRouter from './routes/stripeRoutes.js'; 
-import analyticsRouter from './routes/analytics.js'; // NEW IMPORT for your hypothetical feature
 
 dotenv.config();
 
@@ -30,7 +29,6 @@ app.use("/api/profile", profileRouter);
 app.use("/api/audit", auditRouter); 
 app.use('/api/email', testEmailRoutes); 
 app.use("/api/stripe", stripeRouter);  
-app.use("/api/analytics", analyticsRouter); // NEW: Register your new feature route
 
 const PORT = process.env.PORT || 5000;
 
