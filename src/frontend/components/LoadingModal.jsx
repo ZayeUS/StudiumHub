@@ -1,98 +1,104 @@
-import React from 'react';
+// File: src/frontend/components/LoadingModal.jsx
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import {
   Dialog,
   DialogContent,
   CircularProgress,
   Typography,
-  Box, // Added Box for better layout control
-  Fade, // Added Fade for smoother transition
+  Box,
+  Fade,
   useTheme,
   alpha
 } from '@mui/material';
-import { useUserStore } from '../store/userStore'; // Adjusted path
+import { useUserStore } from '../store/userStore';
 
 export const LoadingModal = ({ message = "Loading..." }) => {
-  // Get loading state from Zustand store.
-  // The modal's visibility is controlled by this 'loading' state.
-  const loading = useUserStore(state => state.loading); 
+  const globalLoading = useUserStore(state => state.loading); 
   const theme = useTheme();
 
+  // Internal state to control Dialog open/close, allowing Fade transition to complete
+  const [open, setOpen] = useState(globalLoading);
+
+  useEffect(() => {
+    if (globalLoading) {
+      setOpen(true); // Open dialog immediately when globalLoading is true
+    }
+    // No 'else' here, let onExited handle closing
+  }, [globalLoading]);
+
+  const handleExited = () => {
+    // This is called when the Fade transition finishes its 'exit' animation
+    if (!globalLoading) { // Only close dialog if globalLoading is false
+      setOpen(false);
+    }
+  };
+
   return (
-    <Fade in={loading} timeout={300}>
-      <Dialog
-        open={loading} // Controlled by the Zustand store's loading state
-        aria-labelledby="loading-dialog-title"
-        aria-describedby="loading-dialog-description"
-        PaperProps={{
-          // Styling for the Dialog's paper container
-          sx: {
-            backgroundColor: alpha(theme.palette.background.paper, 0.95), // Slightly transparent paper
-            borderRadius: theme.shape.borderRadiusLG, // Use large border radius from theme
-            boxShadow: theme.shadows[20], // Use a more prominent shadow for modals
-            overflow: 'hidden', // Prevent content overflow
-            p: { xs: 3, sm: 4 }, // Responsive padding
-            minWidth: { xs: 260, sm: 320 }, // Responsive minimum width
-            minHeight: { xs: 200, sm: 240 }, // Responsive minimum height
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: `1px solid ${theme.palette.divider}`, // Subtle border
-            backdropFilter: 'blur(5px)', // Apply blur to the paper itself if desired (works with transparency)
-          },
+    <Dialog
+      open={open} // Controlled by internal 'open' state
+      aria-labelledby="loading-dialog-title"
+      aria-describedby="loading-dialog-description"
+      PaperProps={{
+        sx: {
+          backgroundColor: alpha(theme.palette.background.paper, 0.95),
+          borderRadius: theme.shape.borderRadiusLG,
+          boxShadow: theme.shadows[20],
+          overflow: 'hidden',
+          p: { xs: 3, sm: 4 },
+          minWidth: { xs: 260, sm: 320 },
+          minHeight: { xs: 200, sm: 240 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: `1px solid ${theme.palette.divider}`,
+          backdropFilter: 'blur(5px)',
+        },
+      }}
+      BackdropProps={{
+        sx: {
+          backgroundColor: alpha(theme.palette.common.black, 0.6),
+          backdropFilter: 'blur(8px)',
+        },
+      }}
+      disableEscapeKeyDown
+      TransitionComponent={Fade} // Explicitly set Fade as the transition component
+      transitionDuration={{ enter: 300, exit: 300 }} // Control transition duration
+      onClose={() => {}} // Prevent closing from outside
+      TransitionProps={{
+        onExited: handleExited // Call our handler when fade-out transition finishes
+      }}
+    >
+      <DialogContent
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          gap: 3,
         }}
-        BackdropProps={{
-          // Styling for the backdrop overlay
-          sx: {
-            backgroundColor: alpha(theme.palette.common.black, 0.6), // Darker, more focused backdrop
-            backdropFilter: 'blur(8px)', // Stronger blur for the backdrop
-          },
-        }}
-        disableEscapeKeyDown // Prevent closing with Escape key while loading
       >
-        <DialogContent
-          // Styling for the content area within the dialog
+        <CircularProgress
+          variant="indeterminate"
+          thickness={4}
+          size={60}
+          color="primary"
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            gap: 3, // Spacing between elements
+            animation: '$spin 1.2s linear infinite',
+          }}
+        />
+        <Typography
+          variant="h6"
+          id="loading-dialog-description"
+          sx={{
+            fontWeight: 500,
+            color: theme.palette.text.primary,
+            letterSpacing: 0.5,
           }}
         >
-          {/* Animated Circular Progress Indicator */}
-          <CircularProgress
-            variant="indeterminate" // Indeterminate for continuous loading
-            thickness={4} // Thickness of the spinner
-            size={60} // Size of the spinner
-            color="primary" // Use primary theme color
-            sx={{
-              animation: '$spin 1.2s linear infinite', // Custom spin animation (optional)
-            }}
-          />
-          {/* Loading message text */}
-          <Typography
-            variant="h6" // Use h6 for a slightly larger, more prominent message
-            id="loading-dialog-description"
-            sx={{
-              fontWeight: 500,
-              color: theme.palette.text.primary, // Use primary text color from theme
-              letterSpacing: 0.5, // Slight letter spacing for readability
-            }}
-          >
-            {message}
-          </Typography>
-        </DialogContent>
-        {/* Optional: Define custom keyframe animation for the spinner if needed */}
-        {/* <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style> */}
-      </Dialog>
-    </Fade>
+          {message}
+        </Typography>
+      </DialogContent>
+    </Dialog>
   );
 };

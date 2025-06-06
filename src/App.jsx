@@ -1,4 +1,4 @@
-// App.jsx - Optimized Application Shell with Enhanced Theme Persistence
+// File: src/App.jsx
 import React, { useEffect, useMemo, useCallback } from "react";
 import { CssBaseline, Box, useMediaQuery, ThemeProvider } from "@mui/material";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -17,12 +17,13 @@ import { ProfileOnboarding } from "./frontend/pages/Authenticated/ProfileOnboard
 import { UserProfilePage } from "./frontend/pages/Authenticated/UserProfilePage";
 import { StripeDashboard } from "./frontend/pages/Authenticated/StripeDashboard";
 import { PaymentSuccessPage } from "./frontend/pages/Authenticated/PaymentSuccessPage";
+import { SubscriptionSelectionPage } from "./frontend/pages/Authenticated/SubscriptionSelectionPage"; // Import new page
 import { ProtectedRoute } from "./frontend/components/ProtectedRoute";
 
 const DRAWER_WIDTH = 60;
 
 export const App = () => {
-  const { isLoggedIn, profile, roleId, listenAuthState, authHydrated, loading } = useUserStore();
+  const { isLoggedIn, profile, roleId, listenAuthState, authHydrated, loading, userSubscriptionStatus } = useUserStore(); 
   
   // Initialize theme from localStorage or system preference
   const [isDarkMode, setIsDarkMode] = React.useState(() => {
@@ -93,17 +94,30 @@ export const App = () => {
   }, [listenAuthState]);
 
   // Layout conditions
-  const showSidebar = isLoggedIn && !isMobile && location.pathname !== "/profile-onboarding";
-  const showMobileNav = isLoggedIn && isMobile && location.pathname !== "/profile-onboarding";
+  // Hide sidebar/mobile nav on onboarding and subscription selection pages
+  const showSidebar = isLoggedIn && !isMobile && location.pathname !== "/profile-onboarding" && location.pathname !== "/subscription-selection"; 
+  const showMobileNav = isLoggedIn && isMobile && location.pathname !== "/profile-onboarding" && location.pathname !== "/subscription-selection"; 
 
-  // Redirect logic
-  const getRedirect = () => {
-    if (profile?.is_new_user) return "/stripe-dashboard";
+  // Redirect logic based on the new flow
+  const getRedirect = useCallback(() => {
+    if (!isLoggedIn) return "/login";
+    if (!profile) return "/profile-onboarding";
+    
+    // If profile exists, and subscription is null (still fetching) or explicitly unsubscribed/inactive,
+    // redirect to subscription selection.
+    // userSubscriptionStatus === 'free' will allow redirection to dashboard
+    if (userSubscriptionStatus === null || userSubscriptionStatus === 'unsubscribed' || userSubscriptionStatus === 'inactive') {
+      return "/subscription-selection";
+    }
+
+    // If profile is complete AND subscription is active/trialing/free, go to dashboard
     return roleId === 1 ? "/admin-dashboard" : "/user-dashboard";
-  };
+  }, [isLoggedIn, profile, roleId, userSubscriptionStatus]);
+
 
   // Loading states - show loading screen during authentication
-  if (!authHydrated || loading) {
+  // Added userSubscriptionStatus to loading condition to ensure it's fetched before redirecting
+  if (!authHydrated || loading || (isLoggedIn && profile && userSubscriptionStatus === null)) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -139,25 +153,21 @@ export const App = () => {
             {/* Authentication routes */}
             <Route
               path="/"
-              element={
-                isLoggedIn
-                  ? <Navigate to={profile ? getRedirect() : "/profile-onboarding"} />
-                  : <LoginPage />
-              }
+              element={ <Navigate to={getRedirect()} /> }
             />
             <Route
               path="/login"
               element={
-                isLoggedIn
-                  ? <Navigate to={profile ? getRedirect() : "/profile-onboarding"} />
+                isLoggedIn && profile && (userSubscriptionStatus === 'active' || userSubscriptionStatus === 'trialing' || userSubscriptionStatus === 'free') // Now also redirect if free
+                  ? <Navigate to={getRedirect()} />
                   : <LoginPage />
               }
             />
             <Route
               path="/signup"
               element={
-                isLoggedIn
-                  ? <Navigate to={profile ? getRedirect() : "/profile-onboarding"} />
+                isLoggedIn && profile && (userSubscriptionStatus === 'active' || userSubscriptionStatus === 'trialing' || userSubscriptionStatus === 'free') // Now also redirect if free
+                  ? <Navigate to={getRedirect()} />
                   : <SignUpPage />
               }
             />
@@ -169,6 +179,16 @@ export const App = () => {
                 isLoggedIn && !profile
                   ? <ProfileOnboarding />
                   : <Navigate to={getRedirect()} />
+              }
+            />
+
+            {/* Subscription Selection Page */}
+            <Route
+              path="/subscription-selection"
+              element={
+                <ProtectedRoute>
+                  <SubscriptionSelectionPage />
+                </ProtectedRoute>
               }
             />
 
@@ -185,6 +205,7 @@ export const App = () => {
             <Route path="/user-dashboard" element={
               <ProtectedRoute allowedRoles={[2]}><UserDashboard /></ProtectedRoute>
             } />
+            {/* Stripe dashboard and payment success still go here, as they are part of the payment flow */}
             <Route path="/stripe-dashboard" element={
               <ProtectedRoute allowedRoles={[1, 2]}><StripeDashboard /></ProtectedRoute>
             } />
@@ -193,7 +214,7 @@ export const App = () => {
             } />
 
             {/* Fallback route for unmatched paths */}
-            <Route path="*" element={<Navigate to={isLoggedIn ? getRedirect() : "/"} />} />
+            <Route path="*" element={<Navigate to={getRedirect()} />} />
           </Routes>
         </Box>
 

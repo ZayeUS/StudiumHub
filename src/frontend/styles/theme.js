@@ -1,28 +1,30 @@
+// File: src/frontend/styles/theme.js
 import { createTheme, alpha } from '@mui/material/styles';
 
 // Base configuration
 const baseConfig = {
-  primary: '#7C3AED',
-  secondary: '#F43F5E',
+  // New Professional & Exciting Palette
+  primary: '#0D47A1', // A strong, deep blue for authority and trust
+  secondary: '#FFC107', // A vibrant amber for energy and attention
   fontFamily: "'Inter', sans-serif",
-  borderRadius: 6,
-  borderRadiusLG: 14,
+  borderRadius: 3,
+  borderRadiusLG: 6,
 };
 
 // Mode-specific configurations
 const modeSpecificConfig = (mode) => ({
   ...(mode === 'dark' ? {
-    background: '#0F172A',
-    paper: '#1E293B',
-    text: '#FFFFFF', // Changed to pure white for better readability
-    textSecondary: '#CBD5E1', // Changed to much lighter gray
-    divider: alpha('#CBD5E1', 0.2), // Lighter divider
+    background: '#121212', // Deeper dark for premium feel
+    paper: '#1F1F1F', // Slightly lighter dark for distinct cards
+    text: '#E0E0E0', // Soft white for readability
+    textSecondary: '#A0A0A0', // Lighter gray for secondary text
+    divider: alpha('#E0E0E0', 0.15), // Subtle divider in dark mode
   } : {
-    background: '#F8FAFC',
-    paper: '#FFFFFF',
-    text: '#0F172A',
-    textSecondary: '#475569',
-    divider: alpha('#475569', 0.15),
+    background: '#F5F5F5', // Light gray for professional background
+    paper: '#FFFFFF', // Pure white for crisp cards
+    text: '#212121', // Dark text for readability
+    textSecondary: '#616161', // Medium gray for secondary text
+    divider: alpha('#212121', 0.1), // Subtle divider in light mode
   }),
   ...baseConfig,
   mode,
@@ -35,14 +37,14 @@ const createAppTheme = (mode = 'dark') => {
   return createTheme({
     palette: {
       mode: config.mode,
-      primary: { main: config.primary, light: alpha(config.primary, 0.85), dark: alpha(config.primary, 0.7) },
-      secondary: { main: config.secondary, light: alpha(config.secondary, 0.85), dark: alpha(config.secondary, 0.7) },
+      primary: { main: config.primary, light: alpha(config.primary, 0.85), dark: alpha(config.primary, 0.7), contrastText: config.mode === 'dark' ? '#FFFFFF' : '#FFFFFF' }, // Ensure contrastText is white for primary
+      secondary: { main: config.secondary, light: alpha(config.secondary, 0.85), dark: alpha(config.secondary, 0.7), contrastText: config.mode === 'dark' ? '#212121' : '#FFFFFF' }, // Ensure contrastText is black for secondary on dark, white on light
       background: { default: config.background, paper: config.paper },
       text: { primary: config.text, secondary: config.textSecondary, disabled: alpha(config.textSecondary, 0.5) },
-      error: { main: mode === 'dark' ? '#F87171' : '#EF4444' },
-      success: { main: mode === 'dark' ? '#34D399' : '#10B981' },
-      warning: { main: mode === 'dark' ? '#FBBF24' : '#F59E0B' },
-      info: { main: mode === 'dark' ? '#60A5FA' : '#3B82F6' },
+      error: { main: mode === 'dark' ? '#EF5350' : '#D32F2F' }, // Standard Material Red
+      success: { main: mode === 'dark' ? '#66BB6A' : '#388E3C' }, // Standard Material Green
+      warning: { main: mode === 'dark' ? '#FFCA28' : '#F57C00' }, // Standard Material Orange/Amber
+      info: { main: mode === 'dark' ? '#29B6F6' : '#0288D1' }, // Standard Material Light Blue
       divider: config.divider,
       action: {
         hover: alpha(config.primary, config.mode === 'dark' ? 0.08 : 0.04),
@@ -79,7 +81,8 @@ const createAppTheme = (mode = 'dark') => {
             '&:hover': { transform: 'translateY(-1px)' }
           },
           containedPrimary: {
-            color: config.mode === 'dark' ? config.text : config.paper,
+            // Updated gradient to use new primary color
+            color: '#FFFFFF', // Always white for contained primary
             background: `linear-gradient(45deg, ${config.primary} 30%, ${alpha(config.primary, 0.75)} 90%)`,
             '&:hover': {
               background: `linear-gradient(45deg, ${alpha(config.primary, 0.9)} 30%, ${alpha(config.primary, 0.65)} 90%)`,
@@ -87,7 +90,8 @@ const createAppTheme = (mode = 'dark') => {
             },
           },
           containedSecondary: {
-            color: config.mode === 'dark' ? config.text : config.paper,
+            // Updated gradient to use new secondary color
+            color: '#FFFFFF', // Always white for contained secondary
             background: `linear-gradient(45deg, ${config.secondary} 30%, ${alpha(config.secondary, 0.75)} 90%)`,
             '&:hover': {
               background: `linear-gradient(45deg, ${alpha(config.secondary, 0.9)} 30%, ${alpha(config.secondary, 0.65)} 90%)`,
@@ -98,6 +102,10 @@ const createAppTheme = (mode = 'dark') => {
             borderWidth: '1.5px', borderColor: config.primary, color: config.primary,
             '&:hover': { backgroundColor: alpha(config.primary, 0.08), borderColor: alpha(config.primary, 0.7) },
           },
+          outlinedSecondary: { // Added for completeness, if used
+            borderWidth: '1.5px', borderColor: config.secondary, color: config.secondary,
+            '&:hover': { backgroundColor: alpha(config.secondary, 0.08), borderColor: alpha(config.secondary, 0.7) },
+          }
         },
       },
       MuiPaper: { 
@@ -129,15 +137,15 @@ const createAppTheme = (mode = 'dark') => {
         styleOverrides: {
             root: { borderRadius: config.borderRadius, borderWidth: '1px', borderStyle: 'solid', padding: '10px 16px' },
             standardSuccess: { 
-                backgroundColor: alpha(config.palette?.success?.main || '#10B981', 0.1), 
+                backgroundColor: alpha(config.palette?.success?.main || '#388E3C', 0.1), 
                 color: config.palette?.success?.dark || config.palette?.success?.main, 
-                borderColor: alpha(config.palette?.success?.main || '#10B981', 0.3),
+                borderColor: alpha(config.palette?.success?.main || '#388E3C', 0.3),
                 '& .MuiAlert-icon': { color: config.palette?.success?.main }
             },
             standardError: { 
-                backgroundColor: alpha(config.palette?.error?.main || '#EF4444', 0.1), 
+                backgroundColor: alpha(config.palette?.error?.main || '#D32F2F', 0.1), 
                 color: config.palette?.error?.dark || config.palette?.error?.main, 
-                borderColor: alpha(config.palette?.error?.main || '#EF4444', 0.3),
+                borderColor: alpha(config.palette?.error?.main || '#D32F2F', 0.3),
                 '& .MuiAlert-icon': { color: config.palette?.error?.main }
             },
         }

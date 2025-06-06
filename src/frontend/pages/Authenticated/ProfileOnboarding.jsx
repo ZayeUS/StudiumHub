@@ -1,3 +1,4 @@
+// File: src/frontend/pages/Authenticated/ProfileOnboarding.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -193,17 +194,15 @@ export const ProfileOnboarding = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate()) {
+        setLoading(false); // Make sure loading is off if validation fails
+        return;
+    }
 
     setLoading(true);
     setApiError("");
     try {
       const profilePayload = { ...form };
-      // Ensure is_new_user is explicitly set to false after onboarding
-      // However, the backend /profile POST route is for new profiles,
-      // and PUT /profile is for updates. is_new_user might be better handled by backend logic
-      // or by redirecting to a different "update profile" page after this.
-      // For now, we assume this form creates the initial profile.
       
       const profileRes = await postData("/profile", profilePayload);
       
@@ -224,16 +223,20 @@ export const ProfileOnboarding = () => {
         }
         setProfile(finalProfile); // Update global store
         setNotification({ open: true, message: "Welcome to Cofoundless! Your profile is set.", severity: "success" });
-        setTimeout(() => navigate("/dashboard"), 1500); // Redirect after a short delay
+        
+        // --- CHANGE HERE: Set loading to false *before* navigation ---
+        setLoading(false); 
+        navigate("/subscription-selection"); 
+        // -------------------------------------------------------------
       } else {
         setApiError(profileRes?.message || "Unable to save profile. Please try again.");
+        setLoading(false); // Always set to false on backend error
       }
     } catch (err) {
       console.error("Profile onboarding error:", err);
       setApiError(err?.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      setLoading(false); // Always set to false on any error
+    } 
   };
 
   const handleLogout = async () => {

@@ -1,3 +1,4 @@
+// File: src/frontend/pages/Non-Authenticated/SignUpPage.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -178,7 +179,7 @@ export function SignUpPage() {
 
   const theme = useTheme();
   const navigate = useNavigate();
-  const { isLoggedIn, setUser, profile, authLoading, authHydrated } = useUserStore();
+  const { isLoggedIn, setUser, profile, authLoading, authHydrated } = useUserStore(); // Destructure setUser
 
   useEffect(() => {
     if (authHydrated && isLoggedIn && profile) {
@@ -244,13 +245,25 @@ export function SignUpPage() {
       }
 
       const user = await firebaseSignUp(email, password);
-      const { user: backendUser } = await postData("/users", {
+      // Ensure backend user creation completes BEFORE proceeding
+      const backendUserResult = await postData("/users", {
         firebase_uid: user.uid,
         email: user.email,
-        role_id: 1 
+        role_id: 2 // Assuming default role 'user' for new signups (role_id 2 for 'user' as per database.sql)
       });
 
-      setUser(user.uid, 1, backendUser.user_id); 
+      // CRITICAL FIX: Manually set user in store immediately after backend user creation
+      // This pre-populates the store, ensuring subsequent listenAuthState calls don't fail
+      // due to "User not found in system"
+      if (backendUserResult?.user) {
+          setUser(user.uid, backendUserResult.user.role_id, backendUserResult.user.user_id);
+      } else {
+          // If backend user creation fails, throw an error to be caught below
+          throw new Error("Failed to create user record in backend.");
+      }
+      
+      // Now, redirect. The listenAuthState will still run, but the store is already hydrated
+      // with essential user info, preventing the initial 401 when fetching profile/payment.
       navigate("/profile-onboarding"); 
 
     } catch (err) {
@@ -270,7 +283,8 @@ export function SignUpPage() {
           setError(specificError);
         }
       } else {
-        setError("Failed to create account. Please try again.");
+        // Handle custom errors from backendUserResult check or other unexpected errors
+        setError(err.message || "Failed to create account. Please try again.");
       }
       console.error("Sign up error:", err);
     } finally {
