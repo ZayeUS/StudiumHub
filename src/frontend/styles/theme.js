@@ -14,17 +14,17 @@ const baseConfig = {
 // Mode-specific configurations
 const modeSpecificConfig = (mode) => ({
   ...(mode === 'dark' ? {
-    background: '#121212', // Deeper dark for premium feel
-    paper: '#1F1F1F', // Slightly lighter dark for distinct cards
-    text: '#E0E0E0', // Soft white for readability
-    textSecondary: '#A0A0A0', // Lighter gray for secondary text
-    divider: alpha('#E0E0E0', 0.15), // Subtle divider in dark mode
+    background: '#18181B', // Even lighter grey for dark mode
+    paper: '#27272A', // Lighter grey for cards
+    text: '#F4F4F5', // Softer white with slight grey tint
+    textSecondary: '#A1A1AA', // Balanced grey that's easier to read
+    divider: alpha('#D4D4D8', 0.1), // Subtle but visible dividers
   } : {
-    background: '#F5F5F5', // Light gray for professional background
-    paper: '#FFFFFF', // Pure white for crisp cards
-    text: '#212121', // Dark text for readability
-    textSecondary: '#616161', // Medium gray for secondary text
-    divider: alpha('#212121', 0.1), // Subtle divider in light mode
+    background: '#F8F9FA', // Softer off-white background
+    paper: '#FFFFFF', // Keep pure white for cards (good contrast)
+    text: '#2D3748', // Softer dark blue-gray text
+    textSecondary: '#718096', // Warmer medium gray
+    divider: alpha('#E2E8F0', 0.8), // More subtle dividers
   }),
   ...baseConfig,
   mode,
@@ -41,10 +41,10 @@ const createAppTheme = (mode = 'dark') => {
       secondary: { main: config.secondary, light: alpha(config.secondary, 0.85), dark: alpha(config.secondary, 0.7), contrastText: config.mode === 'dark' ? '#212121' : '#FFFFFF' }, // Ensure contrastText is black for secondary on dark, white on light
       background: { default: config.background, paper: config.paper },
       text: { primary: config.text, secondary: config.textSecondary, disabled: alpha(config.textSecondary, 0.5) },
-      error: { main: mode === 'dark' ? '#EF5350' : '#D32F2F' }, // Standard Material Red
-      success: { main: mode === 'dark' ? '#66BB6A' : '#388E3C' }, // Standard Material Green
-      warning: { main: mode === 'dark' ? '#FFCA28' : '#F57C00' }, // Standard Material Orange/Amber
-      info: { main: mode === 'dark' ? '#29B6F6' : '#0288D1' }, // Standard Material Light Blue
+      error: { main: mode === 'dark' ? '#FC8181' : '#D32F2F' }, // Softer red in dark mode
+      success: { main: mode === 'dark' ? '#68D391' : '#388E3C' }, // Softer green in dark mode
+      warning: { main: mode === 'dark' ? '#F6E05E' : '#F57C00' }, // Softer yellow in dark mode
+      info: { main: mode === 'dark' ? '#63B3ED' : '#0288D1' }, // Softer blue in dark mode
       divider: config.divider,
       action: {
         hover: alpha(config.primary, config.mode === 'dark' ? 0.08 : 0.04),
@@ -153,14 +153,14 @@ const createAppTheme = (mode = 'dark') => {
       MuiTooltip: {
         styleOverrides: {
             tooltip: {
-                backgroundColor: alpha(config.mode === 'dark' ? '#111111' : '#333333', 0.95), 
+                backgroundColor: alpha(config.mode === 'dark' ? '#2D3748' : '#333333', 0.95), 
                 backdropFilter: 'blur(3px)',
                 borderRadius: config.borderRadius,
                 fontSize: '0.75rem', 
                 padding: '4px 10px', 
             },
             arrow: {
-                color: alpha(config.mode === 'dark' ? '#111111' : '#333333', 0.95),
+                color: alpha(config.mode === 'dark' ? '#2D3748' : '#333333', 0.95),
             }
         }
       }

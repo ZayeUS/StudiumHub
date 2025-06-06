@@ -1,205 +1,287 @@
+// File: src/frontend/components/navigation/MobileBottomNavigation.jsx
 import React, { useState } from "react";
-import { Box, Paper, Typography, Divider, IconButton, Switch,useTheme } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { Home, Menu, LogOut, UserCircle, Moon, Sun, FileText } from "lucide-react"; // Added FileText for Leads icon
+import { 
+  Box, 
+  Paper, 
+  Typography, 
+  Divider, 
+  IconButton, 
+  Switch,
+  useTheme, 
+  BottomNavigation, 
+  BottomNavigationAction, 
+  Drawer, 
+  List, ListItemButton, ListItemIcon, ListItemText, 
+  alpha 
+} from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
+import { 
+  Home, 
+  Menu, 
+  LogOut, 
+  UserCircle, 
+  Moon, 
+  Sun, 
+  CreditCard // Used for Subscription/Billing in drawer
+} from "lucide-react"; 
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
 
-const NavigationButton = ({ icon, label, onClick, active }) => {
-  const theme = useTheme();
-  return (
-    <Box
-      onClick={onClick}
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        py: 1,
-        cursor: "pointer",
-        color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-        transition: "all 0.3s ease",
-      }}
-    >
-      {icon}
-      <Typography variant="caption" fontWeight={active ? 700 : 500} mt={0.5}>
-        {label}
-      </Typography>
-    </Box>
-  );
-};
-
 export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
-  const { isLoggedIn, userRole, clearUser } = useUserStore();
+  const location = useLocation();
+  // We use a state value for BottomNavigation to handle its internal selection indicator.
+  // The actual navigation is handled by onClick, ensuring the correct route is pushed.
+  const [value, setValue] = useState(0); 
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const handleNavigation = (path) => {
-    setShowMenu(false);
-    const finalPath = path === "/dashboard"
-      ? userRole === "admin" ? "/admin-dashboard" : "/user-dashboard"
-      : path;
-    navigate(isLoggedIn ? finalPath : "/");
+  const { isLoggedIn, roleId, clearUser, userSubscriptionStatus } = useUserStore(); 
+
+  // Function to determine the currently active BottomNavigationAction based on route
+  const getCurrentPathValue = () => {
+    // If on Dashboard or Admin/User Dashboard paths
+    if (location.pathname === "/admin-dashboard" || location.pathname === "/user-dashboard" || location.pathname === "/dashboard") {
+      return 0; // Index for Home/Dashboard
+    }
+    // Add logic for other fixed bottom nav items if they are added
+    return 0; // Default to Home if no match
   };
 
+  // Effect to update the BottomNavigation's selected value when the route changes
+  React.useEffect(() => {
+    setValue(getCurrentPathValue());
+  }, [location.pathname]);
+
+  // Unified navigation handler for both main nav and drawer items
+  const handleNavigation = (path) => {
+    setDrawerOpen(false); // Always close drawer on navigation
+    if (!isLoggedIn) {
+        navigate("/login"); // Redirect to login if not authenticated
+        return;
+    }
+
+    if (path === "/dashboard") { 
+      // Redirect to specific dashboard based on role and subscription status
+      if (roleId === 1) { 
+        navigate("/admin-dashboard");
+      } else { 
+        // For regular users, check subscription status
+        if (userSubscriptionStatus === null || userSubscriptionStatus === 'unsubscribed' || userSubscriptionStatus === 'inactive') {
+          navigate("/subscription-selection"); // Guide to subscription selection
+        } else {
+          navigate("/user-dashboard"); // Go to user dashboard if subscribed/free
+        }
+      }
+    } else {
+      navigate(path); // Navigate to any other specified path directly
+    }
+  };
+
+  // Logout handler
   const handleLogout = async () => {
     try {
       await signOut(auth);
       clearUser();
-      navigate("/");
+      navigate("/"); // Redirect to landing page after logout
+      setDrawerOpen(false); // Close drawer
     } catch (err) {
       console.error("Logout failed:", err);
     }
   };
 
+  // Menu items for the expandable drawer (dynamic based on subscription status)
+  const drawerMenuItems = [
+    { label: "Profile", icon: <UserCircle size={20} />, path: "/user-profile" }  ];
+
+  // Add "Subscription" link if user is not active, trialing, or free
+  
+
   return (
     <>
-      {/* Bottom Nav */}
-      <Box
+      {/* Main Persistent Bottom Navigation Bar */}
+      <Paper
         sx={{
-          display: { xs: "block", sm: "none" },
+          display: { xs: "block", sm: "none" }, // Only visible on extra small screens
           position: "fixed",
           bottom: 0,
-          width: "100%",
-          zIndex: 1300,
+          left: 0,
+          right: 0,
+          zIndex: theme.zIndex.appBar + 1, // Ensures it's above most content
+          borderRadius: "16px 16px 0 0", // Rounded top corners for a modern feel
+          overflow: 'hidden', // Ensures content respects the border radius
+          boxShadow: theme.shadows[8], // Prominent shadow for depth
+          backgroundColor: theme.palette.background.paper, // Uses theme's paper background
+          borderTop: `1px solid ${theme.palette.divider}`, // Subtle separation from content
         }}
+        elevation={6} // Consistent elevation
       >
-        <Paper
-          elevation={6}
+        <BottomNavigation
+          showLabels // Always show labels for clarity on mobile
+          value={value}
+          onChange={(event, newValue) => {
+            setValue(newValue); // Update internal state for selected tab visual
+          }}
           sx={{
-            borderRadius: "16px 16px 0 0",
-            px: 4,
-            py: 1,
-            display: "flex",
-            justifyContent: "space-around",
-            alignItems: "center",
+            height: 64, // Standard height for mobile bottom nav
+            bgcolor: 'transparent', // Let Paper component handle background
+            '& .MuiBottomNavigationAction-root': {
+              color: theme.palette.text.secondary, // Default color for unselected items
+              // Enhanced contrast and visual feedback for selected items
+              '&.Mui-selected': {
+                color: "whitesmoke", // Primary color for selected
+                fontWeight: theme.typography.fontWeightBold, // Make text bold
+                transform: 'scale(1.05)', // Subtle scale animation on selection
+                transition: 'transform 0.2s ease-out',
+              },
+              // Touch feedback for mobile for all items
+              '&:active': {
+                  transform: 'scale(0.95)', // Slight press effect
+                  transition: 'transform 0.1s ease-out',
+              },
+              minWidth: 0, // Allow items to shrink
+              maxWidth: 'none', // Allow items to expand
+              flex: 1, // Distribute space evenly
+              padding: '8px 4px', // Adjusted padding
+            },
+            '& .MuiSvgIcon-root': { // Style Lucide icons wrapped in MuiSvgIcon
+                fontSize: 24, // Ensure consistent icon size
+            }
           }}
         >
-          <NavigationButton
-            icon={<Home size={24} />}
+          <BottomNavigationAction
             label="Home"
+            icon={<Home size={24} />} // Lucide icon with explicit size
             onClick={() => handleNavigation("/dashboard")}
-            active={false}
           />
-          {/* Added Leads button */}
-          
-          <NavigationButton
-            icon={<Menu size={24} />}
+          {/* Removed "Billing" from main bottom navigation as requested */}
+          <BottomNavigationAction
             label="Menu"
-            onClick={() => setShowMenu(!showMenu)}
-            active={showMenu}
+            icon={<Menu size={24} />} // Lucide icon with explicit size
+            onClick={() => setDrawerOpen(true)} // Opens the bottom drawer
           />
-        </Paper>
-      </Box>
+        </BottomNavigation>
+      </Paper>
 
-      {/* Expandable Menu */}
-      {showMenu && (
-        <>
-          {/* Backdrop */}
-          <Box
-            onClick={() => setShowMenu(false)}
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100%",
-              height: "100%",
-              bgcolor: "rgba(0,0,0,0.5)",
-              zIndex: 1299,
-            }}
-          />
-          <Box
-            sx={{
-              position: "fixed",
-              bottom: 80,
-              left: 0,
-              width: "100%",
-              px: 2,
-              zIndex: 1301,
-              transition: "transform 0.3s ease, opacity 0.3s ease",
-            }}
-          >
-            <Paper
-              elevation={8}
+      {/* Expandable Menu Drawer (from bottom) */}
+      <Drawer
+        anchor="bottom" // Anchors the drawer to the bottom of the screen
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        ModalProps={{ keepMounted: true }} // Keeps children mounted for smoother transitions
+        PaperProps={{
+          sx: {
+            borderRadius: "16px 16px 0 0", // Matches bottom nav bar corners
+            bgcolor: alpha(theme.palette.background.paper, 0.95), // Semi-transparent background
+            backdropFilter: 'blur(8px)', // Strong blur effect for modern UI
+            pb: theme.spacing(2), // Padding bottom (adjusts for bottom nav bar overlap if needed)
+            maxHeight: '80vh', // Prevents drawer from taking full screen height
+            overflowY: 'auto', // Allows scrolling if menu content is long
+          },
+        }}
+      >
+        {/* Close button at the top-right of the drawer */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            p: 1.5 
+          }}
+        >
+          <IconButton onClick={() => setDrawerOpen(false)} size="medium">
+            <Menu size={24} /> {/* Use menu icon to close for consistent iconography */}
+          </IconButton>
+        </Box>
+        <List sx={{ px: 1 }}> {/* Slight horizontal padding for list items */}
+          {drawerMenuItems.map((item) => (
+            <ListItemButton 
+              key={item.path} // Using path as key for stability
+              onClick={() => handleNavigation(item.path)}
               sx={{
-                borderRadius: 2,
-                overflow: "hidden",
-                backdropFilter: "blur(6px)",
+                py: 1.5,
+                px: 2,
+                borderRadius: theme.shape.borderRadius, // Rounded corners for list items
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+                // White highlight text in dark mode
+                color: location.pathname.startsWith(item.path) 
+                  ? '#FFFFFF'
+                  : theme.palette.text.primary,
               }}
             >
-              <Box
-                sx={{
-                  px: 2,
-                  py: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer",
-                  "&:hover": { bgcolor: "action.hover" },
-                }}
-                onClick={() => handleNavigation("/user-profile")}
-              >
-                <UserCircle size={20} />
-                <Typography variant="body2" fontWeight={500} ml={2}>
-                  Profile
-                </Typography>
-              </Box>
-              
-              <Divider />
-              
-              {/* Theme Toggle */}
-              <Box
-                sx={{
-                  px: 2,
-                  py: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  "&:hover": { bgcolor: "action.hover" },
-                }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  {isDarkMode ? (
-                    <Moon size={20} color={theme.palette.primary.main} />
-                  ) : (
-                    <Sun size={20} color={theme.palette.primary.main} />
-                  )}
-                  <Typography variant="body2" fontWeight={500} ml={2}>
-                    {isDarkMode ? "Dark Mode" : "Light Mode"}
-                  </Typography>
-                </Box>
-                <Switch
-                  checked={isDarkMode}
-                  onChange={toggleTheme}
-                  color="primary"
-                  size="small"
-                />
-              </Box>
-              
-              <Divider />
-              
-              <Box
-                sx={{
-                  px: 2,
-                  py: 2,
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: "pointer",
-                  color: theme.palette.error.main,
-                  "&:hover": { bgcolor: "rgba(244,67,54,0.08)" },
-                }}
-                onClick={handleLogout}
-              >
-                <LogOut size={20} />
-                <Typography variant="body2" fontWeight={500} ml={2}>
-                  Logout
-                </Typography>
-              </Box>
-            </Paper>
-          </Box>
-        </>
-      )}
+              <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}> {/* Inherit color from parent */}
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.label} 
+                primaryTypographyProps={{ 
+                  fontWeight: location.pathname.startsWith(item.path) ? 600 : 500, // Bolder text for active item
+                  color: 'inherit' 
+                }} 
+              />
+            </ListItemButton>
+          ))}
+          
+          <Divider sx={{ my: 1 }} />
+          
+          {/* Theme Toggle (Light/Dark Mode) */}
+          <ListItemButton
+            onClick={toggleTheme}
+            sx={{
+              py: 1.5,
+              px: 2,
+              justifyContent: 'space-between',
+              borderRadius: theme.shape.borderRadius,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              }
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <ListItemIcon sx={{ minWidth: 40, color: theme.palette.text.secondary }}>
+                {isDarkMode ? <Moon size={20} /> : <Sun size={20} />}
+              </ListItemIcon>
+              <ListItemText 
+                primary={isDarkMode ? "Dark Mode" : "Light Mode"} 
+                primaryTypographyProps={{ 
+                  fontWeight: 500, 
+                  color: theme.palette.text.primary 
+                }} 
+              />
+            </Box>
+           
+          </ListItemButton>
+
+          <Divider sx={{ my: 1 }} />
+          
+          {/* Logout Button */}
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              py: 1.5,
+              px: 2,
+              color: theme.palette.error.main, // Error color for logout
+              borderRadius: theme.shape.borderRadius,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.error.main, 0.08), // Subtle hover effect
+              }
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: 'inherit' }}>
+              <LogOut size={20} />
+            </ListItemIcon>
+            <ListItemText 
+              primary="Logout" 
+              primaryTypographyProps={{ 
+                fontWeight: 500, 
+                color: 'inherit' 
+              }} 
+            />
+          </ListItemButton>
+        </List>
+      </Drawer>
     </>
   );
 };

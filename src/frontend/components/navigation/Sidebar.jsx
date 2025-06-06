@@ -1,3 +1,4 @@
+// File: src/frontend/components/navigation/Sidebar.jsx
 import React, { useState, useEffect } from "react";
 import {
   Drawer,
@@ -21,14 +22,14 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Sun, 
-  Moon 
-} from "lucide-react";
+  Moon,
+} from "lucide-react"; 
 import { useUserStore } from "../../store/userStore";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import { auth } from "../../../firebase";
 
-// Sidebar Item Component
-const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
+// Sidebar Item Component - Memoized for performance
+const SidebarItem = React.memo(({ icon, label, path, isActive, onClick, isExpanded }) => {
   const theme = useTheme();
   return (
     <Tooltip title={!isExpanded ? label : ""} placement="right" arrow>
@@ -42,11 +43,11 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
           py: 1.25,
           minHeight: 48,
           justifyContent: isExpanded ? "initial" : "center",
-          color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-          backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.1) : "transparent",
+          color: isActive ? '#FFFFFF' : theme.palette.text.secondary,
+          backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.15) : "transparent",
           '&:hover': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.08),
-            color: theme.palette.primary.main,
+            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+            color: '#FFFFFF',
           },
           '& .MuiListItemIcon-root': {
             minWidth: 0,
@@ -74,10 +75,10 @@ const SidebarItem = ({ icon, label, path, isActive, onClick, isExpanded }) => {
       </ListItemButton>
     </Tooltip>
   );
-};
+});
 
-// Theme Toggle Component
-const ThemeToggle = ({ isExpanded, isDarkMode, toggleTheme }) => {
+// Theme Toggle Component - Memoized for performance
+const ThemeToggle = React.memo(({ isExpanded, isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   return (
     <Box
@@ -114,14 +115,14 @@ const ThemeToggle = ({ isExpanded, isDarkMode, toggleTheme }) => {
       </Tooltip>
     </Box>
   );
-};
+});
 
 // Main Sidebar Component
 export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { isLoggedIn, roleId, clearUser } = useUserStore();
+  const { isLoggedIn, clearUser } = useUserStore(); 
   
   const [isExpanded, setIsExpanded] = useState(!isMobile);
 
@@ -147,19 +148,17 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
   const toggleSidebar = () => setIsExpanded(prev => !prev);
 
   const handleNavigation = (path) => {
-    if (isLoggedIn) {
-      if (path === "/dashboard") {
-        navigate(roleId === 1 ? "/admin-dashboard" : "/user-dashboard");
-      } else {
-        navigate(path);
-      }
-    } else {
-      navigate("/login");
+    if (!isLoggedIn) {
+      navigate("/login"); 
+      if (isMobile && onClose) onClose();
+      return;
     }
+
+    navigate(path);
     if (isMobile && onClose) onClose();
   };
 
-  // Single menu items list - no admin duplication
+  // Simple menu items - no subscription logic
   const menuItems = [
     { label: "Dashboard", path: "/dashboard", icon: <Home size={20} strokeWidth={2} /> },
     { label: "Profile", path: "/user-profile", icon: <User size={20} strokeWidth={2} /> },
@@ -180,9 +179,9 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
           width: drawerWidth,
           boxSizing: 'border-box',
           borderRight: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: theme.palette.background.drawerPaper || theme.palette.background.paper,
           overflowX: 'hidden',
-          transition: theme.transitions.create('width', {
+          transition: theme.transitions.create(['width', 'padding', 'background-color', 'color'], {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
@@ -237,7 +236,10 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
               <SidebarItem
                 key={item.label}
                 {...item}
-                isActive={pathname === item.path || (item.path !== "/dashboard" && pathname.startsWith(item.path))}
+                isActive={
+                  (item.path === "/dashboard" && (pathname === "/admin-dashboard" || pathname === "/user-dashboard")) ||
+                  (item.path !== "/dashboard" && pathname.startsWith(item.path))
+                }
                 onClick={() => handleNavigation(item.path)}
                 isExpanded={isExpanded}
               />
