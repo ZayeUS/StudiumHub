@@ -1,36 +1,37 @@
+// File: src/backend/server.js
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import usersRouter from './routes/users.js';
-import rolesRouter from './routes/roles.js'; // Import the roles router
-import profileRouter from './routes/profiles.js'; // Import the profile routes
+import rolesRouter from './routes/roles.js';
+import profileRouter from './routes/profiles.js';
 import auditRouter from './routes/auditRoutes.js';
 import testEmailRoutes from './routes/testEmail.js';
-import stripeRouter from './routes/stripeRoutes.js'; // Import the Stripe routes
+import stripeRouter from './routes/stripeRoutes.js'; 
+import analyticsRouter from './routes/analytics.js'; // NEW IMPORT for your hypothetical feature
 
 dotenv.config();
 
 const app = express();
 
-// CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "*", // Restrict based on environment
+  origin: process.env.CORS_ORIGIN || "*", 
   methods: "GET,POST,PUT,DELETE",
   allowedHeaders: "Content-Type,Authorization",
 };
 
 app.use(cors(corsOptions));
-app.use(express.json()); // Middleware to parse incoming JSON data
+app.use(express.json());
 
 // Routes
-app.use("/api/users", usersRouter);  // Users routes
-app.use("/api/roles", rolesRouter);  // Roles routes
-app.use("/api/profile", profileRouter);  // Profile routes
-app.use("/api/audit", auditRouter); // Audit log routes
-app.use('/api/email', testEmailRoutes); // Email routes
-app.use("/api/stripe", stripeRouter);  // Stripe routes (subscription, payment handling)
+app.use("/api/users", usersRouter); 
+app.use("/api/roles", rolesRouter); 
+app.use("/api/profile", profileRouter);
+app.use("/api/audit", auditRouter); 
+app.use('/api/email', testEmailRoutes); 
+app.use("/api/stripe", stripeRouter);  
+app.use("/api/analytics", analyticsRouter); // NEW: Register your new feature route
 
-// Server
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

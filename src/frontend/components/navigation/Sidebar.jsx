@@ -43,11 +43,11 @@ const SidebarItem = React.memo(({ icon, label, path, isActive, onClick, isExpand
           py: 1.25,
           minHeight: 48,
           justifyContent: isExpanded ? "initial" : "center",
-          color: isActive ? '#FFFFFF' : theme.palette.text.secondary,
+          color: isActive ? (theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.primary.main) : theme.palette.text.secondary,
           backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.15) : "transparent",
           '&:hover': {
             backgroundColor: alpha(theme.palette.primary.main, 0.1),
-            color: '#FFFFFF',
+            color: theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.primary.main,
           },
           '& .MuiListItemIcon-root': {
             minWidth: 0,

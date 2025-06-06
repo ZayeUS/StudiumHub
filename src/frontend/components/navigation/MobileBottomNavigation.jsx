@@ -130,7 +130,7 @@ export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
               color: theme.palette.text.secondary, // Default color for unselected items
               // Enhanced contrast and visual feedback for selected items
               '&.Mui-selected': {
-                color: "whitesmoke", // Primary color for selected
+                color: theme.palette.mode === 'dark' ? "whitesmoke" : theme.palette.primary.main, // Conditional color
                 fontWeight: theme.typography.fontWeightBold, // Make text bold
                 transform: 'scale(1.05)', // Subtle scale animation on selection
                 transition: 'transform 0.2s ease-out',
@@ -173,7 +173,7 @@ export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
         PaperProps={{
           sx: {
             borderRadius: "16px 16px 0 0", // Matches bottom nav bar corners
-            bgcolor: alpha(theme.palette.background.paper, 0.95), // Semi-transparent background
+            bgcolor: theme.palette.background.drawerPaper || theme.palette.background.paper, // Use theme's drawerPaper
             backdropFilter: 'blur(8px)', // Strong blur effect for modern UI
             pb: theme.spacing(2), // Padding bottom (adjusts for bottom nav bar overlap if needed)
             maxHeight: '80vh', // Prevents drawer from taking full screen height
@@ -205,9 +205,9 @@ export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
                 },
-                // White highlight text in dark mode
+                // Conditional highlight: white in dark mode, blue in light mode
                 color: location.pathname.startsWith(item.path) 
-                  ? '#FFFFFF'
+                  ? (theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.primary.main)
                   : theme.palette.text.primary,
               }}
             >
