@@ -265,12 +265,16 @@ router.get('/payment-status', authenticate, async (req, res) => {
     const result = await query(paymentStatusQuery, [user_id]);
 
     if (result.rows.length > 0) {
+      // User has a payment record, return their status.
       return res.status(200).json({ 
         status: result.rows[0].stripe_status,
         plan: result.rows[0].subscription_plan
       });
     } else {
-      return res.status(404).json({ message: 'No payment record found for user.' });
+      // --- FIX ---
+      // Instead of a 404, we now return a 200 with a default 'unsubscribed' status.
+      // This is an expected state for a new user and not an error.
+      return res.status(200).json({ status: 'unsubscribed', plan: null });
     }
   } catch (err) {
     console.error('Error fetching payment status:', err);
