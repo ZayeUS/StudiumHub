@@ -1,415 +1,237 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  Box, Typography, TextField, Button, Alert, Paper, 
-  useTheme, CircularProgress, Avatar, useMediaQuery,
-  Snackbar, Fade, Divider, Container
+  Box, Typography, TextField, Button, Alert, Paper,
+  useTheme, CircularProgress, Avatar, Snackbar, Container,
+  Divider, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Grid,
+  InputAdornment, IconButton
 } from "@mui/material";
-import { CloudUpload, Edit, Save, Cancel, Person } from "@mui/icons-material";
+import { Edit, Save, Cancel, Person, Lock, Delete, Visibility, VisibilityOff } from "@mui/icons-material";
 import { useUserStore } from "../../store/userStore";
-import { putData, uploadFile } from "../../utils/BackendRequestHelper";
+import { putData, deleteData } from "../../utils/BackendRequestHelper";
+import { updateUserPassword, reauthenticateUser, deleteFirebaseUser } from "../../../firebase";
+
+// A reusable confirmation dialog for the deletion flow
+const ConfirmationDialog = ({ open, onClose, onConfirm, title, message, loading }) => (
+    <Dialog open={open} onClose={onClose}>
+        <DialogTitle fontWeight="bold">{title}</DialogTitle>
+        <DialogContent><DialogContentText>{message}</DialogContentText></DialogContent>
+        <DialogActions>
+            <Button onClick={onClose} disabled={loading}>Cancel</Button>
+            <Button onClick={onConfirm} color="error" variant="contained" disabled={loading}>
+                {loading ? <CircularProgress size={24} /> : "Delete"}
+            </Button>
+        </DialogActions>
+    </Dialog>
+);
+
+// A dialog for re-authentication before a sensitive action
+const ReauthDialog = ({ open, onClose, onConfirm, title, loading }) => {
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+            <DialogTitle fontWeight="bold">{title}</DialogTitle>
+            <DialogContent>
+                <DialogContentText sx={{ mb: 2 }}>For your security, please enter your password to continue.</DialogContentText>
+                <TextField 
+                    autoFocus 
+                    type={showPassword ? 'text' : 'password'} 
+                    label="Current Password" 
+                    fullWidth 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                              {showPassword ? <VisibilityOff /> : <Visibility />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                    }}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} disabled={loading}>Cancel</Button>
+                <Button onClick={() => onConfirm(password)} variant="contained" color="primary" disabled={loading}>
+                    {loading ? <CircularProgress size={24} /> : "Confirm"}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+// A dedicated component for the Change Password modal for cleanliness
+const ChangePasswordDialog = ({ open, onClose, onSave, loading, apiError, setApiError }) => {
+    const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+    const [showPasswords, setShowPasswords] = useState({ current: false, new: false });
+    const [error, setError] = useState('');
+
+    const handleSave = () => {
+        setError('');
+        setApiError('');
+        if (!passwords.current || !passwords.new || !passwords.confirm) {
+            setError("All fields are required.");
+            return;
+        }
+        if (passwords.new.length < 6) {
+            setError("New password must be at least 6 characters.");
+            return;
+        }
+        if (passwords.new !== passwords.confirm) {
+            setError("New passwords do not match.");
+            return;
+        }
+        onSave(passwords.current, passwords.new);
+    };
+
+    const toggleShowPassword = (field) => {
+        setShowPasswords(prev => ({...prev, [field]: !prev[field]}));
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+            <DialogTitle fontWeight="bold">Change Password</DialogTitle>
+            <DialogContent>
+                {error && <Alert severity="warning" sx={{mb: 2}}>{error}</Alert>}
+                {apiError && <Alert severity="error" sx={{mb: 2}}>{apiError}</Alert>}
+                <TextField autoFocus margin="dense" label="Current Password" type={showPasswords.current ? 'text' : 'password'} fullWidth value={passwords.current} onChange={e => setPasswords({...passwords, current: e.target.value})} InputProps={{endAdornment: (<InputAdornment position="end"><IconButton onClick={() => toggleShowPassword('current')}>{showPasswords.current ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>)}}/>
+                <TextField margin="dense" label="New Password" type={showPasswords.new ? 'text' : 'password'} fullWidth value={passwords.new} onChange={e => setPasswords({...passwords, new: e.target.value})} InputProps={{endAdornment: (<InputAdornment position="end"><IconButton onClick={() => toggleShowPassword('new')}>{showPasswords.new ? <VisibilityOff /> : <Visibility />}</IconButton></InputAdornment>)}}/>
+                <TextField margin="dense" label="Confirm New Password" type="password" fullWidth value={passwords.confirm} onChange={e => setPasswords({...passwords, confirm: e.target.value})} />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} disabled={loading}>Cancel</Button>
+                <Button onClick={handleSave} variant="contained" disabled={loading}>
+                    {loading ? <CircularProgress size={24} /> : "Save Password"}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
 
 export function UserProfilePage() {
-  // State
-  const [formData, setFormData] = useState({ 
-    first_name: "", 
-    last_name: "", 
-    date_of_birth: "" 
-  });
-  const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState("");
+  const { profile, setProfile, clearUser, setLoading, loading } = useUserStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState(null);
-  const [notification, setNotification] = useState({
-    open: false,
-    message: "",
-    severity: "success"
-  });
+  const [formData, setFormData] = useState({ first_name: profile?.first_name || "", last_name: profile?.last_name || "" });
+  const [notification, setNotification] = useState({ open: false, message: "", severity: "success" });
+  const [dialogOpen, setDialogOpen] = useState({ changePass: false, deleteConfirm: false, reauthDelete: false });
+  const [apiError, setApiError] = useState('');
 
-  // Hooks
-  const profile = useUserStore(state => state.profile);
-  const setProfile = useUserStore(state => state.setProfile);
-  const loading = useUserStore(state => state.loading);
-  const setLoading = useUserStore(state => state.setLoading);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const showNotification = (message, severity = "success") => setNotification({ open: true, message, severity });
 
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        first_name: profile.first_name || "",
-        last_name: profile.last_name || "",
-        date_of_birth: profile.date_of_birth
-          ? new Date(profile.date_of_birth).toISOString().split("T")[0]
-          : ""
-      });
-      setAvatarPreview(profile.avatar_url);
-    }
-  }, [profile]);
-
-  // Show notification
-  const showNotification = (message, severity = "success") => {
-    setNotification({ open: true, message, severity });
-  };
-
-  // Form input handler
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear errors
-    if (errors[name]) {
-      const updated = { ...errors };
-      delete updated[name];
-      setErrors(updated);
-    }
-    if (apiError) setApiError("");
-  };
-
-  // Avatar handler
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // File type validation
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        showNotification("Only JPEG and PNG images are allowed", "error");
-        e.target.value = null;
-        return;
-      }
-
-      // File size validation (5MB limit)
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        showNotification("Image size should be less than 5MB", "error");
-        e.target.value = null;
-        return;
-      }
-
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Form validation
-  const validateForm = () => {
-    const errs = {};
-    if (!formData.first_name.trim()) errs.first_name = "First name is required";
-    if (!formData.last_name.trim()) errs.last_name = "Last name is required";
-
-    if (!formData.date_of_birth) {
-      errs.date_of_birth = "Date of birth is required";
-    } else {
-      const dob = new Date(formData.date_of_birth);
-      if (dob > new Date()) errs.date_of_birth = "Cannot be in the future";
-      if (isNaN(dob.getTime())) errs.date_of_birth = "Invalid date";
-    }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  // Form submission handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
+  const handleProfileSave = async () => {
+    if (!formData.first_name || !formData.last_name) return;
     setLoading(true);
     try {
-      let profileData = { ...formData };
-
-      // If avatar file exists, upload it first
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append("avatar", avatarFile);
-        
-        try {
-          const avatarResponse = await uploadFile("/profile/avatar", formData);
-          if (avatarResponse?.profile?.avatar_url) {
-            profileData.avatar_url = avatarResponse.profile.avatar_url;
-          }
-        } catch (uploadError) {
-          showNotification("Profile updated but avatar upload failed", "warning");
-        }
-      }
-
-      // Submit profile data
-      const response = await putData(`/profile`, profileData);
-      if (response?.profile) {
-        setProfile(response.profile);
-        setIsEditing(false);
-        showNotification("Profile updated successfully!");
-        setAvatarFile(null);
-      } else {
-        setApiError("Update failed");
-      }
+      const response = await putData('/profile', formData);
+      setProfile(response.profile);
+      showNotification("Profile updated successfully!");
+      setIsEditing(false);
     } catch (err) {
-      console.error(err);
-      setApiError(err.message || "Something went wrong");
+      showNotification(err.message || "Failed to update profile.", "error");
     } finally {
       setLoading(false);
     }
   };
-
-  // Cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-    setErrors({});
-    setApiError("");
-    
-    // Reset form to original profile data
-    if (profile) {
-      setFormData({
-        first_name: profile.first_name || "",
-        last_name: profile.last_name || "",
-        date_of_birth: profile.date_of_birth
-          ? new Date(profile.date_of_birth).toISOString().split("T")[0]
-          : ""
-      });
-      setAvatarPreview(profile.avatar_url);
-      setAvatarFile(null);
+  
+  const handleChangePassword = async (currentPassword, newPassword) => {
+    setLoading(true);
+    setApiError('');
+    try {
+        await reauthenticateUser(currentPassword);
+        await updateUserPassword(newPassword);
+        showNotification("Password updated successfully!");
+        setDialogOpen(prev => ({ ...prev, changePass: false }));
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        if (error.code === 'auth/wrong-password') {
+            setApiError("The current password you entered is incorrect.");
+        } else {
+            setApiError("An error occurred. Please try again.");
+        }
+    } finally {
+        setLoading(false);
     }
   };
 
-  // Loading state
-  if (!profile) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleDeleteAccount = async (password) => {
+      setLoading(true);
+      try {
+        await reauthenticateUser(password);
+        await deleteData('/users/me');
+        await deleteFirebaseUser();
+        clearUser();
+      } catch (error) {
+        // --- THIS IS THE IMPROVED ERROR HANDLING ---
+        console.error("Account deletion failed:", error); // Log the full error for debugging
+        
+        let message = "An unexpected error occurred. Please try again later.";
+        if (error.code === 'auth/wrong-password') {
+            message = "The password you entered is incorrect. Account not deleted.";
+        } else if (error.code === 'auth/too-many-requests') {
+            message = "Access temporarily disabled due to too many failed attempts. Please try again later.";
+        }
+        showNotification(message, "error");
+
+      } finally {
+        setLoading(false);
+        setDialogOpen({ changePass: false, deleteConfirm: false, reauthDelete: false });
+      }
+  };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: theme.palette.background.default,
-        py: { xs: 3, sm: 4 }
-      }}
-    >
-      {/* Notification */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert severity={notification.severity}>{notification.message}</Alert>
+    <Box sx={{ minHeight: "100vh", bgcolor: 'background.default', py: { xs: 3, sm: 5 } }}>
+      <Snackbar open={notification.open} autoHideDuration={6000} onClose={() => setNotification(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+        <Alert severity={notification.severity} onClose={() => setNotification(prev => ({...prev, open: false}))}>{notification.message}</Alert>
       </Snackbar>
-
       <Container maxWidth="md">
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography 
-            variant="h4" 
-            fontWeight={700}
-            color="text.primary"
-            gutterBottom
-          >
-            {isEditing ? "Edit Profile" : "Profile Settings"}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {isEditing ? "Update your personal information" : "Manage your account details and preferences"}
-          </Typography>
-        </Box>
+        <Typography variant="h4" fontWeight={700} gutterBottom>My Profile</Typography>
 
-        {/* Main Content */}
-        <Paper
-          elevation={8}
-          sx={{
-            p: { xs: 3, sm: 4, md: 5 },
-            borderRadius: theme.shape.borderRadiusLG,
-          }}
-        >
-          {apiError && (
-            <Alert severity="error" sx={{ mb: 3 }} onClose={() => setApiError("")}>
-              {apiError}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            {/* Avatar Section */}
-            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 4 }}>
-              <Avatar
-                src={avatarPreview}
-                sx={{
-                  width: 100,
-                  height: 100,
-                  mb: 2,
-                  bgcolor: theme.palette.primary.main,
-                  fontSize: '2rem'
-                }}
-              >
-                {!avatarPreview && <Person fontSize="large" />}
-              </Avatar>
-              
-              {isEditing && (
-                <Box sx={{ textAlign: 'center' }}>
-                  <Button
-                    component="label"
-                    variant="outlined"
-                    startIcon={<CloudUpload />}
-                    size="small"
-                    sx={{ mb: 1 }}
-                  >
-                    {avatarFile ? "Change Photo" : "Upload Photo"}
-                    <input
-                      type="file"
-                      accept="image/jpeg, image/jpg, image/png"
-                      onChange={handleAvatarChange}
-                      hidden
-                    />
-                  </Button>
-                  <Typography variant="caption" display="block" color="text.secondary">
-                    JPEG or PNG, max 5MB
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            {/* Form Fields */}
-            <Box sx={{ mb: 4 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 3 }}>
-                {/* First Name */}
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    First Name
-                  </Typography>
-                  {isEditing ? (
-                    <TextField
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                      fullWidth
-                      error={!!errors.first_name}
-                      helperText={errors.first_name}
-                      disabled={loading}
-                      placeholder="Enter first name"
-                    />
-                  ) : (
-                    <Typography variant="body1" fontWeight={500} color="text.primary">
-                      {profile.first_name || "Not provided"}
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Last Name */}
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Last Name
-                  </Typography>
-                  {isEditing ? (
-                    <TextField
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleChange}
-                      fullWidth
-                      error={!!errors.last_name}
-                      helperText={errors.last_name}
-                      disabled={loading}
-                      placeholder="Enter last name"
-                    />
-                  ) : (
-                    <Typography variant="body1" fontWeight={500} color="text.primary">
-                      {profile.last_name || "Not provided"}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-
-              {/* Date of Birth */}
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                  Date of Birth
-                </Typography>
-                {isEditing ? (
-                  <TextField
-                    name="date_of_birth"
-                    type="date"
-                    value={formData.date_of_birth}
-                    onChange={handleChange}
-                    fullWidth
-                    error={!!errors.date_of_birth}
-                    helperText={errors.date_of_birth}
-                    disabled={loading}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{ maxWidth: { xs: '100%', sm: '300px' } }}
-                  />
-                ) : (
-                  <Typography variant="body1" fontWeight={500} color="text.primary">
-                    {profile.date_of_birth 
-                      ? new Date(profile.date_of_birth).toLocaleDateString() 
-                      : "Not provided"}
-                  </Typography>
-                )}
-              </Box>
-            </Box>
-
-            <Divider sx={{ my: 4 }} />
-
-            {/* Action Buttons */}
-            <Box sx={{ display: "flex", justifyContent: "center", gap: 2, flexWrap: 'wrap' }}>
-              {isEditing ? (
-                <>
-                  <Button
-                    variant="outlined"
-                    onClick={handleCancel}
-                    disabled={loading}
-                    startIcon={<Cancel />}
-                    sx={{ px: 3 }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="contained"
-                    type="submit"
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Save />}
-                    sx={{ px: 3 }}
-                  >
-                    {loading ? "Saving..." : "Save Changes"}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="contained"
-                  onClick={() => setIsEditing(true)}
-                  startIcon={<Edit />}
-                  sx={{ px: 4, py: 1.2 }}
-                >
-                  Edit Profile
-                </Button>
-              )}
-            </Box>
+        <Paper elevation={4} sx={{ p: 4, mt: 3, borderRadius: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" fontWeight={600}>Profile Details</Typography>
+            {!isEditing && <Button variant="outlined" startIcon={<Edit />} onClick={() => setIsEditing(true)}>Edit</Button>}
           </Box>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} sm={2} sx={{display: 'flex', justifyContent: {xs: 'center', sm: 'flex-start'}}}>
+                <Avatar src={profile?.avatar_url} sx={{ width: 80, height: 80 }}><Person sx={{fontSize: 40}}/></Avatar>
+            </Grid>
+            <Grid item xs={12} sm={10} container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                {isEditing ? <TextField label="First Name" fullWidth value={formData.first_name} onChange={e => setFormData({...formData, first_name: e.target.value})} /> : <><Typography color="text.secondary" variant="body2">First Name</Typography><Typography>{profile?.first_name}</Typography></>}
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                {isEditing ? <TextField label="Last Name" fullWidth value={formData.last_name} onChange={e => setFormData({...formData, last_name: e.target.value})} /> : <><Typography color="text.secondary" variant="body2">Last Name</Typography><Typography>{profile?.last_name}</Typography></>}
+              </Grid>
+            </Grid>
+          </Grid>
+          {isEditing && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+                <Button variant="text" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button variant="contained" startIcon={loading ? <CircularProgress size={20}/> : <Save/>} onClick={handleProfileSave} disabled={loading}>Save Changes</Button>
+            </Box>
+          )}
         </Paper>
 
-        {/* Email Section (Read-only) */}
-        {/* <Paper
-          elevation={8}
-          sx={{
-            p: { xs: 3, sm: 4 },
-            mt: 3,
-            borderRadius: theme.shape.borderRadiusLG,
-          }}
-        >
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            Account Information
-          </Typography>
-          <Box>
-            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              Email Address
-            </Typography>
-            <Typography variant="body1" fontWeight={500} color="text.primary">
-              {profile.email}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              Contact support to change your email address
-            </Typography>
-          </Box>
-        </Paper> */}
+        <Paper elevation={4} sx={{ p: 4, mt: 4, borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>Security Settings</Typography>
+            <Divider />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, flexWrap: 'wrap', gap: 2 }}>
+                <Box><Typography fontWeight="medium">Change Password</Typography><Typography variant="body2" color="text.secondary">Update your password to keep your account secure.</Typography></Box>
+                <Button variant="outlined" startIcon={<Lock/>} onClick={() => setDialogOpen(prev => ({...prev, changePass: true}))}>Change</Button>
+            </Box>
+            <Divider />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2, flexWrap: 'wrap', gap: 2 }}>
+                <Box><Typography fontWeight="medium" color="error">Delete Account</Typography><Typography variant="body2" color="text.secondary">Permanently delete your account and all of your data.</Typography></Box>
+                <Button variant="contained" color="error" startIcon={<Delete/>} onClick={() => setDialogOpen(prev => ({...prev, deleteConfirm: true}))}>Delete</Button>
+            </Box>
+        </Paper>
       </Container>
+      
+      <ChangePasswordDialog open={dialogOpen.changePass} onClose={() => setDialogOpen(prev => ({...prev, changePass: false}))} onSave={handleChangePassword} loading={loading} apiError={apiError} setApiError={setApiError}/>
+      <ConfirmationDialog open={dialogOpen.deleteConfirm} onClose={() => setDialogOpen(prev => ({...prev, deleteConfirm: false}))} onConfirm={() => {setDialogOpen({deleteConfirm: false, reauthDelete: true})}} title="Delete Account?" message="This action is permanent and cannot be undone. Are you sure you want to delete your account?" />
+      <ReauthDialog open={dialogOpen.reauthDelete} onClose={() => setDialogOpen(prev => ({...prev, reauthDelete: false}))} onConfirm={handleDeleteAccount} title="Confirm Account Deletion" loading={loading} />
     </Box>
   );
 }

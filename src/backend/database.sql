@@ -17,18 +17,19 @@ CREATE TABLE users (
   role_id INT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  deleted_at TIMESTAMPTZ DEFAULT NULL, -- ✅ Keep deleted_at here
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
   CONSTRAINT fk_role FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE RESTRICT
 );
 
--- PROFILES Table (UUID, NO deleted_at)
+-- PROFILES Table (Simpler, no date_of_birth)
+-- PROFILES Table
 CREATE TABLE profiles (
   profile_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   first_name VARCHAR(255) NOT NULL,
   last_name VARCHAR(255) NOT NULL,
-  date_of_birth DATE NOT NULL,
   avatar_url TEXT DEFAULT NULL,
+  fully_onboarded BOOLEAN DEFAULT FALSE NOT NULL, -- <-- ADD THIS LINE
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -56,29 +57,21 @@ CREATE TABLE audit_logs (
   CONSTRAINT fk_target FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+-- PAYMENTS Table
 CREATE TABLE payments (
   payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
-  stripe_customer_id VARCHAR(255),
-  stripe_subscription_id VARCHAR(255),
-  stripe_status VARCHAR(50), -- E.g., 'active', 'past_due', 'canceled'
-  subscription_plan VARCHAR(255), -- E.g., 'basic', 'premium'
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT,
+  stripe_status VARCHAR(50), 
+  subscription_plan VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CONSTRAINT unique_subscription UNIQUE (stripe_subscription_id)
 );
+
 -- Audit log indexes
 CREATE INDEX idx_audit_actor_user_id ON audit_logs(actor_user_id);
 CREATE INDEX idx_audit_target_user_id ON audit_logs(target_user_id);
 CREATE INDEX idx_audit_table_record ON audit_logs(table_name, record_id);
-
-
-ALTER TABLE payments 
-ADD CONSTRAINT unique_subscription 
-UNIQUE (stripe_subscription_id);
-
-ALTER TABLE payments
-    ALTER COLUMN stripe_customer_id TYPE TEXT;
-
-ALTER TABLE payments
-    ALTER COLUMN stripe_subscription_id TYPE TEXT;

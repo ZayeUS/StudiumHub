@@ -1,12 +1,16 @@
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged, 
-  sendPasswordResetEmail, 
-  fetchSignInMethodsForEmail 
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  deleteUser
 } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
@@ -24,70 +28,46 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
-const signUp = async (email, password) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error) {
-    console.error('Error signing up: ', error.message);
-    throw new Error(error.message);
-  }
-};
-
-const login = async (email, password) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error) {
-    console.error("Error logging in:", error.message);
-    
-    // Convert Firebase errors to user-friendly messages
-    if (
-      error.code === 'auth/invalid-credential' || 
-      error.code === 'auth/user-not-found' || 
-      error.code === 'auth/wrong-password' ||
-      error.message === 'INVALID_LOGIN_CREDENTIALS' ||
-      (error.error && error.error.message === 'INVALID_LOGIN_CREDENTIALS')
-    ) {
-      throw new Error('Incorrect Email or Password');
-    } else if (error.code === 'auth/too-many-requests') {
-      throw new Error('Too many failed login attempts. Please try again later.');
-    } else if (error.code === 'auth/user-disabled') {
-      throw new Error('This account has been disabled. Please contact support.');
-    } else {
-      throw new Error('Login failed. Please try again.');
-    }
-  }
-};
-
-const logout = async () => {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Error logging out: ", error.message);
-    throw new Error(error.message);
-  }
-};
-
-const resetPassword = async (email) => {
-  try {
-    await sendPasswordResetEmail(auth, email);
-  } catch (error) {
-    console.error("Error sending password reset email: ", error.message);
-    throw new Error(error.message);
-  }
-};
-
-const checkEmailExists = async (email) => {
-  try {
-    const methods = await fetchSignInMethodsForEmail(auth, email);
-    return methods.length > 0;
-  } catch (error) {
-    console.error("Error checking email existence: ", error.message);
-    throw new Error(error.message);
-  }
-};
-
+// --- Core Auth Functions ---
+const signUp = (email, password) => createUserWithEmailAndPassword(auth, email, password);
+const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
+const logout = () => signOut(auth);
+const resetPassword = (email) => sendPasswordResetEmail(auth, email);
+const checkEmailExists = (email) => fetchSignInMethodsForEmail(auth, email).then(methods => methods.length > 0);
 const onAuthStateChangedListener = (callback) => onAuthStateChanged(auth, callback);
 
-export { auth, analytics, signUp, login, logout, resetPassword, checkEmailExists, onAuthStateChangedListener };
+// --- NEW: User Management Functions ---
+
+// Re-authenticates the current user - required for sensitive operations
+const reauthenticateUser = (password) => {
+  const user = auth.currentUser;
+  const credential = EmailAuthProvider.credential(user.email, password);
+  return reauthenticateWithCredential(user, credential);
+};
+
+// Changes the user's password after they have been re-authenticated
+const updateUserPassword = (newPassword) => {
+  const user = auth.currentUser;
+  return updatePassword(user, newPassword);
+};
+
+// Deletes the user from Firebase Authentication
+const deleteFirebaseUser = () => {
+  const user = auth.currentUser;
+  return deleteUser(user);
+};
+
+
+export {
+  auth,
+  analytics,
+  signUp,
+  login,
+  logout,
+  resetPassword,
+  checkEmailExists,
+  onAuthStateChangedListener,
+  reauthenticateUser,
+  updateUserPassword,
+  deleteFirebaseUser,
+};
