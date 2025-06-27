@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Button, 
   Container, 
@@ -10,369 +10,358 @@ import {
   Grid,
   useMediaQuery,
   alpha,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Chip,
+  Stack,ListItemIcon
 } from '@mui/material';
-import { ArrowRight, CheckCircle, Zap, Users, Shield } from 'lucide-react';
+import { 
+    ArrowRight, CheckCircle, Zap, Users, Shield, ArrowDown, Menu, Home, LogIn, ChevronRight, X 
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+
+// --- NAVIGATION BAR COMPONENT (NOW INSIDE LANDING PAGE) ---
+const NavBar = () => {
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const navItems = [
+    { text: "Features", icon: <Zap size={18} />, path: "#features" },
+    { text: "Pricing", icon: <ChevronRight size={18} />, path: "#pricing" },
+  ];
+
+  return (
+    <AppBar
+      position="sticky"
+      elevation={0}
+      sx={{
+        backgroundColor: alpha(theme.palette.background.paper, 0.8),
+        backdropFilter: 'blur(8px)',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        color: theme.palette.text.primary
+      }}
+    >
+      <Container maxWidth="lg">
+        <Toolbar disableGutters sx={{ py: 1 }}>
+          <Typography
+            variant="h5"
+            component={Link}
+            to="/"
+            sx={{
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              textDecoration: 'none',
+              color: 'text.primary'
+            }}
+          >
+            <Zap size={24} style={{ marginRight: 8, color: theme.palette.primary.main }} />
+            SoftwareTemplate
+          </Typography>
+
+          <Box sx={{ flexGrow: 1 }} />
+
+          {!isMobile && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {navItems.map((item) => (
+                <Button key={item.text} href={item.path} color="inherit" sx={{ fontWeight: 500, textTransform: 'none' }}>
+                  {item.text}
+                </Button>
+              ))}
+              <Divider orientation="vertical" flexItem sx={{ mx: 1, my: 1.5 }} />
+              <Button component={Link} to="/login" color="inherit" sx={{ fontWeight: 500 }}>
+                Login
+              </Button>
+              <Button component={Link} to="/signup" variant="contained" color="primary" disableElevation sx={{ borderRadius: 2 }}>
+                Get Started
+              </Button>
+            </Box>
+          )}
+
+          {isMobile && (
+            <IconButton edge="end" color="inherit" onClick={() => setOpenDrawer(true)}>
+              <Menu />
+            </IconButton>
+          )}
+
+          <Drawer anchor="right" open={openDrawer} onClose={() => setOpenDrawer(false)}>
+            <Box sx={{ width: 250, p: 2 }}>
+              <List>
+                {navItems.map((item) => (
+                  <ListItem key={item.text} component="a" href={item.path} onClick={() => setOpenDrawer(false)}>
+                      <ListItemIcon>{item.icon}</ListItemIcon>
+                      <ListItemText primary={item.text} />
+                  </ListItem>
+                ))}
+                <Divider sx={{ my: 2 }} />
+                <Button component={Link} to="/login" fullWidth variant="outlined" sx={{ mb: 1 }}>Login</Button>
+                <Button component={Link} to="/signup" fullWidth variant="contained">Get Started</Button>
+              </List>
+            </Box>
+          </Drawer>
+        </Toolbar>
+      </Container>
+    </AppBar>
+  );
+};
+
+
+// A reusable component for section animations
+const MotionBox = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, amount: 0.3 }}
+    transition={{ duration: 0.6, ease: 'easeOut' }}
+  >
+    {children}
+  </motion.div>
+);
 
 const LandingPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
-  // Feature data
+
   const features = [
     { 
-      title: "Streamlined Workflow", 
-      description: "Reduce operational overhead by 35% with our intuitive automation tools.", 
+      title: "Launch Faster", 
+      description: "Pre-built authentication, billing, and database integration lets you focus on your core features.", 
       icon: <Zap size={24} color={theme.palette.secondary.main} />
     },
     { 
-      title: "Team Collaboration", 
-      description: "Enable real-time collaboration that increases team productivity by 42%.", 
+      title: "Scale Confidently", 
+      description: "Built on a modern, robust stack (React, Node, Postgres) ready to handle growth from day one.", 
       icon: <Users size={24} color={theme.palette.secondary.main} />
     },
     { 
-      title: "Enterprise Security", 
-      description: "Bank-level encryption protecting your sensitive business data 24/7.", 
+      title: "Secure by Default", 
+      description: "Best practices for security, including soft deletes, audit logs, and secure authentication.", 
       icon: <Shield size={24} color={theme.palette.secondary.main} />
     },
   ];
 
-  // Pricing plans
+  // --- UPDATED PRICING ---
   const plans = [
     {
-      name: "Starter",
-      price: "$49",
-      period: "/month",
+      name: "MVP Tier",
+      price: "$500",
+      period: "/ one-time",
       features: [
-        "Up to 5 team members",
-        "10GB storage",
-        "Basic analytics",
-        "24/7 email support"
-      ],
-      isPopular: false
-    },
-    {
-      name: "Professional",
-      price: "$99",
-      period: "/month",
-      features: [
-        "Up to 20 team members",
-        "50GB storage",
-        "Advanced analytics",
-        "Priority support"
+        "Full Source Code Access",
+        "Stripe Billing Integration",
+        "Priority Email Support (3 Months)"
       ],
       isPopular: true
     },
-    {
-      name: "Enterprise",
-      price: "Contact us",
-      period: "",
-      features: [
-        "Unlimited team members",
-        "Unlimited storage",
-        "Custom integrations",
-        "Dedicated account manager"
-      ],
-      isPopular: false
-    }
   ];
 
-  // FAQ items
   const faqItems = [
     {
-      question: "How quickly can I get started?",
-      answer: "You can be up and running in less than 5 minutes. Our streamlined onboarding process ensures immediate productivity with no technical setup required."
+      question: "What do I get when I purchase the template?",
+      answer: "You receive the complete source code for the entire project, including the React frontend, Node.js backend, and all database setup files. You also get access to our documentation."
     },
     {
-      question: "Is my data secure?",
-      answer: "We implement bank-level 256-bit encryption and comply with GDPR, HIPAA, and SOC2 standards to ensure your business data remains completely secure."
+      question: "Is this a one-time payment?",
+      answer: "Yes! The purchase of the SoftwareTemplate is a one-time payment that grants you a license to use the code in unlimited projects. There are no recurring fees to us."
     },
     {
-      question: "Can I upgrade or downgrade my plan?",
-      answer: "Yes, you can easily change your plan at any time. We'll prorate your billing so you only pay for what you use."
+      question: "What kind of support is included?",
+      answer: "The MVP Tier comes with priority email support for 3 months to help you with setup, configuration, and understanding the codebase."
     }
   ];
 
   return (
     <Box sx={{ bgcolor: theme.palette.background.default }}>
-      {/* Hero Section - Single Column Header */}
+      <NavBar />
+      
+      {/* Hero Section */}
       <Box 
         sx={{ 
-          py: { xs: 6, md: 10 },
-          background: `linear-gradient(145deg, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.background.paper, 1)})`,
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+          py: { xs: 8, md: 12 },
+          overflow: 'hidden',
+          position: 'relative',
+          background: `radial-gradient(ellipse 80% 50% at 50% -20%, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`
         }}
       >
         <Container maxWidth="md">
-          <Box 
-            sx={{ 
-              textAlign: 'center',
-              maxWidth: '800px',
-              mx: 'auto'
-            }}
-          >
-            <Box 
-              sx={{ 
-                display: 'inline-flex', 
-                bgcolor: alpha(theme.palette.secondary.main, 0.1), 
-                color: theme.palette.secondary.main,
-                px: 2, 
-                py: 0.5, 
-                borderRadius: 2,
-                mb: 2,
-                alignItems: 'center'
-              }}
-            >
-              <Zap size={16} style={{ marginRight: 8 }} />
-              <Typography variant="body2" fontWeight={600}>Boost Your Business Productivity</Typography>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Chip label="Launch your SaaS in days, not months" color="primary" variant="outlined" sx={{ mb: 3 }}/>
+              <Typography 
+                variant="h1" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 800, 
+                  mb: 3,
+                  fontSize: isMobile ? '2.8rem' : '4rem',
+                  letterSpacing: '-1.5px',
+                  lineHeight: 1.1,
+                }}
+              >
+                The Modern Foundation
+                <br />
+                for Your Next <Box component="span" sx={{
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                }}>SaaS Product</Box>
+              </Typography>
+              
+              <Typography 
+                variant="h6" 
+                color="text.secondary" 
+                sx={{ mb: 4, maxWidth: '650px', mx: 'auto', fontWeight: 400 }}
+              >
+                A production-ready boilerplate with authentication, subscriptions and a modern tech stack. Skip the setup and start building your core features today.
+              </Typography>
+              
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                <Button 
+                  href="#pricing"
+                  variant="contained" 
+                  color="primary"
+                  size="large"
+                  disableElevation 
+                  endIcon={<ArrowRight size={18} />} 
+                  sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: 600 }}
+                >
+                  Purchase Now
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  color="inherit"
+                  size="large"
+                  sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: 600 }}
+                >
+                  View Demo
+                </Button>
+              </Stack>
             </Box>
-            
-            <Typography 
-              variant="h1" 
-              component="h1" 
-              sx={{ 
-                fontWeight: 800, 
-                mb: 3,
-                background: `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.light})`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontSize: isMobile ? '2.5rem' : '3.5rem',
-              }}
-            >
-              Transform Your Workflow & Increase Revenue
-            </Typography>
-            
-            <Typography 
-              variant="h6" 
-              color="textSecondary" 
-              sx={{ 
-                mb: 4, 
-                maxWidth: '700px', 
-                mx: 'auto',
-                fontWeight: 400,
-                lineHeight: 1.6
-              }}
-            >
-              Our proven SaaS platform helps businesses like yours increase operational efficiency by 47% while reducing costs. Join over 10,000 companies already transforming their workflow.
-            </Typography>
-            
-            <Button 
-              variant="contained" 
-              color="secondary"
-              size="large"
-              disableElevation 
-              endIcon={<ArrowRight size={18} />} 
-              sx={{ 
-                borderRadius: 2, 
-                px: 4, 
-                py: 1.5, 
-                textTransform: 'none', 
-                fontWeight: 600, 
-                fontSize: '1rem',
-                boxShadow: `0 8px 20px ${alpha(theme.palette.secondary.main, 0.3)}`,
-                mb: 3
-              }}
-            >
-              Start Free Trial
-            </Button>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1 }}>
-              <CheckCircle size={16} color={theme.palette.success.main} style={{ marginRight: 8 }} />
-              <Typography variant="body2" color="textSecondary">No credit card required • 14-day free trial • Cancel anytime</Typography>
-            </Box>
-          </Box>
-        </Container>
-      </Box>
-
-      {/* Social Proof */}
-      <Box sx={{ py: 4, bgcolor: theme.palette.background.paper }}>
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              TRUSTED BY FORWARD-THINKING COMPANIES
-            </Typography>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: 4
-            }}>
-              {/* You would add your client logos here */}
-              {['Logo 1', 'Logo 2', 'Logo 3', 'Logo 4', 'Logo 5'].map((logo, index) => (
-                <Box key={index} sx={{ 
-                  height: '30px', 
-                  width: isMobile ? '30%' : '15%', 
-                  bgcolor: alpha(theme.palette.text.secondary, 0.1),
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 1
-                }}>
-                  <Typography variant="body2" color="textSecondary">{logo}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </Box>
+          </motion.div>
         </Container>
       </Box>
 
       {/* Features Section */}
-      <Box sx={{ py: { xs: 6, md: 10 } }}>
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h3" component="h2" fontWeight={700}>
-              How We Solve Your Business Challenges
-            </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
-              Our platform addresses the three biggest challenges facing modern businesses
-            </Typography>
-          </Box>
+      <Box sx={{ py: { xs: 8, md: 12 } }} id="features">
+        <Container maxWidth="lg">
+          <MotionBox>
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <Typography variant="h3" component="h2" fontWeight={700}>
+                Everything You Need to Launch
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
+                This template is packed with the essential features that every SaaS product needs, saving you hundreds of hours of development time.
+              </Typography>
+            </Box>
+          </MotionBox>
           
           <Grid container spacing={4}>
             {features.map((feature, index) => (
               <Grid item xs={12} md={4} key={index}>
-                <Card sx={{ 
-                  height: '100%', 
-                  borderRadius: theme.shape.borderRadius,
-                  boxShadow: `0 8px 30px ${alpha(theme.palette.common.black, 0.1)}`,
-                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-5px)',
-                    boxShadow: `0 12px 40px ${alpha(theme.palette.secondary.main, 0.15)}`
-                  }
-                }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', mb: 2 }}>
-                      {feature.icon}
-                    </Box>
-                    <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
-                      {feature.title}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {feature.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.5 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Card sx={{ 
+                    height: '100%', 
+                    borderRadius: theme.shape.borderRadiusLG,
+                    border: 'none',
+                    bgcolor: 'background.paper',
+                    p: 2
+                  }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%', bgcolor: alpha(theme.palette.secondary.main, 0.1), mb: 2 }}>
+                        {feature.icon}
+                      </Box>
+                      <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {feature.description}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </Grid>
             ))}
           </Grid>
         </Container>
       </Box>
 
-      {/* Call To Action */}
-      <Box sx={{ 
-        py: { xs: 6, md: 8 }, 
-        bgcolor: theme.palette.secondary.main,
-        color: '#fff'
-      }}>
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h3" component="h2" fontWeight={700} color="inherit" gutterBottom>
-              Ready to Transform Your Business?
-            </Typography>
-            <Typography variant="body1" color="inherit" sx={{ mb: 4, opacity: 0.9 }}>
-              Join thousands of companies that have already boosted their productivity by 47%.
-            </Typography>
-            <Button 
-              variant="contained" 
-              size="large"
-              disableElevation 
-              sx={{ 
-                borderRadius: 2, 
-                px: 4, 
-                py: 1.5, 
-                textTransform: 'none', 
-                fontWeight: 600, 
-                fontSize: '1rem',
-                bgcolor: '#fff',
-                color: theme.palette.secondary.main,
-                '&:hover': {
-                  bgcolor: alpha('#fff', 0.9)
-                }
-              }}
-            >
-              Start Free Trial
-            </Button>
-          </Box>
-        </Container>
-      </Box>
-
       {/* Pricing Section */}
-      <Box sx={{ py: { xs: 6, md: 10 }, bgcolor: theme.palette.background.paper }}>
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h3" component="h2" fontWeight={700}>
-              Simple, Transparent Pricing
-            </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
-              No hidden fees. No long-term contracts. Scale as your business grows.
-            </Typography>
-          </Box>
+      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: alpha(theme.palette.primary.main, 0.05) }} id="pricing">
+        <Container maxWidth="sm">
+          <MotionBox>
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <Typography variant="h3" component="h2" fontWeight={700}>
+                One Price, All Features
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
+                A simple one-time payment grants you lifetime access to the full source code and all future updates. No hidden fees, no subscriptions.
+              </Typography>
+            </Box>
+          </MotionBox>
           
           <Grid container spacing={4} justifyContent="center">
             {plans.map((plan, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <Card sx={{ 
-                  height: '100%', 
-                  borderRadius: theme.shape.borderRadius,
-                  boxShadow: plan.isPopular 
-                    ? `0 12px 40px ${alpha(theme.palette.secondary.main, 0.2)}` 
-                    : `0 8px 30px ${alpha(theme.palette.common.black, 0.1)}`,
-                  border: plan.isPopular ? `2px solid ${theme.palette.secondary.main}` : 'none',
-                  position: 'relative',
-                  overflow: 'visible'
-                }}>
-                  {plan.isPopular && (
-                    <Box sx={{
-                      position: 'absolute',
-                      top: -12,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      bgcolor: theme.palette.secondary.main,
-                      color: '#fff',
-                      py: 0.5,
-                      px: 2,
-                      borderRadius: 1,
-                      fontWeight: 600,
-                      fontSize: '0.75rem'
-                    }}>
-                      MOST POPULAR
-                    </Box>
-                  )}
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h5" fontWeight={700} gutterBottom>
-                      {plan.name}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 3 }}>
-                      <Typography variant="h3" component="span" fontWeight={800}>
-                        {plan.price}
+              <Grid item xs={12} md={8} key={index}>
+                <motion.div whileHover={{ y: -8 }} style={{ height: '100%' }}>
+                  <Card sx={{ 
+                    height: '100%', 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    borderRadius: theme.shape.borderRadiusLG,
+                    p: 4,
+                    border: `2px solid ${theme.palette.secondary.main}`,
+                    position: 'relative'
+                  }}>
+                    {plan.isPopular && (
+                      <Chip label="Full Access" color="secondary" sx={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', fontWeight: 'bold' }}/>
+                    )}
+                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, p: 0 }}>
+                      <Typography variant="h5" fontWeight={700} gutterBottom>
+                        {plan.name}
                       </Typography>
-                      <Typography variant="body1" color="textSecondary" component="span" ml={0.5}>
-                        {plan.period}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ mb: 3 }}>
-                      {plan.features.map((feature, i) => (
-                        <Box key={i} sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                          <CheckCircle size={18} style={{ marginRight: 10 }} color={theme.palette.secondary.main} />
-                          <Typography variant="body2">{feature}</Typography>
-                        </Box>
-                      ))}
-                    </Box>
-                    <Button 
-                      fullWidth 
-                      variant={plan.isPopular ? "contained" : "outlined"} 
-                      color="secondary"
-                      sx={{ 
-                        py: 1.5,
-                        borderRadius: theme.shape.borderRadius
-                      }}
-                    >
-                      Get Started
-                    </Button>
-                  </CardContent>
-                </Card>
+                      <Box sx={{ display: 'flex', alignItems: 'baseline', my: 2 }}>
+                        <Typography variant="h3" component="span" fontWeight={800}>
+                          {plan.price}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" component="span" ml={1}>
+                          {plan.period}
+                        </Typography>
+                      </Box>
+                      <Stack spacing={1.5} sx={{ my: 3, flexGrow: 1 }}>
+                        {plan.features.map((feature) => (
+                          <Box key={feature} sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CheckCircle size={18} style={{ marginRight: 12 }} color={theme.palette.secondary.main} />
+                            <Typography variant="body2">{feature}</Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                      <Button 
+                        fullWidth 
+                        variant="contained"
+                        color="secondary"
+                        size="large"
+                        sx={{ py: 1.5, borderRadius: 2 }}
+                      >
+                        Purchase Now
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </Grid>
             ))}
           </Grid>
@@ -380,77 +369,48 @@ const LandingPage = () => {
       </Box>
 
       {/* FAQ Section */}
-      <Box sx={{ py: { xs: 6, md: 10 } }}>
+      <Box sx={{ py: { xs: 8, md: 12 } }}>
         <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
-            <Typography variant="h3" component="h2" fontWeight={700}>
-              Frequently Asked Questions
-            </Typography>
-          </Box>
+          <MotionBox>
+            <Box sx={{ textAlign: 'center', mb: 8 }}>
+              <Typography variant="h3" component="h2" fontWeight={700}>
+                Frequently Asked Questions
+              </Typography>
+            </Box>
+          </MotionBox>
           
-          <Grid container spacing={4}>
+          <Box>
             {faqItems.map((faq, index) => (
-              <Grid item xs={12} key={index}>
-                <Card sx={{ 
-                  borderRadius: theme.shape.borderRadius,
-                  boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.05)}`
-                }}>
-                  <CardContent sx={{ p: 3 }}>
-                    <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
-                      {faq.question}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {faq.answer}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+              <Accordion key={index} sx={{ 
+                bgcolor: 'transparent', 
+                boxShadow: 'none',
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                '&:before': { display: 'none' },
+                '&.Mui-expanded': { margin: 0 }
+              }}>
+                <AccordionSummary
+                  expandIcon={<ArrowDown />}
+                  sx={{ py: 2, '& .MuiAccordionSummary-content': { margin: '0 !important' } }}
+                >
+                  <Typography variant="h6" fontWeight={600}>{faq.question}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography color="text.secondary">
+                    {faq.answer}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             ))}
-          </Grid>
+          </Box>
         </Container>
       </Box>
 
-      {/* Final CTA + Footer */}
-      <Box sx={{ 
-        py: { xs: 6, md: 8 }, 
-        bgcolor: theme.palette.background.paper,
-        borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-      }}>
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" component="h2" fontWeight={700} gutterBottom>
-              Start Your Free Trial Today
-            </Typography>
-            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-              Join over 10,000 satisfied businesses already using our platform.
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="secondary"
-              size="large"
-              disableElevation 
-              sx={{ 
-                borderRadius: 2, 
-                px: 4, 
-                py: 1.5, 
-                textTransform: 'none', 
-                fontWeight: 600
-              }}
-            >
-              Get Started Now
-            </Button>
-          </Box>
-          
-          <Box sx={{ 
-            mt: 6,
-            pt: 4,
-            borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-            textAlign: 'center'
-          }}>
-            <Typography variant="body2" color="textSecondary">
-              © {new Date().getFullYear()} Your Company. All rights reserved.
-            </Typography>
-          </Box>
+      {/* Footer */}
+      <Box sx={{ py: 6, bgcolor: 'background.paper' }}>
+        <Container>
+          <Typography variant="body2" color="text.secondary" align="center">
+            © {new Date().getFullYear()} SoftwareTemplate. All rights reserved.
+          </Typography>
         </Container>
       </Box>
     </Box>

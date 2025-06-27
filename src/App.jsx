@@ -11,18 +11,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Pages
 import { LoginPage } from "./frontend/pages/Non-Authenticated/LoginPage";
 import { SignUpPage } from "./frontend/pages/Non-Authenticated/SignUpPage";
-import { AdminDashboard } from "./frontend/pages/Authenticated/AdminDashboard";
-import { UserDashboard } from "./frontend/pages/Authenticated/UserDashboard";
+import { Dashboard } from "./frontend/pages/Authenticated/Dashboard"; // <-- Name updated here
 import { OnboardingWizard } from "./frontend/pages/Authenticated/OnboardingWizard";
 import { UserProfilePage } from "./frontend/pages/Authenticated/UserProfilePage";
 import { PaymentSuccessPage } from "./frontend/pages/Authenticated/PaymentSuccessPage";
 import { ProtectedRoute } from "./frontend/components/ProtectedRoute";
+import LandingPage from "./frontend/pages/Non-Authenticated/LandingPage"; // Import the LandingPage
 
 const DRAWER_WIDTH = 60;
 
 export const App = () => {
   const {
-    isLoggedIn, profile, roleId, listenAuthState, authHydrated,
+    isLoggedIn, profile, listenAuthState, authHydrated,
     isDarkMode, toggleTheme
   } = useUserStore();
   
@@ -36,61 +36,61 @@ export const App = () => {
   }, [listenAuthState]);
   
   const getRedirect = useCallback(() => {
-    if (!isLoggedIn) return "/login";
+    if (!isLoggedIn) return "/"; // Default to landing page if not logged in
     
-    // If the user's profile is missing or not marked as fully onboarded,
-    // they must go through the wizard.
     if (!profile || !profile.fully_onboarded) {
       return "/profile-onboarding";
     }
 
-    // Otherwise, they are fully set up. Send them to their dashboard.
-    return roleId === 1 ? "/admin-dashboard" : "/user-dashboard";
-  }, [isLoggedIn, profile, roleId]);
+    return "/dashboard";
+  }, [isLoggedIn, profile]);
 
-  const showNavUI = isLoggedIn && location.pathname !== "/profile-onboarding";
+  const showSidebar = isLoggedIn && location.pathname !== "/profile-onboarding";
+  const showBottomNav = isLoggedIn && isMobile && location.pathname !== "/profile-onboarding";
+  
   const isLoading = !authHydrated;
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <FullScreenLoader isLoading={isLoading} />
+      
+
+
       <AnimatePresence>
         {!isLoading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} style={{ display: 'flex', flexGrow: 1, minHeight: '100vh' }}>
             <Box sx={{ display: "flex", flexGrow: 1 }}>
-              {showNavUI && !isMobile && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} isMobile={isMobile} />}
-              <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", ml: showNavUI && !isMobile ? `${DRAWER_WIDTH}px` : 0, pb: showNavUI && isMobile ? 10 : 0 }}>
+              {showSidebar && !isMobile && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
+              <Box component="main" sx={{ flexGrow: 1, bgcolor: "background.default", ml: showSidebar && !isMobile ? `${isLoggedIn ? 80 : 0}px` : 0, pb: showBottomNav ? 10 : 0 }}>
                 <Routes>
-                  <Route path="/" element={<Navigate to={getRedirect()} />} />
-                  <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} /> : <LoginPage />} />
-                  <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} /> : <SignUpPage />} />
+                  {/* Public Routes */}
+                  <Route path="/" element={isLoggedIn ? <Navigate to="/dashboard" /> : <LandingPage />} />
+                  <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" /> : <LoginPage />} />
+                  <Route path="/signup" element={isLoggedIn ? <Navigate to="/dashboard" /> : <SignUpPage />} />
                   
-                  {/* --- THE FINAL, ROBUST ONBOARDING ROUTE --- */}
+                  {/* Protected Routes */}
                   <Route
                     path="/profile-onboarding"
                     element={
                       <ProtectedRoute>
-                        {/* If the user is already fully onboarded, redirect them away from the wizard to the dashboard. */}
                         {profile && profile.fully_onboarded ? (
                           <Navigate to="/dashboard" replace />
                         ) : (
-                          // Otherwise, show the wizard and tell it which step to start on.
                           <OnboardingWizard initialStep={profile ? 2 : 1} />
                         )}
                       </ProtectedRoute>
                     }
                   />
-                  
                   <Route path="/user-profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
-                  <Route path="/dashboard" element={<ProtectedRoute><Navigate to={getRedirect()} /></ProtectedRoute>} />
-                  <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={[1]}><AdminDashboard /></ProtectedRoute>} />
-                  <Route path="/user-dashboard" element={<ProtectedRoute allowedRoles={[2]}><UserDashboard /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/payment-success" element={<ProtectedRoute><PaymentSuccessPage /></ProtectedRoute>} />
+                  
+                  {/* Catch-all Redirect */}
                   <Route path="*" element={<Navigate to={getRedirect()} />} />
                 </Routes>
               </Box>
-              {showNavUI && isMobile && <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
+              {showBottomNav && <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
             </Box>
           </motion.div>
         )}

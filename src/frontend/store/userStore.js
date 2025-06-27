@@ -21,7 +21,7 @@ const storage = {
 export const useUserStore = create((set, get) => ({
   // State
   firebaseId: null,
-  roleId: null,
+  // roleId: null, // REMOVED
   userId: null,
   isLoggedIn: false,
   profile: null,
@@ -30,7 +30,6 @@ export const useUserStore = create((set, get) => ({
   authHydrated: false,
   userSubscriptionStatus: null,
   
-  // NEW: Theme state
   isDarkMode: (() => {
     const savedTheme = storage.get("theme");
     if (savedTheme) return savedTheme === "dark";
@@ -43,7 +42,6 @@ export const useUserStore = create((set, get) => ({
   setUserSubscriptionStatus: (status) => set({ userSubscriptionStatus: status }),
   markFreeTierSelected: () => set({ userSubscriptionStatus: 'free' }), 
 
-  // NEW: Theme toggle action
   toggleTheme: () => {
     set(state => {
       const newIsDarkMode = !state.isDarkMode;
@@ -52,11 +50,9 @@ export const useUserStore = create((set, get) => ({
     });
   },
 
-  setUser: (firebaseId, roleId, userId) => {
-    const normalizedRoleId = Number(roleId);
+  setUser: (firebaseId, userId) => { // MODIFIED: roleId removed
     set({
       firebaseId,
-      roleId: normalizedRoleId,
       userId,
       isLoggedIn: true,
     });
@@ -65,7 +61,7 @@ export const useUserStore = create((set, get) => ({
   clearUser: () => {
     set({
       firebaseId: null,
-      roleId: null,
+      // roleId: null, // REMOVED
       userId: null,
       isLoggedIn: false,
       profile: null,
@@ -83,7 +79,7 @@ export const useUserStore = create((set, get) => ({
         let userData;
         try {
           userData = await getData(`/users/${user.uid}`);
-          if (!userData?.user_id || userData?.role_id === undefined) {
+          if (!userData?.user_id) { // MODIFIED: Simplified check
             get().clearUser();
             return;
           }
@@ -92,7 +88,7 @@ export const useUserStore = create((set, get) => ({
           return;
         }
 
-        get().setUser(user.uid, userData.role_id, userData.user_id);
+        get().setUser(user.uid, userData.user_id); // MODIFIED: roleId removed
         
         const profileData = await getData(`/profile`).catch(() => null);
         set({ profile: profileData });

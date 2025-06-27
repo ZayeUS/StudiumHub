@@ -77,6 +77,7 @@ export const NavBar = () => {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 2 }}>
+                {/* --- THIS IS THE NEW LOGIN BUTTON --- */}
                 <Button
                   component={Link}
                   to="/login"
@@ -214,7 +215,8 @@ export const NavBar = () => {
               ))}
 
               <Divider sx={{ my: 2 }} />
-
+              
+              {/* --- THIS IS THE NEW LOGIN BUTTON FOR MOBILE DRAWER --- */}
               <Button
                 component={Link}
                 to="/login"

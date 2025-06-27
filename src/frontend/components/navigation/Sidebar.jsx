@@ -13,11 +13,11 @@ import {
   Divider,
   useTheme,
   alpha,
+  Avatar,
 } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { 
   Home, 
-  User, 
   LogOut, 
   ChevronLeft, 
   ChevronRight, 
@@ -28,7 +28,8 @@ import { useUserStore } from "../../store/userStore";
 import { signOut as firebaseSignOut } from "firebase/auth";
 import { auth } from "../../../firebase";
 
-// Sidebar Item Component - Memoized for performance
+// SidebarItem, ThemeToggle, and UserProfileSection components remain the same...
+
 const SidebarItem = React.memo(({ icon, label, path, isActive, onClick, isExpanded }) => {
   const theme = useTheme();
   return (
@@ -77,7 +78,6 @@ const SidebarItem = React.memo(({ icon, label, path, isActive, onClick, isExpand
   );
 });
 
-// Theme Toggle Component - Memoized for performance
 const ThemeToggle = React.memo(({ isExpanded, isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   return (
@@ -117,19 +117,62 @@ const ThemeToggle = React.memo(({ isExpanded, isDarkMode, toggleTheme }) => {
   );
 });
 
+const UserProfileSection = React.memo(({ isExpanded }) => {
+    const theme = useTheme();
+    const navigate = useNavigate();
+    const { profile } = useUserStore();
+
+    const userName = profile ? `${profile.first_name} ${profile.last_name}` : "User";
+    const userInitial = profile ? profile.first_name.charAt(0) : "U";
+
+    return (
+        <Tooltip title={!isExpanded ? "Profile" : ""} placement="right" arrow>
+            <ListItemButton
+                onClick={() => navigate('/user-profile')}
+                sx={{
+                    borderRadius: theme.shape.borderRadius,
+                    py: 1,
+                    px: isExpanded ? 2 : 'auto',
+                    justifyContent: isExpanded ? "initial" : "center",
+                    mb: 1,
+                }}
+            >
+                <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: isExpanded ? 2 : 0 }}>
+                    <Avatar 
+                        sx={{ width: 32, height: 32, bgcolor: 'secondary.main', fontSize: '0.875rem' }}
+                        src={profile?.avatar_url}
+                    >
+                        {userInitial}
+                    </Avatar>
+                </ListItemIcon>
+                {isExpanded && (
+                    <ListItemText 
+                        primary={userName}
+                        secondary="View Profile"
+                        primaryTypographyProps={{ fontWeight: 600, whiteSpace: 'nowrap' }}
+                        secondaryTypographyProps={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    />
+                )}
+            </ListItemButton>
+        </Tooltip>
+    );
+});
+
+
 // Main Sidebar Component
 export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
   const theme = useTheme();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { isLoggedIn, clearUser } = useUserStore(); 
+  const { clearUser } = useUserStore();
   
-  const [isExpanded, setIsExpanded] = useState(!isMobile);
+  // --- FIX: Sidebar is now collapsed by default on all screen sizes ---
+  const [isExpanded, setIsExpanded] = useState(false);
 
+  // This useEffect will only run if the isMobile prop changes (e.g., window resize)
+  // It ensures the sidebar is closed on mobile, but doesn't force it open on desktop.
   useEffect(() => {
-    if (!isMobile) {
-      setIsExpanded(true);
-    } else {
+    if (isMobile) {
       setIsExpanded(false);
     }
   }, [isMobile]);
@@ -139,7 +182,6 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
       await firebaseSignOut(auth);
       clearUser();
       navigate("/");
-      if (isMobile && onClose) onClose();
     } catch (error) {
       console.error("Error logging out:", error);
     }
@@ -148,30 +190,18 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
   const toggleSidebar = () => setIsExpanded(prev => !prev);
 
   const handleNavigation = (path) => {
-    if (!isLoggedIn) {
-      navigate("/login"); 
-      if (isMobile && onClose) onClose();
-      return;
-    }
-
     navigate(path);
-    if (isMobile && onClose) onClose();
   };
 
-  // Simple menu items - no subscription logic
   const menuItems = [
     { label: "Dashboard", path: "/dashboard", icon: <Home size={20} strokeWidth={2} /> },
-    { label: "Profile", path: "/user-profile", icon: <User size={20} strokeWidth={2} /> },
   ];
 
-  const drawerWidth = isExpanded ? 250 : 80;
+  const drawerWidth = isExpanded ? 240 : 80;
 
   return (
     <Drawer
-      variant={isMobile ? "temporary" : "permanent"}
-      open={isMobile ? (isExpanded && onClose !== undefined) : true}
-      onClose={isMobile ? onClose : undefined}
-      ModalProps={{ keepMounted: true }}
+      variant="permanent"
       sx={{
         width: drawerWidth,
         flexShrink: 0,
@@ -179,13 +209,12 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
           width: drawerWidth,
           boxSizing: 'border-box',
           borderRight: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.drawerPaper || theme.palette.background.paper,
+          backgroundColor: theme.palette.background.paper,
           overflowX: 'hidden',
-          transition: theme.transitions.create(['width', 'padding', 'background-color', 'color'], {
+          transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
-          boxShadow: theme.shadows[2],
         },
       }}
     >
@@ -214,32 +243,19 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
               Cofoundless
             </Typography>
           )}
-          {!isMobile && (
-            <IconButton
-              onClick={toggleSidebar}
-              size="small"
-              sx={{
-                color: theme.palette.text.secondary,
-                '&:hover': { backgroundColor: theme.palette.action.hover },
-                mr: isExpanded ? 0.5 : 0,
-              }}
-            >
-              {isExpanded ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
-            </IconButton>
-          )}
+          <IconButton onClick={toggleSidebar} size="small" sx={{ color: 'text.secondary', '&:hover': { backgroundColor: 'action.hover' }, mr: isExpanded ? 0.5 : 0, }}>
+            {isExpanded ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
+          </IconButton>
         </Box>
 
         {/* Menu Items */}
-        <Box flexGrow={1} sx={{ overflowY: 'auto', overflowX: 'hidden', p: isExpanded ? 1.5 : 1 }}>
+        <Box sx={{ p: isExpanded ? 1.5 : 1 }}>
           <List disablePadding>
             {menuItems.map(item => (
               <SidebarItem
                 key={item.label}
                 {...item}
-                isActive={
-                  (item.path === "/dashboard" && (pathname === "/admin-dashboard" || pathname === "/user-dashboard")) ||
-                  (item.path !== "/dashboard" && pathname.startsWith(item.path))
-                }
+                isActive={pathname.startsWith(item.path)}
                 onClick={() => handleNavigation(item.path)}
                 isExpanded={isExpanded}
               />
@@ -247,43 +263,31 @@ export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
           </List>
         </Box>
 
-        {/* Footer: Theme Toggle & Logout */}
+        {/* Footer Section */}
         <Box sx={{ p: isExpanded ? 2 : 1, mt: 'auto' }}>
-          <ThemeToggle 
-            isExpanded={isExpanded} 
-            isDarkMode={isDarkMode} 
-            toggleTheme={toggleTheme} 
-          />
-          <Divider sx={{ my: isExpanded ? 1.5 : 1 }} />
-          <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
-            <ListItemButton
-              onClick={handleLogout}
-              sx={{
-                borderRadius: theme.shape.borderRadius,
-                py: 1.25,
-                px: isExpanded ? 2.5 : 'auto',
-                justifyContent: isExpanded ? "initial" : "center",
-                color: theme.palette.error.main,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.error.main, 0.08),
-                },
-                '& .MuiListItemIcon-root': {
-                  minWidth: 0,
-                  justifyContent: 'center',
-                  color: 'inherit',
-                  marginRight: isExpanded ? 2 : 0,
-                },
-              }}
-            >
-              <ListItemIcon><LogOut size={20} strokeWidth={2.5} /></ListItemIcon>
-              {isExpanded && (
-                <ListItemText 
-                  primary="Logout" 
-                  primaryTypographyProps={{ fontWeight: 600, variant: 'body2', sx: { whiteSpace: 'nowrap' } }} 
-                />
-              )}
-            </ListItemButton>
-          </Tooltip>
+            <UserProfileSection isExpanded={isExpanded} />
+            <Divider sx={{ my: 1 }} />
+            <ThemeToggle isExpanded={isExpanded} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+
+            <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
+                <ListItemButton
+                onClick={handleLogout}
+                sx={{
+                    borderRadius: theme.shape.borderRadius,
+                    py: 1.25,
+                    px: isExpanded ? 2.5 : 'auto',
+                    justifyContent: isExpanded ? "initial" : "center",
+                    color: theme.palette.error.main,
+                    '&:hover': {
+                    backgroundColor: alpha(theme.palette.error.main, 0.08),
+                    },
+                    '& .MuiListItemIcon-root': { minWidth: 0, justifyContent: 'center', color: 'inherit', marginRight: isExpanded ? 2 : 0, },
+                }}
+                >
+                <ListItemIcon><LogOut size={20} strokeWidth={2.5} /></ListItemIcon>
+                {isExpanded && <ListItemText primary="Logout" primaryTypographyProps={{ fontWeight: 600, variant: 'body2' }} />}
+                </ListItemButton>
+            </Tooltip>
         </Box>
       </Box>
     </Drawer>

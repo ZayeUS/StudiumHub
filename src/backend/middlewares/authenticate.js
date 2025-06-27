@@ -1,6 +1,6 @@
 // src/backend/middleware/authenticate.js
 import admin from "../firebaseAdmin.js";
-import { query } from "../db.js";  // ✅ import only query function
+import { query } from "../db.js";
 
 // Middleware to verify Firebase token and fetch internal user_id
 const authenticate = async (req, res, next) => {
@@ -25,7 +25,7 @@ const authenticate = async (req, res, next) => {
 
     // Lookup user in your database using firebase_uid
     const { rows } = await query(
-      "SELECT user_id, role_id FROM users WHERE firebase_uid = $1 ",
+      "SELECT user_id FROM users WHERE firebase_uid = $1 ", // MODIFIED: Removed role_id from query
       [decodedToken.uid]
     );
 
@@ -38,7 +38,6 @@ const authenticate = async (req, res, next) => {
     // Attach your own user info to the request
     req.user = {
       user_id: user.user_id,  // Your internal UUID
-      role_id: user.role_id,  // Might be useful for role-based protection
       email: decodedToken.email || null,
       firebase_uid: decodedToken.uid,
     };

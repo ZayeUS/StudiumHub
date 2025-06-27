@@ -1,12 +1,11 @@
-// File: src/frontend/styles/theme.js
 import { createTheme, alpha } from '@mui/material/styles';
 
 // Base configuration for "Confident Simplicity"
 const baseConfig = {
-  primary: '#667eea',     // Crisp blue-purple from your logo
-  secondary: '#2A9D8F',   // Muted teal
-  success: '#3FCF8E',
-  error: '#F25F5C',
+  primary: '#E82127',     // Tesla's vibrant red for bold accents
+  secondary: '#3C3C3C',   // Deep metallic gray for sophistication
+  success: '#00A896',     // Crisp teal-green for positive feedback
+  error: '#FF4C4C',       // Bright red for errors, aligned with Tesla's warning tones
   fontFamily: "'Inter', sans-serif",
   borderRadius: 4,
   borderRadiusLG: 8,
@@ -14,17 +13,17 @@ const baseConfig = {
 
 const modeSpecificConfig = (mode) => ({
   ...(mode === 'dark' ? {
-    background: '#1E1E2F',
-    paper: '#28293E',
-    text: '#F3F4F6',
-    textSecondary: '#9CA3AF',
-    divider: 'rgba(255, 255, 255, 0.08)',
+    background: '#1A1A1A',   // Lighter, premium black inspired by Tesla's dark UI
+    paper: '#242424',       // Slightly lighter gray for depth and contrast
+    text: '#F5F5F5',        // Near-white for high readability
+    textSecondary: '#B0B0B0', // Light gray for secondary text, ensuring contrast
+    divider: 'rgba(255, 255, 255, 0.12)', // Subtle divider for clean separation
   } : {
-    background: '#F7FAFC',
-    paper: '#FFFFFF',
-    text: '#1F2937',
-    textSecondary: '#6B7280',
-    divider: 'rgba(0,0,0,0.06)',
+    background: '#F9FAFB',   // Clean, near-white background for a minimalist look
+    paper: '#FFFFFF',       // Pure white for cards and surfaces
+    text: '#121212',        // Deep black for maximum contrast
+    textSecondary: '#5A5A5A', // Softer gray for secondary text
+    divider: 'rgba(0, 0, 0, 0.08)', // Light divider for subtle separation
   }),
   ...baseConfig,
   mode,

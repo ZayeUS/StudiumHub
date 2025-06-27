@@ -104,9 +104,8 @@ export function SignUpPage() {
       const backendUser = await postData("/users", {
         firebase_uid: userCredential.user.uid,
         email: userCredential.user.email,
-        role_id: 2,
       });
-      setUser(userCredential.user.uid, backendUser.user.role_id, backendUser.user.user_id);
+      setUser(userCredential.user.uid, backendUser.user.user_id);
     } catch (err) {
       setError(err.message || "Failed to create account. Please try again.");
     } finally {
