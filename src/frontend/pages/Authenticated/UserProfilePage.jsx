@@ -1,4 +1,3 @@
-// File: src/frontend/pages/Authenticated/UserProfilePage.jsx
 import React, { useState } from "react";
 import {
   Box, Typography, TextField, Button, Alert, Paper,
@@ -11,8 +10,7 @@ import { useUserStore } from "../../store/userStore";
 import { putData, deleteData } from "../../utils/BackendRequestHelper";
 import { updateUserPassword, reauthenticateUser, deleteFirebaseUser } from "../../../firebase";
 
-// ConfirmationDialog, ReauthDialog, and ChangePasswordDialog components remain the same...
-
+// A reusable confirmation dialog for the deletion flow
 const ConfirmationDialog = ({ open, onClose, onConfirm, title, message, loading }) => (
     <Dialog open={open} onClose={onClose}>
         <DialogTitle fontWeight="bold">{title}</DialogTitle>
@@ -26,6 +24,7 @@ const ConfirmationDialog = ({ open, onClose, onConfirm, title, message, loading 
     </Dialog>
 );
 
+// A dialog for re-authentication before a sensitive action
 const ReauthDialog = ({ open, onClose, onConfirm, title, loading }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -62,6 +61,7 @@ const ReauthDialog = ({ open, onClose, onConfirm, title, loading }) => {
     );
 };
 
+// A dedicated component for the Change Password modal for cleanliness
 const ChangePasswordDialog = ({ open, onClose, onSave, loading, apiError, setApiError }) => {
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
     const [showPasswords, setShowPasswords] = useState({ current: false, new: false });
@@ -136,24 +136,66 @@ export function UserProfilePage() {
   };
   
   const handleChangePassword = async (currentPassword, newPassword) => {
-    // ... logic remains the same
+    setLoading(true);
+    setApiError('');
+    try {
+        await reauthenticateUser(currentPassword);
+        await updateUserPassword(newPassword);
+        showNotification("Password updated successfully!");
+        setDialogOpen(prev => ({ ...prev, changePass: false }));
+    } catch (error) {
+        console.error("Change Password Error:", error);
+        if (error.code === 'auth/wrong-password') {
+            setApiError("The current password you entered is incorrect.");
+        } else {
+            setApiError("An error occurred. Please try again.");
+        }
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleDeleteAccount = async (password) => {
-      // ... logic remains the same
+      setLoading(true);
+      try {
+        await reauthenticateUser(password);
+        await deleteData('/users/me');
+        await deleteFirebaseUser();
+        clearUser();
+      } catch (error) {
+        console.error("Account deletion failed:", error);
+        
+        let message = "An unexpected error occurred. Please try again later.";
+        if (error.code === 'auth/wrong-password') {
+            message = "The password you entered is incorrect. Account not deleted.";
+        } else if (error.code === 'auth/too-many-requests') {
+            message = "Access temporarily disabled due to too many failed attempts. Please try again later.";
+        }
+        showNotification(message, "error");
+
+      } finally {
+        setLoading(false);
+        setDialogOpen({ changePass: false, deleteConfirm: false, reauthDelete: false });
+      }
   };
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: 'background.default', py: { xs: 3, sm: 5 } }}>
-      <Snackbar open={notification.open} autoHideDuration={6000} onClose={() => setNotification(prev => ({ ...prev, open: false }))} anchorOrigin={{ vertical: "top", horizontal: "center" }}>
+      {/* --- THIS IS THE FIX --- */}
+      <Snackbar 
+        open={notification.open} 
+        autoHideDuration={6000} 
+        onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
         <Alert severity={notification.severity} onClose={() => setNotification(prev => ({...prev, open: false}))}>{notification.message}</Alert>
       </Snackbar>
+
       <Container maxWidth="md">
         <Typography variant="h4" fontWeight={700} gutterBottom>My Profile</Typography>
 
-        {/* --- FIX: ADDED AVATAR TO PROFILE DETAILS CARD --- */}
         <Paper elevation={4} sx={{ p: 4, mt: 3, borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 3 }}>
                 <Avatar 
                     src={profile?.avatar_url} 
                     sx={{ width: 80, height: 80, bgcolor: 'primary.main' }}

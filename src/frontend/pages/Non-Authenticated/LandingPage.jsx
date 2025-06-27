@@ -237,14 +237,7 @@ const LandingPage = () => {
                 >
                   Purchase Now
                 </Button>
-                <Button 
-                  variant="outlined" 
-                  color="inherit"
-                  size="large"
-                  sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: 600 }}
-                >
-                  View Demo
-                </Button>
+               
               </Stack>
             </Box>
           </motion.div>
