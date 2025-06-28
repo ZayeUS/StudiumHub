@@ -1,295 +1,297 @@
-// File: src/frontend/components/navigation/Sidebar.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from 'react';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Drawer,
-  Box,
-  Typography,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Tooltip,
-  Divider,
-  useTheme,
-  alpha,
-  Avatar,
-} from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  LogOut, 
-  ChevronLeft, 
-  ChevronRight, 
-  Sun, 
+  Home,
+  User,
+  LogOut,
+  Sun,
   Moon,
-} from "lucide-react"; 
-import { useUserStore } from "../../store/userStore";
-import { signOut as firebaseSignOut } from "firebase/auth";
-import { auth } from "../../../firebase";
+  ChevronLeft,
+  ChevronRight,
+  Zap
+} from 'lucide-react';
+import { useUserStore } from '../../store/userStore';
+import { signOut as firebaseSignOut } from 'firebase/auth';
+import { auth } from '../../../firebase';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// SidebarItem, ThemeToggle, and UserProfileSection components remain the same...
+// shadcn components
+import { Button } from '@/components/ui/button';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage
+} from '@/components/ui/avatar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 
-const SidebarItem = React.memo(({ icon, label, path, isActive, onClick, isExpanded }) => {
-  const theme = useTheme();
-  return (
-    <Tooltip title={!isExpanded ? label : ""} placement="right" arrow>
-      <ListItemButton
-        onClick={onClick}
-        selected={isActive}
-        sx={{
-          borderRadius: theme.shape.borderRadius,
-          mb: 1,
-          px: isExpanded ? 2.5 : 'auto',
-          py: 1.25,
-          minHeight: 48,
-          justifyContent: isExpanded ? "initial" : "center",
-          color: isActive ? (theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.primary.main) : theme.palette.text.secondary,
-          backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.15) : "transparent",
-          '&:hover': {
-            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-            color: theme.palette.mode === 'dark' ? '#FFFFFF' : theme.palette.primary.main,
-          },
-          '& .MuiListItemIcon-root': {
-            minWidth: 0,
-            justifyContent: 'center',
-            color: 'inherit',
-            marginRight: isExpanded ? 2 : 0,
-          },
-          transition: theme.transitions.create(['width', 'padding', 'background-color', 'color'], {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-        }}
-      >
-        <ListItemIcon>{icon}</ListItemIcon>
-        {isExpanded && (
-          <ListItemText 
-            primary={label} 
-            primaryTypographyProps={{ 
-              fontWeight: isActive ? 600 : 500, 
-              variant: 'body2',
-              sx: { whiteSpace: 'nowrap', color: 'inherit' }
-            }} 
-          />
-        )}
-      </ListItemButton>
-    </Tooltip>
-  );
-});
+// Animation Variants
+const sidebarVariants = {
+  expanded: { width: '15rem' }, // 240px
+  collapsed: { width: '5rem' }  // 80px
+};
 
-const ThemeToggle = React.memo(({ isExpanded, isDarkMode, toggleTheme }) => {
-  const theme = useTheme();
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: isExpanded ? "space-between" : "center",
-        p: isExpanded ? 1.5 : 0.5,
-        borderRadius: theme.shape.borderRadius,
-        my: 1,
-      }}
-    >
-      {isExpanded && (
-        <Typography variant="caption" fontWeight={500} color="text.secondary">
-          Interface Mode
-        </Typography>
-      )}
-      <Tooltip title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"} placement="top">
-        <IconButton
-          onClick={toggleTheme}
-          size="small"
-          sx={{ 
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: theme.shape.borderRadius,
-            color: theme.palette.text.secondary,
-            '&:hover': {
-              backgroundColor: theme.palette.action.hover,
-              color: theme.palette.primary.main,
-            }
-          }}
-        >
-          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-        </IconButton>
-      </Tooltip>
-    </Box>
-  );
-});
+const navItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 }
+};
 
-const UserProfileSection = React.memo(({ isExpanded }) => {
-    const theme = useTheme();
-    const navigate = useNavigate();
-    const { profile } = useUserStore();
-
-    const userName = profile ? `${profile.first_name} ${profile.last_name}` : "User";
-    const userInitial = profile ? profile.first_name.charAt(0) : "U";
-
-    return (
-        <Tooltip title={!isExpanded ? "Profile" : ""} placement="right" arrow>
-            <ListItemButton
-                onClick={() => navigate('/user-profile')}
-                sx={{
-                    borderRadius: theme.shape.borderRadius,
-                    py: 1,
-                    px: isExpanded ? 2 : 'auto',
-                    justifyContent: isExpanded ? "initial" : "center",
-                    mb: 1,
-                }}
-            >
-                <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', mr: isExpanded ? 2 : 0 }}>
-                    <Avatar 
-                        sx={{ width: 32, height: 32, bgcolor: 'secondary.main', fontSize: '0.875rem' }}
-                        src={profile?.avatar_url}
-                    >
-                        {userInitial}
-                    </Avatar>
-                </ListItemIcon>
-                {isExpanded && (
-                    <ListItemText 
-                        primary={userName}
-                        secondary="View Profile"
-                        primaryTypographyProps={{ fontWeight: 600, whiteSpace: 'nowrap' }}
-                        secondaryTypographyProps={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                    />
-                )}
-            </ListItemButton>
-        </Tooltip>
-    );
-});
-
-
-// Main Sidebar Component
-export const Sidebar = ({ isMobile, onClose, isDarkMode, toggleTheme }) => {
-  const theme = useTheme();
+const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { clearUser } = useUserStore();
-  
-  // --- FIX: Sidebar is now collapsed by default on all screen sizes ---
-  const [isExpanded, setIsExpanded] = useState(false);
+  const isActive = pathname === to;
 
-  // This useEffect will only run if the isMobile prop changes (e.g., window resize)
-  // It ensures the sidebar is closed on mobile, but doesn't force it open on desktop.
-  useEffect(() => {
-    if (isMobile) {
-      setIsExpanded(false);
-    }
-  }, [isMobile]);
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <NavLink to={to} end>
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              className={cn(
+                'flex items-center h-10 rounded-md text-muted-foreground transition-colors w-full',
+                'hover:bg-accent hover:text-accent-foreground',
+                isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                isExpanded ? 'px-3 justify-start' : 'px-3 justify-center'
+              )}
+            >
+              <Icon className="w-5 h-5" />
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.span
+                    variants={navItemVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    transition={{ duration: 0.2, delay: 0.1 }}
+                    className="ml-4 truncate"
+                  >
+                    {label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </NavLink>
+        </TooltipTrigger>
+        {!isExpanded && (
+          <TooltipContent side="right" sideOffset={8}>
+            {label}
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
+export const Sidebar = ({ isDarkMode, toggleTheme }) => {
+  const { profile, clearUser } = useUserStore();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
-    try {
-      await firebaseSignOut(auth);
-      clearUser();
-      navigate("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
+    await firebaseSignOut(auth);
+    clearUser();
+    navigate('/');
   };
 
-  const toggleSidebar = () => setIsExpanded(prev => !prev);
-
-  const handleNavigation = (path) => {
-    navigate(path);
-  };
-
-  const menuItems = [
-    { label: "Dashboard", path: "/dashboard", icon: <Home size={20} strokeWidth={2} /> },
+  const navItems = [
+    { label: 'Dashboard', to: '/dashboard', icon: Home },
+    // Add more items here as your app grows
   ];
 
-  const drawerWidth = isExpanded ? 240 : 80;
+  const bottomItems = [
+    {
+      label: 'Theme',
+      icon: isDarkMode ? Sun : Moon,
+      onClick: toggleTheme,
+      tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'
+    },
+    {
+      label: 'Log out',
+      icon: LogOut,
+      onClick: handleLogout,
+      tooltip: 'Log out',
+      isDestructive: true
+    }
+  ]
 
   return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          boxSizing: 'border-box',
-          borderRight: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
-          overflowX: 'hidden',
-          transition: theme.transitions.create('width', {
-            easing: theme.transitions.easing.sharp,
-            duration: theme.transitions.duration.enteringScreen,
-          }),
-        },
-      }}
+    <motion.aside
+      initial="collapsed"
+      animate={isExpanded ? "expanded" : "collapsed"}
+      variants={sidebarVariants}
+      transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+      className="hidden md:flex fixed top-0 left-0 h-full flex-col bg-card border-r z-50"
     >
-      <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        {/* Header/Logo Section */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: isExpanded ? "space-between" : "center",
-            px: isExpanded ? 2.5 : 0,
-            height: 64,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          }}
-        >
-          {isExpanded && (
-            <Typography 
-              variant="h6" 
-              fontWeight="bold" 
-              color="primary" 
-              noWrap 
-              component="div"
-              onClick={() => navigate('/')}
-              sx={{ cursor: 'pointer', ml: 0.5 }}
+      {/* Sidebar Content */}
+      <div className="flex flex-col justify-between h-full p-2">
+        {/* Top Section */}
+        <div>
+          {/* Header */}
+          <div className="flex items-center h-14 mb-2">
+            <motion.div
+              className="flex items-center w-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
             >
-              Cofoundless
-            </Typography>
-          )}
-          <IconButton onClick={toggleSidebar} size="small" sx={{ color: 'text.secondary', '&:hover': { backgroundColor: 'action.hover' }, mr: isExpanded ? 0.5 : 0, }}>
-            {isExpanded ? <ChevronLeft size={22} /> : <ChevronRight size={22} />}
-          </IconButton>
-        </Box>
+              <Link to="/dashboard" className="flex items-center p-2">
+                <Zap className="w-8 h-8 text-primary" />
+              </Link>
+              <AnimatePresence>
+                 {isExpanded && (
+                    <motion.span 
+                      variants={navItemVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                      className="font-bold text-lg ml-2"
+                    >SaaSify</motion.span>
+                 )}
+              </AnimatePresence>
+            </motion.div>
+          </div>
 
-        {/* Menu Items */}
-        <Box sx={{ p: isExpanded ? 1.5 : 1 }}>
-          <List disablePadding>
-            {menuItems.map(item => (
-              <SidebarItem
-                key={item.label}
-                {...item}
-                isActive={pathname.startsWith(item.path)}
-                onClick={() => handleNavigation(item.path)}
-                isExpanded={isExpanded}
-              />
+          {/* Main Navigation Links */}
+          <motion.nav
+            layout
+            className="flex flex-col space-y-1"
+            initial="hidden"
+            animate="visible"
+            transition={{ staggerChildren: 0.05, delayChildren: 0.3 }}
+          >
+            {navItems.map((item) => (
+              <NavItem key={item.to} {...item} isExpanded={isExpanded} />
             ))}
-          </List>
-        </Box>
+          </motion.nav>
+        </div>
 
-        {/* Footer Section */}
-        <Box sx={{ p: isExpanded ? 2 : 1, mt: 'auto' }}>
-            <UserProfileSection isExpanded={isExpanded} />
-            <Divider sx={{ my: 1 }} />
-            <ThemeToggle isExpanded={isExpanded} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+        {/* Bottom Section */}
+        <div className="flex flex-col space-y-1">
+          <Separator className="my-2" />
+          
+          {/* Profile Link */}
+          <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                       <Link to="/user-profile" className="w-full">
+                          <motion.div
+                            whileTap={{ scale: 0.95 }}
+                            className="flex items-center h-14 rounded-md hover:bg-accent w-full p-2"
+                          >
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={profile?.avatar_url} />
+                              <AvatarFallback>{profile?.first_name?.[0] ?? 'U'}</AvatarFallback>
+                            </Avatar>
+                             <AnimatePresence>
+                                {isExpanded && (
+                                <motion.div 
+                                    variants={navItemVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="hidden"
+                                    transition={{ duration: 0.2, delay: 0.1 }}
+                                    className="ml-3 text-left"
+                                >
+                                    <p className="text-sm font-semibold truncate">{profile?.first_name} {profile?.last_name}</p>
+                                    <p className="text-xs text-muted-foreground">View Profile</p>
+                                </motion.div>
+                                )}
+                            </AnimatePresence>
+                          </motion.div>
+                       </Link>
+                  </TooltipTrigger>
+                   {!isExpanded && (
+                        <TooltipContent side="right" sideOffset={8}>
+                            Profile
+                        </TooltipContent>
+                    )}
+              </Tooltip>
+          </TooltipProvider>
 
-            <Tooltip title={!isExpanded ? "Logout" : ""} placement="right" arrow>
-                <ListItemButton
-                onClick={handleLogout}
-                sx={{
-                    borderRadius: theme.shape.borderRadius,
-                    py: 1.25,
-                    px: isExpanded ? 2.5 : 'auto',
-                    justifyContent: isExpanded ? "initial" : "center",
-                    color: theme.palette.error.main,
-                    '&:hover': {
-                    backgroundColor: alpha(theme.palette.error.main, 0.08),
-                    },
-                    '& .MuiListItemIcon-root': { minWidth: 0, justifyContent: 'center', color: 'inherit', marginRight: isExpanded ? 2 : 0, },
-                }}
-                >
-                <ListItemIcon><LogOut size={20} strokeWidth={2.5} /></ListItemIcon>
-                {isExpanded && <ListItemText primary="Logout" primaryTypographyProps={{ fontWeight: 600, variant: 'body2' }} />}
-                </ListItemButton>
-            </Tooltip>
-        </Box>
-      </Box>
-    </Drawer>
+          {/* Bottom Actions */}
+          {bottomItems.map(item => (
+            <TooltipProvider key={item.label} delayDuration={0}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <motion.div whileTap={{ scale: 0.95 }} className="w-full">
+                            <Button 
+                                variant="ghost" 
+                                className={cn(
+                                    "w-full justify-start h-10",
+                                    item.isDestructive && "text-destructive hover:text-destructive hover:bg-destructive/10",
+                                    !isExpanded && "justify-center w-10 px-0"
+                                )}
+                                onClick={item.onClick}
+                            >
+                                <item.icon className="w-5 h-5" />
+                                <AnimatePresence>
+                                  {isExpanded && (
+                                    <motion.span 
+                                      variants={navItemVariants}
+                                      initial="hidden"
+                                      animate="visible"
+                                      exit="hidden"
+                                      transition={{ duration: 0.2, delay: 0.1 }}
+                                      className="ml-4 truncate"
+                                    >
+                                      {item.label}
+                                    </motion.span>
+                                  )}
+                                </AnimatePresence>
+                            </Button>
+                        </motion.div>
+                    </TooltipTrigger>
+                    {!isExpanded && (
+                        <TooltipContent side="right" sideOffset={8}>
+                            {item.tooltip}
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
+          ))}
+          
+        </div>
+      </div>
+
+       {/* Expander/Collapser Button */}
+      <div className="absolute top-1/2 -right-4">
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+                <motion.div whileTap={{ scale: 0.9 }} >
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8 rounded-full"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={isExpanded ? 'left' : 'right'}
+                            initial={{ rotate: -90, opacity: 0 }}
+                            animate={{ rotate: 0, opacity: 1 }}
+                            exit={{ rotate: 90, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </motion.div>
+                        </AnimatePresence>
+                    </Button>
+                </motion.div>
+            </TooltipTrigger>
+             <TooltipContent side="right" sideOffset={5}>
+                {isExpanded ? 'Collapse' : 'Expand'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+    </motion.aside>
   );
 };

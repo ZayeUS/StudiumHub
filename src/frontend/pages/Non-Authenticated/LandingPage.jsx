@@ -1,157 +1,134 @@
 import React, { useState } from 'react';
-import { 
-  Button, 
-  Container, 
-  Typography, 
-  Box, 
-  useTheme, 
-  Card, 
-  CardContent,
-  Grid,
-  useMediaQuery,
-  alpha,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Chip,
-  Stack,ListItemIcon
-} from '@mui/material';
-import { 
-    ArrowRight, CheckCircle, Zap, Users, Shield, ArrowDown, Menu, Home, LogIn, ChevronRight, X 
-} from 'lucide-react';
-import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  Zap,
+  CheckCircle,
+  Users,
+  Shield,
+  ArrowRight,
+  Menu,
+} from 'lucide-react';
 
-// --- NAVIGATION BAR COMPONENT (NOW INSIDE LANDING PAGE) ---
-const NavBar = () => {
-  const [openDrawer, setOpenDrawer] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+// Shadcn UI Components
+import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
-  const navItems = [
-    { text: "Features", icon: <Zap size={18} />, path: "#features" },
-    { text: "Pricing", icon: <ChevronRight size={18} />, path: "#pricing" },
-  ];
-
-  return (
-    <AppBar
-      position="sticky"
-      elevation={0}
-      sx={{
-        backgroundColor: alpha(theme.palette.background.paper, 0.8),
-        backdropFilter: 'blur(8px)',
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        color: theme.palette.text.primary
-      }}
-    >
-      <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ py: 1 }}>
-          <Typography
-            variant="h5"
-            component={Link}
-            to="/"
-            sx={{
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.primary'
-            }}
-          >
-            <Zap size={24} style={{ marginRight: 8, color: theme.palette.primary.main }} />
-            SoftwareTemplate
-          </Typography>
-
-          <Box sx={{ flexGrow: 1 }} />
-
-          {!isMobile && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {navItems.map((item) => (
-                <Button key={item.text} href={item.path} color="inherit" sx={{ fontWeight: 500, textTransform: 'none' }}>
-                  {item.text}
-                </Button>
-              ))}
-              <Divider orientation="vertical" flexItem sx={{ mx: 1, my: 1.5 }} />
-              <Button component={Link} to="/login" color="inherit" sx={{ fontWeight: 500 }}>
-                Login
-              </Button>
-              <Button component={Link} to="/signup" variant="contained" color="primary" disableElevation sx={{ borderRadius: 2 }}>
-                Get Started
-              </Button>
-            </Box>
-          )}
-
-          {isMobile && (
-            <IconButton edge="end" color="inherit" onClick={() => setOpenDrawer(true)}>
-              <Menu />
-            </IconButton>
-          )}
-
-          <Drawer anchor="right" open={openDrawer} onClose={() => setOpenDrawer(false)}>
-            <Box sx={{ width: 250, p: 2 }}>
-              <List>
-                {navItems.map((item) => (
-                  <ListItem key={item.text} component="a" href={item.path} onClick={() => setOpenDrawer(false)}>
-                      <ListItemIcon>{item.icon}</ListItemIcon>
-                      <ListItemText primary={item.text} />
-                  </ListItem>
-                ))}
-                <Divider sx={{ my: 2 }} />
-                <Button component={Link} to="/login" fullWidth variant="outlined" sx={{ mb: 1 }}>Login</Button>
-                <Button component={Link} to="/signup" fullWidth variant="contained">Get Started</Button>
-              </List>
-            </Box>
-          </Drawer>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-};
-
-
-// A reusable component for section animations
-const MotionBox = ({ children }) => (
+// Reusable component for section animations
+const MotionBox = ({ children, className }) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true, amount: 0.3 }}
     transition={{ duration: 0.6, ease: 'easeOut' }}
+    className={className}
   >
     {children}
   </motion.div>
 );
 
-const LandingPage = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+const NavBar = () => {
+  const [isOpen, setIsOpen] = useState(false);
 
+  const navItems = [
+    { text: "Features", path: "#features" },
+    { text: "Pricing", path: "#pricing" },
+  ];
+
+  return (
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 flex items-center">
+          <Zap className="h-6 w-6 mr-2 text-primary" />
+          <Link to="/" className="mr-6 font-bold text-lg">
+            SoftwareTemplate
+          </Link>
+        </div>
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          {navItems.map((item) => (
+            <a key={item.text} href={item.path} onClick={() => setIsOpen(false)} className="transition-colors hover:text-foreground/80 text-foreground/60">
+              {item.text}
+            </a>
+          ))}
+        </nav>
+        <div className="flex flex-1 items-center justify-end space-x-2">
+          <nav className="hidden md:flex items-center space-x-2">
+            <Button variant="ghost" asChild>
+              <Link to="/login">Login</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/signup">Get Started</Link>
+            </Button>
+          </nav>
+          <div className="md:hidden">
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col space-y-3 mt-6">
+                  {navItems.map((item) => (
+                    <a key={item.text} href={item.path} onClick={() => setIsOpen(false)} className="font-medium text-lg text-foreground/70 hover:text-foreground">
+                      {item.text}
+                    </a>
+                  ))}
+                  <Separator className="my-4" />
+                  <Button variant="outline" asChild onClick={() => setIsOpen(false)}>
+                    <Link to="/login">Login</Link>
+                  </Button>
+                   <Button asChild onClick={() => setIsOpen(false)}>
+                    <Link to="/signup">Get Started</Link>
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
+
+const LandingPage = () => {
   const features = [
     { 
       title: "Launch Faster", 
       description: "Pre-built authentication, billing, and database integration lets you focus on your core features.", 
-      icon: <Zap size={24} color={theme.palette.secondary.main} />
+      icon: <Zap className="h-6 w-6 text-secondary-foreground" />
     },
     { 
       title: "Scale Confidently", 
       description: "Built on a modern, robust stack (React, Node, Postgres) ready to handle growth from day one.", 
-      icon: <Users size={24} color={theme.palette.secondary.main} />
+      icon: <Users className="h-6 w-6 text-secondary-foreground" />
     },
     { 
       title: "Secure by Default", 
       description: "Best practices for security, including soft deletes, audit logs, and secure authentication.", 
-      icon: <Shield size={24} color={theme.palette.secondary.main} />
+      icon: <Shield className="h-6 w-6 text-secondary-foreground" />
     },
   ];
 
-  // --- UPDATED PRICING ---
   const plans = [
     {
       name: "MVP Tier",
@@ -182,231 +159,137 @@ const LandingPage = () => {
   ];
 
   return (
-    <Box sx={{ bgcolor: theme.palette.background.default }}>
+    <div className="bg-background text-foreground">
       <NavBar />
       
       {/* Hero Section */}
-      <Box 
-        sx={{ 
-          py: { xs: 8, md: 12 },
-          overflow: 'hidden',
-          position: 'relative',
-          background: `radial-gradient(ellipse 80% 50% at 50% -20%, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`
-        }}
-      >
-        <Container maxWidth="md">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: 'easeOut' }}>
-            <Box sx={{ textAlign: 'center' }}>
-              <Chip label="Launch your SaaS in days, not months" color="primary" variant="outlined" sx={{ mb: 3 }}/>
-              <Typography 
-                variant="h1" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 800, 
-                  mb: 3,
-                  fontSize: isMobile ? '2.8rem' : '4rem',
-                  letterSpacing: '-1.5px',
-                  lineHeight: 1.1,
-                }}
-              >
+      <section className="py-20 md:py-32 overflow-hidden relative">
+        <div className="container max-w-4xl mx-auto px-4">
+          <MotionBox>
+            <div className="text-center">
+              <Badge variant="outline" className="mb-4">Launch your SaaS in days, not months</Badge>
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter mb-4 leading-tight">
                 The Modern Foundation
                 <br />
-                for Your Next <Box component="span" sx={{
-                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                    backgroundClip: 'text', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                }}>SaaS Product</Box>
-              </Typography>
+                for Your Next <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">SaaS Product</span>
+              </h1>
               
-              <Typography 
-                variant="h6" 
-                color="text.secondary" 
-                sx={{ mb: 4, maxWidth: '650px', mx: 'auto', fontWeight: 400 }}
-              >
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
                 A production-ready boilerplate with authentication, subscriptions and a modern tech stack. Skip the setup and start building your core features today.
-              </Typography>
+              </p>
               
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-                <Button 
-                  href="#pricing"
-                  variant="contained" 
-                  color="primary"
-                  size="large"
-                  disableElevation 
-                  endIcon={<ArrowRight size={18} />} 
-                  sx={{ borderRadius: 2, px: 4, py: 1.5, fontWeight: 600 }}
-                >
-                  Purchase Now
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="font-semibold">
+                    <a href="#pricing">
+                        Purchase Now <ArrowRight className="ml-2 h-5 w-5" />
+                    </a>
                 </Button>
-               
-              </Stack>
-            </Box>
-          </motion.div>
-        </Container>
-      </Box>
+              </div>
+            </div>
+          </MotionBox>
+        </div>
+      </section>
 
       {/* Features Section */}
-      <Box sx={{ py: { xs: 8, md: 12 } }} id="features">
-        <Container maxWidth="lg">
-          <MotionBox>
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
-              <Typography variant="h3" component="h2" fontWeight={700}>
-                Everything You Need to Launch
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
-                This template is packed with the essential features that every SaaS product needs, saving you hundreds of hours of development time.
-              </Typography>
-            </Box>
+      <section id="features" className="py-20 md:py-28 bg-muted/40">
+        <div className="container mx-auto px-4">
+          <MotionBox className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything You Need to Launch</h2>
+            <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+              This template is packed with the essential features that every SaaS product needs, saving you hundreds of hours of development time.
+            </p>
           </MotionBox>
           
-          <Grid container spacing={4}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Grid item xs={12} md={4} key={index}>
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, amount: 0.5 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <Card sx={{ 
-                    height: '100%', 
-                    borderRadius: theme.shape.borderRadiusLG,
-                    border: 'none',
-                    bgcolor: 'background.paper',
-                    p: 2
-                  }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%', bgcolor: alpha(theme.palette.secondary.main, 0.1), mb: 2 }}>
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="h-full bg-background/80">
+                    <CardHeader>
+                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-secondary mb-4">
                         {feature.icon}
-                      </Box>
-                      <Typography variant="h5" component="h3" fontWeight={600} gutterBottom>
-                        {feature.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {feature.description}
-                      </Typography>
+                      </div>
+                      <CardTitle>{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{feature.description}</p>
                     </CardContent>
                   </Card>
-                </motion.div>
-              </Grid>
+              </motion.div>
             ))}
-          </Grid>
-        </Container>
-      </Box>
+          </div>
+        </div>
+      </section>
 
       {/* Pricing Section */}
-      <Box sx={{ py: { xs: 8, md: 12 }, bgcolor: alpha(theme.palette.primary.main, 0.05) }} id="pricing">
-        <Container maxWidth="sm">
-          <MotionBox>
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
-              <Typography variant="h3" component="h2" fontWeight={700}>
-                One Price, All Features
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 2, maxWidth: '700px', mx: 'auto' }}>
-                A simple one-time payment grants you lifetime access to the full source code and all future updates. No hidden fees, no subscriptions.
-              </Typography>
-            </Box>
-          </MotionBox>
-          
-          <Grid container spacing={4} justifyContent="center">
-            {plans.map((plan, index) => (
-              <Grid item xs={12} md={8} key={index}>
-                <motion.div whileHover={{ y: -8 }} style={{ height: '100%' }}>
-                  <Card sx={{ 
-                    height: '100%', 
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: theme.shape.borderRadiusLG,
-                    p: 4,
-                    border: `2px solid ${theme.palette.secondary.main}`,
-                    position: 'relative'
-                  }}>
-                    {plan.isPopular && (
-                      <Chip label="Full Access" color="secondary" sx={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', fontWeight: 'bold' }}/>
-                    )}
-                    <CardContent sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, p: 0 }}>
-                      <Typography variant="h5" fontWeight={700} gutterBottom>
-                        {plan.name}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'baseline', my: 2 }}>
-                        <Typography variant="h3" component="span" fontWeight={800}>
-                          {plan.price}
-                        </Typography>
-                        <Typography variant="body1" color="text.secondary" component="span" ml={1}>
-                          {plan.period}
-                        </Typography>
-                      </Box>
-                      <Stack spacing={1.5} sx={{ my: 3, flexGrow: 1 }}>
-                        {plan.features.map((feature) => (
-                          <Box key={feature} sx={{ display: 'flex', alignItems: 'center' }}>
-                            <CheckCircle size={18} style={{ marginRight: 12 }} color={theme.palette.secondary.main} />
-                            <Typography variant="body2">{feature}</Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                      <Button 
-                        fullWidth 
-                        variant="contained"
-                        color="secondary"
-                        size="large"
-                        sx={{ py: 1.5, borderRadius: 2 }}
-                      >
-                        Purchase Now
-                      </Button>
+      <section id="pricing" className="py-20 md:py-28">
+        <div className="container max-w-md mx-auto px-4">
+            <MotionBox className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">One Price, All Features</h2>
+                <p className="text-muted-foreground mt-4 max-w-2xl mx-auto">
+                    A simple one-time payment grants you lifetime access to the full source code and all future updates. No hidden fees, no subscriptions.
+                </p>
+            </MotionBox>
+
+            <motion.div whileHover={{ y: -5 }} className="w-full">
+                <Card className="relative border-2 border-primary shadow-lg">
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Full Access</Badge>
+                    <CardHeader>
+                        <CardTitle className="text-xl">{plans[0].name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col space-y-6">
+                        <div className="flex items-baseline">
+                            <span className="text-5xl font-extrabold">{plans[0].price}</span>
+                            <span className="ml-1 text-muted-foreground">{plans[0].period}</span>
+                        </div>
+                        <ul className="space-y-3">
+                            {plans[0].features.map((feature, i) => (
+                                <li key={i} className="flex items-center">
+                                    <CheckCircle className="h-5 w-5 text-primary mr-2" />
+                                    <span>{feature}</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <Button size="lg" className="w-full font-bold">
+                            Purchase Now
+                        </Button>
                     </CardContent>
-                  </Card>
-                </motion.div>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+                </Card>
+            </motion.div>
+        </div>
+      </section>
 
       {/* FAQ Section */}
-      <Box sx={{ py: { xs: 8, md: 12 } }}>
-        <Container maxWidth="md">
-          <MotionBox>
-            <Box sx={{ textAlign: 'center', mb: 8 }}>
-              <Typography variant="h3" component="h2" fontWeight={700}>
-                Frequently Asked Questions
-              </Typography>
-            </Box>
-          </MotionBox>
-          
-          <Box>
-            {faqItems.map((faq, index) => (
-              <Accordion key={index} sx={{ 
-                bgcolor: 'transparent', 
-                boxShadow: 'none',
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                '&:before': { display: 'none' },
-                '&.Mui-expanded': { margin: 0 }
-              }}>
-                <AccordionSummary
-                  expandIcon={<ArrowDown />}
-                  sx={{ py: 2, '& .MuiAccordionSummary-content': { margin: '0 !important' } }}
-                >
-                  <Typography variant="h6" fontWeight={600}>{faq.question}</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography color="text.secondary">
-                    {faq.answer}
-                  </Typography>
-                </AccordionDetails>
-              </Accordion>
-            ))}
-          </Box>
-        </Container>
-      </Box>
+      <section className="py-20 md:py-28 bg-muted/40">
+        <div className="container max-w-3xl mx-auto px-4">
+            <MotionBox className="text-center mb-12">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Frequently Asked Questions</h2>
+            </MotionBox>
+            <Accordion type="single" collapsible className="w-full">
+                {faqItems.map((faq, index) => (
+                    <AccordionItem key={index} value={`item-${index}`}>
+                        <AccordionTrigger className="text-lg font-semibold">{faq.question}</AccordionTrigger>
+                        <AccordionContent className="text-base text-muted-foreground">
+                            {faq.answer}
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+        </div>
+      </section>
 
       {/* Footer */}
-      <Box sx={{ py: 6, bgcolor: 'background.paper' }}>
-        <Container>
-          <Typography variant="body2" color="text.secondary" align="center">
+      <footer className="py-8 border-t">
+        <div className="container text-center text-muted-foreground">
             © {new Date().getFullYear()} SoftwareTemplate. All rights reserved.
-          </Typography>
-        </Container>
-      </Box>
-    </Box>
+        </div>
+      </footer>
+    </div>
   );
 };
 

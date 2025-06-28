@@ -1,24 +1,38 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Box, Typography, TextField, Button, Alert, Paper, Container, Avatar, Grid,
-  CircularProgress, IconButton, Tooltip, LinearProgress, Chip, Stack, useTheme, alpha
-} from "@mui/material";
-import {
-  PersonOutline, Logout, ArrowForward, CheckCircle, ArrowBack, 
-  LightMode, DarkMode, Celebration, Image as ImageIcon, Edit
-} from "@mui/icons-material";
-import { Star } from 'lucide-react';
-import { useDropzone } from 'react-dropzone';
 import { useNavigate } from "react-router-dom";
+import { useDropzone } from 'react-dropzone';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  PersonStanding,
+  LogOut,
+  ArrowRight,
+  Check,
+  ArrowLeft,
+  Sun,
+  Moon,
+  Camera,
+  Edit,
+  Loader2,
+  Star,
+  PartyPopper
+} from "lucide-react";
+
 import { postData, uploadFile, getData } from "../../utils/BackendRequestHelper";
 import { useUserStore } from "../../store/userStore";
-import { motion, AnimatePresence } from 'framer-motion';
+
+// Shadcn UI Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"; // <-- CORRECTED IMPORT
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const STRIPE_PAYMENT_LINK = import.meta.env.VITE_STRIPE_PAYMENT_LINK;
 
-// --- FINAL ENHANCED PHOTO UPLOAD ---
 const PhotoUpload = ({ onFileSelect, loading }) => {
-    const theme = useTheme();
     const [preview, setPreview] = useState(null);
 
     const onDrop = useCallback(acceptedFiles => {
@@ -36,65 +50,32 @@ const PhotoUpload = ({ onFileSelect, loading }) => {
     });
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 1 }}>
-            <Box
+        <div className="flex flex-col items-center mb-1">
+            <div
                 {...getRootProps()}
-                sx={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: '50%',
-                    border: `2px dashed ${isDragActive ? theme.palette.primary.main : theme.palette.divider}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    bgcolor: isDragActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&:hover': {
-                        borderColor: theme.palette.primary.main,
-                        '& .upload-overlay': {
-                            opacity: 1,
-                        }
-                    },
-                }}
+                className={`relative w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition-all ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
             >
                 <input {...getInputProps()} disabled={loading} />
-                <Avatar src={preview} sx={{ width: '100%', height: '100%', bgcolor: 'action.hover' }}>
-                    <PersonOutline sx={{ fontSize: 40, color: 'text.secondary' }} />
+                <Avatar className="w-full h-full">
+                    <AvatarImage src={preview} alt="User avatar" />
+                    <AvatarFallback>
+                        <PersonStanding className="w-12 h-12 text-muted-foreground" />
+                    </AvatarFallback>
                 </Avatar>
-
-                <Box
-                    className="upload-overlay"
-                    sx={{
-                        position: 'absolute',
-                        width: '100%',
-                        height: '100%',
-                        bgcolor: alpha(theme.palette.common.black, 0.5),
-                        color: theme.palette.common.white,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                        opacity: isDragActive ? 1 : 0,
-                        transition: 'opacity 0.3s ease',
-                    }}
+                <div
+                    className={`absolute inset-0 w-full h-full bg-black/50 text-white flex flex-col items-center justify-center rounded-full transition-opacity ${preview ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+                        }`}
                 >
-                    {preview ? <Edit /> : <ImageIcon />}
-                    <Typography variant="caption" sx={{ mt: 0.5 }}>
-                        {isDragActive ? 'Drop here' : 'Change Photo'}
-                    </Typography>
-                </Box>
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-                Optional, but recommended.
-            </Typography>
-        </Box>
+                    {preview ? <Edit /> : <Camera />}
+                    <p className="text-xs mt-1">{preview ? 'Change' : 'Upload'}</p>
+                </div>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">Optional, but recommended.</p>
+        </div>
     );
 };
 
-// --- PROFILE STEP ---
 const ProfileStep = ({ onProfileComplete, loading }) => {
   const [form, setForm] = useState({ first_name: "", last_name: "" });
   const [errors, setErrors] = useState({});
@@ -104,28 +85,34 @@ const ProfileStep = ({ onProfileComplete, loading }) => {
   const handleNext = () => { if (validate()) { onProfileComplete(form, avatarFile); } };
 
   return (
-    <Box>
-      <Typography variant="h5" align="center" fontWeight="bold">Tell us about yourself</Typography>
-      <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 4 }}>This will help us personalize your experience.</Typography>
+    <div className="space-y-4">
+        <div className="text-center">
+            <h2 className="text-2xl font-bold">Tell us about yourself</h2>
+            <p className="text-muted-foreground">This will help us personalize your experience.</p>
+        </div>
       <PhotoUpload onFileSelect={setAvatarFile} loading={loading} />
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        <Grid item xs={12} sm={6}>
-            <TextField name="first_name" label="First Name" fullWidth value={form.first_name} onChange={handleChange} error={!!errors.first_name} helperText={errors.first_name} />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-            <TextField name="last_name" label="Last Name" fullWidth value={form.last_name} onChange={handleChange} error={!!errors.last_name} helperText={errors.last_name} />
-        </Grid>
-      </Grid>
-      <Button onClick={handleNext} fullWidth variant="contained" size="large" disabled={loading} endIcon={loading ? <CircularProgress size={20} /> : <ArrowForward />} sx={{ mt: 4, py: 1.5 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+        <div className="space-y-2">
+            <Label htmlFor="first_name">First Name</Label>
+            <Input id="first_name" name="first_name" value={form.first_name} onChange={handleChange} />
+            {errors.first_name && <p className="text-sm text-destructive">{errors.first_name}</p>}
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="last_name">Last Name</Label>
+            <Input id="last_name" name="last_name" value={form.last_name} onChange={handleChange} />
+            {errors.last_name && <p className="text-sm text-destructive">{errors.last_name}</p>}
+        </div>
+      </div>
+      <Button onClick={handleNext} className="w-full" size="lg" disabled={loading}>
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {loading ? "Saving Profile..." : "Next: Choose Plan"}
+          {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
       </Button>
-    </Box>
+    </div>
   );
 };
 
-// --- DATA-DRIVEN SUBSCRIPTION STEP ---
 const SubscriptionStep = ({ onPlanSelected, backStep, loading, setLoading }) => {
-    const theme = useTheme();
     const [plans, setPlans] = useState([]);
     const [fetchError, setFetchError] = useState(null);
     const [isFetching, setIsFetching] = useState(true);
@@ -158,7 +145,6 @@ const SubscriptionStep = ({ onPlanSelected, backStep, loading, setLoading }) => 
         }
     };
     
-    // Placeholder features - you can make these dynamic later
     const getPlanFeatures = (planName) => {
         if (planName.toLowerCase() === 'free') {
             return ["1 Project", "Basic Analytics", "Community Support"];
@@ -171,91 +157,86 @@ const SubscriptionStep = ({ onPlanSelected, backStep, loading, setLoading }) => 
 
     if (isFetching) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 300 }}>
-                <CircularProgress />
-            </Box>
+            <div className="flex justify-center items-center min-h-[300px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
         );
     }
 
     if (fetchError) {
-        return <Alert severity="error">{fetchError}</Alert>;
+        return <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{fetchError}</AlertDescription></Alert>;
     }
 
     return (
-        <Box>
-            <Typography variant="h5" align="center" fontWeight="bold">Choose Your Plan</Typography>
-            <Typography variant="body1" align="center" color="text.secondary" sx={{ mb: 4 }}>You can always upgrade later.</Typography>
-            <Grid container spacing={{xs: 3, md: 4}} justifyContent="center">
+        <div className="space-y-6">
+            <div className="text-center">
+                <h2 className="text-2xl font-bold">Choose Your Plan</h2>
+                <p className="text-muted-foreground">You can always upgrade later.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 justify-center">
                 {plans.map((plan) => (
-                    <Grid item xs={12} md={6} key={plan.plan_id}>
-                        <motion.div whileHover={{ y: -5, boxShadow: `0 10px 20px ${alpha(plan.name === 'Free' ? theme.palette.primary.main : theme.palette.secondary.main, 0.15)}` }}>
-                            <Paper sx={{ 
-                                p: 4, 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                height: '100%', 
-                                borderRadius: 4,
-                                border: plan.name !== 'Free' ? `2px solid ${theme.palette.secondary.main}` : `1px solid ${theme.palette.divider}`,
-                                position: 'relative'
-                            }}>
-                                {plan.name !== 'Free' && (
-                                    <Chip label="Recommended" color="secondary" size="small" sx={{ position: 'absolute', top: -12, left: 24, fontWeight: 'bold' }} />
-                                )}
-                                <Typography variant="h6" fontWeight={700}>{plan.name} Tier</Typography>
-                                <Typography variant="h4" fontWeight={800} sx={{ my: 2 }} color={plan.name === 'Free' ? 'text.primary' : 'secondary.main'}>
-                                    ${parseFloat(plan.price_monthly).toFixed(2)}
-                                    <Typography component="span" variant="body1" color="text.secondary">/mo</Typography>
-                                </Typography>
-                                <Stack spacing={1.5} sx={{ mb: 4, flexGrow: 1 }}>
-                                    {getPlanFeatures(plan.name).map(feature => (
-                                        <Box key={feature} sx={{display: 'flex', alignItems: 'center'}}>
-                                            <CheckCircle fontSize="small" color={plan.name === 'Free' ? 'success' : 'secondary'} sx={{mr:1.5}}/>
-                                            <Typography variant="body2">{feature}</Typography>
-                                        </Box>
-                                    ))}
-                                </Stack>
-                                {plan.name === 'Free' ? (
-                                    <Button onClick={handleFreeTier} variant="outlined" color="primary" fullWidth size="large" disabled={loading}>
-                                        {loading ? <CircularProgress size={24}/> : 'Get Started for Free'}
-                                    </Button>
-                                ) : (
-                                    <Button href={STRIPE_PAYMENT_LINK} variant="contained" color="secondary" fullWidth size="large" disabled={loading}>
-                                        Go to Checkout
-                                    </Button>
-                                )}
-                            </Paper>
-                        </motion.div>
-                    </Grid>
+                    <Card key={plan.plan_id} className={`flex flex-col ${plan.name !== 'Free' ? 'border-2 border-primary' : ''}`}>
+                        <CardHeader>
+                            {plan.name !== 'Free' && <div className="text-sm font-bold text-primary mb-2">Recommended</div>}
+                            <CardTitle>{plan.name} Tier</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                            <div className="text-4xl font-extrabold mb-4">
+                                ${parseFloat(plan.price_monthly).toFixed(2)}
+                                <span className="text-lg font-normal text-muted-foreground">/mo</span>
+                            </div>
+                            <ul className="space-y-2">
+                                {getPlanFeatures(plan.name).map(feature => (
+                                    <li key={feature} className="flex items-center">
+                                        <Check className="h-5 w-5 text-green-500 mr-2" />
+                                        <span>{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </CardContent>
+                        <CardFooter>
+                            {plan.name === 'Free' ? (
+                                <Button onClick={handleFreeTier} variant="outline" className="w-full" disabled={loading}>
+                                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Get Started for Free'}
+                                </Button>
+                            ) : (
+                                <Button asChild className="w-full" disabled={loading}>
+                                    <a href={STRIPE_PAYMENT_LINK}>Go to Checkout</a>
+                                </Button>
+                            )}
+                        </CardFooter>
+                    </Card>
                 ))}
-            </Grid>
-            {backStep && <Button onClick={backStep} startIcon={<ArrowBack />} sx={{ mt: 4 }} disabled={loading}>Back to Profile</Button>}
-        </Box>
+            </div>
+             {backStep && <Button onClick={backStep} variant="outline" disabled={loading} className="mt-4"><ArrowLeft className="mr-2 h-4 w-4" />Back to Profile</Button>}
+        </div>
     );
 };
 
-// --- WELCOME STEP ---
 const WelcomeStep = () => {
     const navigate = useNavigate();
     const { setProfile, setLoading, loading } = useUserStore();
     const handleGoToDashboard = async () => { setLoading(true); try { const response = await postData('/profile/complete-onboarding', {}); setProfile(response.profile); navigate('/dashboard'); } catch (error) { console.error("Failed to finalize onboarding:", error); navigate('/dashboard'); } finally { setLoading(false); } };
     return (
         <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 100, delay: 0.2 }}>
-            <Box textAlign="center" p={4}>
-                <Celebration color="success" sx={{ fontSize: 80, mb: 2 }} />
-                <Typography variant="h4" fontWeight="bold">You're All Set!</Typography>
-                <Typography color="text.secondary" sx={{ my: 2, maxWidth: 350, mx: 'auto' }}>Your profile is complete and your plan is active. Welcome aboard!</Typography>
-                <Button variant="contained" size="large" onClick={handleGoToDashboard} disabled={loading} endIcon={loading ? <CircularProgress size={20}/> : <ArrowForward />}>Go to My Dashboard</Button>
-            </Box>
+            <div className="text-center p-4">
+                <PartyPopper className="mx-auto h-20 w-20 text-yellow-400 mb-2" />
+                <h2 className="text-3xl font-bold">You're All Set!</h2>
+                <p className="text-muted-foreground my-2 max-w-xs mx-auto">Your profile is complete and your plan is active. Welcome aboard!</p>
+                <Button size="lg" onClick={handleGoToDashboard} disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Go to My Dashboard
+                    {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                </Button>
+            </div>
         </motion.div>
     );
 };
 
-// --- MAIN ONBOARDING WIZARD ---
 export const OnboardingWizard = ({ initialStep = 1 }) => {
   const [step, setStep] = useState(initialStep);
   const [apiError, setApiError] = useState("");
   const { setProfile, clearUser, loading, setLoading, isDarkMode, toggleTheme, userSubscriptionStatus } = useUserStore();
-  const theme = useTheme();
 
   useEffect(() => {
     setStep(initialStep);
@@ -305,44 +286,59 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
   const canGoBack = step === 2 && initialStep === 1;
 
   return (
-    <Box sx={{ 
-        minHeight: "100vh", 
-        py: 4, 
-        display: 'flex', 
-        alignItems: 'center',
-        background: `radial-gradient(circle at top left, ${alpha(theme.palette.primary.main, 0.1)}, transparent 40%), radial-gradient(circle at bottom right, ${alpha(theme.palette.secondary.main, 0.1)}, transparent 40%)`,
-        bgcolor: 'background.default'
-    }}>
-        <Container maxWidth="md">
+    <div className="min-h-screen py-4 flex items-center bg-background">
+        <div className="container max-w-2xl mx-auto">
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <Paper elevation={12} sx={{ p: { xs: 3, sm: 5 }, borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
-                    <Box sx={{ position: 'absolute', top: 8, right: 8, display: 'flex' }}>
-                        <Tooltip title={`Switch to ${isDarkMode ? 'Light' : 'Dark'} Mode`}><IconButton onClick={toggleTheme}>{isDarkMode ? <LightMode /> : <DarkMode />}</IconButton></Tooltip>
-                        <Tooltip title="Logout"><IconButton onClick={handleLogout}><Logout /></IconButton></Tooltip>
-                    </Box>
-                    <Box sx={{ mb: 4, width: '100%' }}>
-                        <Typography variant="h4" fontWeight="bold" align="center" sx={{ mb: 2 }}>
-                            {`Step ${step}: ${stepTitles[step - 1]}`}
-                        </Typography>
-                        <LinearProgress variant="determinate" value={(step / 3) * 100} sx={{height: 8, borderRadius: 4}} />
-                    </Box>
-                    {apiError && <Alert severity="error" sx={{ mb: 2 }}>{apiError}</Alert>}
-                    <AnimatePresence mode="wait">
-                        <motion.div 
-                          key={step} 
-                          initial={{ x: 30, opacity: 0 }} 
-                          animate={{ x: 0, opacity: 1 }} 
-                          exit={{ x: -30, opacity: 0 }} 
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                            {step === 1 && <ProfileStep onProfileComplete={handleProfileComplete} loading={loading} />}
-                            {step === 2 && <SubscriptionStep onPlanSelected={handlePlanSelected} backStep={canGoBack ? () => setStep(1) : null} loading={loading} setLoading={setLoading} />}
-                            {step === 3 && <WelcomeStep />}
-                        </motion.div>
-                    </AnimatePresence>
-                </Paper>
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div className="flex-grow">
+                                <CardTitle className="text-center text-2xl mb-2">{`Step ${step}: ${stepTitles[step - 1]}`}</CardTitle>
+                                <Progress value={(step / 3) * 100} className="w-full" />
+                            </div>
+                            <div className="flex gap-1 absolute top-4 right-4">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={toggleTheme}>
+                                                {isDarkMode ? <Sun className="h-5 w-5"/> : <Moon className="h-5 w-5"/>}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Switch to {isDarkMode ? 'Light' : 'Dark'} Mode</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="icon" onClick={handleLogout}><LogOut className="h-5 w-5" /></Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Logout</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        {apiError && <Alert variant="destructive" className="mb-4"><AlertDescription>{apiError}</AlertDescription></Alert>}
+                        <AnimatePresence mode="wait">
+                            <motion.div 
+                              key={step} 
+                              initial={{ x: 30, opacity: 0 }} 
+                              animate={{ x: 0, opacity: 1 }} 
+                              exit={{ x: -30, opacity: 0 }} 
+                              transition={{ duration: 0.3, ease: "easeInOut" }}
+                            >
+                                {step === 1 && <ProfileStep onProfileComplete={handleProfileComplete} loading={loading} />}
+                                {step === 2 && <SubscriptionStep onPlanSelected={handlePlanSelected} backStep={canGoBack ? () => setStep(1) : null} loading={loading} setLoading={setLoading} />}
+                                {step === 3 && <WelcomeStep />}
+                            </motion.div>
+                        </AnimatePresence>
+                    </CardContent>
+                </Card>
             </motion.div>
-        </Container>
-    </Box>
+        </div>
+    </div>
   );
 };

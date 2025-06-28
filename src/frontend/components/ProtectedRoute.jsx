@@ -1,19 +1,17 @@
+// src/frontend/components/ProtectedRoute.jsx
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 
-export const ProtectedRoute = ({ children }) => { // MODIFIED: allowedRoles removed
-  const { isLoggedIn, authHydrated } = useUserStore();
+export const ProtectedRoute = () => {
+  const { authHydrated, isLoggedIn } = useUserStore();
 
-  if (!authHydrated) {
-    return null; 
-  }
+  // still waiting on Firebase/profile
+  if (!authHydrated) return null;
 
-  if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  // Role-based access check has been removed.
+  // not signed in → login
+  if (!isLoggedIn) return <Navigate to="/login" replace />;
 
-  return children;
+  // otherwise render whatever child route matched
+  return <Outlet />;
 };
