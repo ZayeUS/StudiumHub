@@ -177,4 +177,4 @@ The project is organized with a clear separation between the frontend and backen
     ├── styles/         # Global theme and styling configuration
     ├── utils/          # Frontend utility functions (e.g., API helpers)
     └── App.jsx         # Main application component with routing
-```
+```# SoftwareTemplateB2b
