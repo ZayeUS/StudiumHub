@@ -1,6 +1,7 @@
 // src/frontend/pages/Authenticated/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useUserStore } from '../../store/userStore';
+import { postData } from '../../utils/BackendRequestHelper';
 import {
   motion,
   AnimatePresence,
@@ -15,7 +16,9 @@ import {
   Users,
   DollarSign,
   Briefcase,
-  Loader2
+  Loader2,
+  Mail,
+  UserPlus
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +30,107 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+
+const InviteMemberDialog = () => {
+    const { toast } = useToast();
+    const { organization } = useUserStore();
+    const [open, setOpen] = useState(false);
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState('member');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleInvite = async () => {
+        setError('');
+        if (!email || !role) {
+            setError('Please provide a valid email and select a role.');
+            return;
+        }
+        setLoading(true);
+        try {
+            await postData('/invitations', {
+                email,
+                role,
+                organization_id: organization.organization_id
+            });
+            toast({
+                title: 'Invitation Sent!',
+                description: `${email} has been invited to join your organization.`,
+            });
+            setOpen(false); // Close dialog on success
+            setEmail('');
+            setRole('member');
+        } catch (err) {
+            setError(err.message || 'Failed to send invitation.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <UserPlus className="mr-2 h-4 w-4" /> Invite Team Member
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Invite a New Team Member</DialogTitle>
+                    <DialogDescription>
+                        Enter the email and assign a role. They will receive an email to sign up and join your organization.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">Email</Label>
+                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="role" className="text-right">Role</Label>
+                        <Select value={role} onValueChange={setRole}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="member">Member</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleInvite} disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Send Invitation
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 // Mock Data
 const MOCK_PROJECTS = [
@@ -125,7 +227,7 @@ const EmptyState = () => (
 );
 
 export function Dashboard() {
-  const { profile } = useUserStore();
+  const { profile, role, organization } = useUserStore();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -158,15 +260,20 @@ export function Dashboard() {
       <motion.header variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {profile?.first_name || 'User'}!
+            Welcome to {organization?.name || 'your Dashboard'}!
           </h1>
           <p className="text-muted-foreground">
-            Here’s what’s happening with your projects today.
+            Here’s what’s happening with your projects today, {profile?.first_name}.
           </p>
         </div>
-        <Button className="hidden md:flex">
-          <Plus className="mr-2 h-4 w-4" /> New Project
-        </Button>
+        <div className="flex items-center gap-2">
+            {role === 'admin' && (
+                <InviteMemberDialog />
+            )}
+            <Button className="hidden md:flex">
+                <Plus className="mr-2 h-4 w-4" /> New Project
+            </Button>
+        </div>
       </motion.header>
 
       {/* Stats */}

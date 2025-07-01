@@ -1,21 +1,66 @@
 import express from 'express';
 import { query } from '../db.js';
 import authenticate from '../middlewares/authenticate.js';
-import {logAudit} from '../utils/auditLogger.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const router = express.Router();
 
+// GET the current user's role
+router.get('/me/role', authenticate, async (req, res) => {
+    const { user_id } = req.user;
+    try {
+        const result = await query(
+            'SELECT role FROM organization_members WHERE user_id = $1',
+            [user_id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Role not found for user.' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching user role:', error);
+        res.status(500).json({ message: 'Error fetching user role' });
+    }
+});
+
+
 // CREATE a new user
 router.post("/", async (req, res) => {
-  const { firebase_uid, email } = req.body; // MODIFIED: role_id removed
+  const { firebase_uid, email, invitation_token } = req.body;
   if (!firebase_uid || !email) {
     return res.status(400).json({ message: "Firebase UID and email are required." });
   }
-  const queryText = "INSERT INTO users (firebase_uid, email) VALUES ($1, $2) RETURNING *"; // MODIFIED: role_id removed
-  const values = [firebase_uid, email];
+
+  let organization_id = null;
+  let role = 'member'; // Default role
+
+  if (invitation_token) {
+    const invitationResult = await query(
+      'SELECT * FROM invitations WHERE token = $1 AND expires_at > NOW()',
+      [invitation_token]
+    );
+
+    if (invitationResult.rows.length > 0) {
+      organization_id = invitationResult.rows[0].organization_id;
+      role = invitationResult.rows[0].role; // Get role from the invitation
+    }
+  }
+
+  const queryText = "INSERT INTO users (firebase_uid, email, organization_id) VALUES ($1, $2, $3) RETURNING *";
+  const values = [firebase_uid, email, organization_id];
+
   try {
     const result = await query(queryText, values);
     const user = result.rows[0];
+
+    if (organization_id) {
+        await query(
+            'INSERT INTO organization_members (organization_id, user_id, role) VALUES ($1, $2, $3)',
+            [organization_id, user.user_id, role] // Use the specified role
+          );
+        await query('DELETE FROM invitations WHERE token = $1', [invitation_token]);
+    }
+
     await logAudit({
       actorUserId: user.user_id,
       targetUserId: user.user_id,
@@ -46,9 +91,9 @@ router.get('/', authenticate, async (req, res) => {
 router.delete('/me', authenticate, async (req, res) => {
   const { user_id, email } = req.user;
   const queryText = `
-    UPDATE users 
-    SET deleted_at = CURRENT_TIMESTAMP 
-    WHERE user_id = $1 AND deleted_at IS NULL 
+    UPDATE users
+    SET deleted_at = CURRENT_TIMESTAMP
+    WHERE user_id = $1 AND deleted_at IS NULL
     RETURNING user_id`;
   try {
     const result = await query(queryText, [user_id]);
