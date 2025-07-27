@@ -2,7 +2,7 @@
 import admin from "../firebaseAdmin.js";
 import { query } from "../db.js";
 
-// Middleware to verify Firebase token and fetch internal user_id + organization_id
+// Middleware to verify Firebase token and fetch or create user + org info
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -16,28 +16,38 @@ const authenticate = async (req, res, next) => {
     }
 
     const decodedToken = await admin.auth().verifyIdToken(token);
-    if (!decodedToken || !decodedToken.uid) {
+    if (!decodedToken?.uid) {
       return res.status(401).json({ message: "Invalid token payload" });
     }
 
-    // Lookup user in your database using firebase_uid, include organization_id
-    const { rows } = await query(
+    // 1) Try to look up the user in our DB
+    let { rows } = await query(
       `SELECT user_id, organization_id
          FROM users
         WHERE firebase_uid = $1`,
       [decodedToken.uid]
     );
 
+    // 2) If they don’t exist yet, insert them
+    let user_id, organization_id;
     if (rows.length === 0) {
-      return res.status(401).json({ message: "User not found in system" });
+      const insertRes = await query(
+        `INSERT INTO users (firebase_uid, email)
+           VALUES ($1, $2)
+         RETURNING user_id, organization_id`,
+        [decodedToken.uid, decodedToken.email || null]
+      );
+      user_id = insertRes.rows[0].user_id;
+      organization_id = insertRes.rows[0].organization_id;
+    } else {
+      user_id = rows[0].user_id;
+      organization_id = rows[0].organization_id;
     }
 
-    const { user_id, organization_id } = rows[0];
-
-    // Attach your own user info to the request
+    // 3) Attach to req.user for downstream routes/logger
     req.user = {
-      user_id,            // Internal UUID
-      organization_id,    // Org they belong to
+      user_id,
+      organization_id,
       email: decodedToken.email || null,
       firebase_uid: decodedToken.uid,
     };
