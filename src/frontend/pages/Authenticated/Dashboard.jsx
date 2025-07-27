@@ -266,14 +266,7 @@ export function Dashboard() {
             Here’s what’s happening with your projects today, {profile?.first_name}.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-            {role === 'admin' && (
-                <InviteMemberDialog />
-            )}
-            <Button className="hidden md:flex">
-                <Plus className="mr-2 h-4 w-4" /> New Project
-            </Button>
-        </div>
+       
       </motion.header>
 
       {/* Stats */}

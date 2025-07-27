@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+// src/frontend/components/navigation/Sidebar.jsx
+import React from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
-  User,
   LogOut,
   Sun,
   Moon,
   ChevronLeft,
   ChevronRight,
-  Zap
+  Settings,
+  Building
 } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import { signOut as firebaseSignOut } from 'firebase/auth';
@@ -18,29 +19,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // shadcn components
 import { Button } from '@/components/ui/button';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from '@/components/ui/avatar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 
 // Animation Variants
 const sidebarVariants = {
-  expanded: { width: '15rem' }, // 240px
-  collapsed: { width: '5rem' }  // 80px
+  expanded: { width: '16rem' }, // 256px
+  collapsed: { width: '4.5rem' }  // 72px
 };
 
 const navItemVariants = {
-  hidden: { opacity: 0, x: -20 },
+  hidden: { opacity: 0, x: -15 },
   visible: { opacity: 1, x: 0 }
 };
+
+const getInitials = (name = '') => {
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+}
 
 const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
   const { pathname } = useLocation();
@@ -50,13 +46,13 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
     <TooltipProvider delayDuration={0}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <NavLink to={to} end>
+          <NavLink to={to} end className="w-full">
             <motion.div
               whileTap={{ scale: 0.95 }}
               className={cn(
-                'flex items-center h-10 rounded-md text-muted-foreground transition-colors w-full',
+                'flex items-center h-10 rounded-lg text-muted-foreground transition-colors w-full font-medium',
                 'hover:bg-accent hover:text-accent-foreground',
-                isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground',
+                isActive && 'bg-primary/10 text-primary',
                 isExpanded ? 'px-3 justify-start' : 'px-3 justify-center'
               )}
             >
@@ -69,7 +65,7 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
                     animate="visible"
                     exit="hidden"
                     transition={{ duration: 0.2, delay: 0.1 }}
-                    className="ml-4 truncate"
+                    className="ml-3 truncate"
                   >
                     {label}
                   </motion.span>
@@ -89,8 +85,7 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
 };
 
 export const Sidebar = ({ isDarkMode, toggleTheme }) => {
-  const { profile, clearUser } = useUserStore();
-  const [isExpanded, setIsExpanded] = useState(false);
+  const { profile, organization, clearUser, role, isSidebarExpanded, setIsSidebarExpanded } = useUserStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -101,38 +96,25 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
 
   const navItems = [
     { label: 'Dashboard', to: '/dashboard', icon: Home },
-    // Add more items here as your app grows
   ];
 
-  const bottomItems = [
-    {
-      label: 'Theme',
-      icon: isDarkMode ? Sun : Moon,
-      onClick: toggleTheme,
-      tooltip: isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'
-    },
-    {
-      label: 'Log out',
-      icon: LogOut,
-      onClick: handleLogout,
-      tooltip: 'Log out',
-      isDestructive: true
-    }
-  ]
+  if (role === 'admin') {
+      navItems.push({ label: 'Organization', to: '/organization', icon: Building });
+  }
+  
 
   return (
     <motion.aside
-      initial="collapsed"
-      animate={isExpanded ? "expanded" : "collapsed"}
+      initial={false}
+      animate={isSidebarExpanded ? "expanded" : "collapsed"}
       variants={sidebarVariants}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-      className="hidden md:flex fixed top-0 left-0 h-full flex-col bg-card border-r z-50"
+      className="hidden md:flex fixed top-0 left-0 h-full flex-col bg-card border-r z-50 p-2"
     >
       {/* Sidebar Content */}
-      <div className="flex flex-col justify-between h-full p-2">
+      <div className="flex flex-col justify-between h-full">
         {/* Top Section */}
         <div>
-          {/* Header */}
           <div className="flex items-center h-14 mb-2">
             <motion.div
               className="flex items-center w-full"
@@ -140,24 +122,28 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <Link to="/dashboard" className="flex items-center p-2">
-                <Zap className="w-8 h-8 text-primary" />
-              </Link>
+              <div className="flex items-center p-2">
+                <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
+                        {getInitials(organization?.name)}
+                    </AvatarFallback>
+                </Avatar>
+              </div>
               <AnimatePresence>
-                 {isExpanded && (
-                    <motion.span 
+                 {isSidebarExpanded && (
+                    <motion.div
                       variants={navItemVariants}
                       initial="hidden"
                       animate="visible"
                       exit="hidden"
-                      className="font-bold text-lg ml-2"
-                    >SaaSify</motion.span>
+                      className="font-bold text-md ml-2 truncate"
+                    >
+                      {organization?.name || 'Your Workspace'}
+                    </motion.div>
                  )}
               </AnimatePresence>
             </motion.div>
           </div>
-
-          {/* Main Navigation Links */}
           <motion.nav
             layout
             className="flex flex-col space-y-1"
@@ -166,37 +152,34 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
             transition={{ staggerChildren: 0.05, delayChildren: 0.3 }}
           >
             {navItems.map((item) => (
-              <NavItem key={item.to} {...item} isExpanded={isExpanded} />
+              <NavItem key={item.to} {...item} isExpanded={isSidebarExpanded} />
             ))}
           </motion.nav>
         </div>
-
         {/* Bottom Section */}
         <div className="flex flex-col space-y-1">
           <Separator className="my-2" />
-          
-          {/* Profile Link */}
           <TooltipProvider delayDuration={0}>
               <Tooltip>
                   <TooltipTrigger asChild>
                        <Link to="/user-profile" className="w-full">
                           <motion.div
                             whileTap={{ scale: 0.95 }}
-                            className="flex items-center h-14 rounded-md hover:bg-accent w-full p-2"
+                            className="flex items-center h-14 rounded-lg hover:bg-accent w-full p-2"
                           >
-                            <Avatar className="w-10 h-10">
+                            <Avatar className="w-9 h-9">
                               <AvatarImage src={profile?.avatar_url} />
                               <AvatarFallback>{profile?.first_name?.[0] ?? 'U'}</AvatarFallback>
                             </Avatar>
                              <AnimatePresence>
-                                {isExpanded && (
+                                {isSidebarExpanded && (
                                 <motion.div 
                                     variants={navItemVariants}
                                     initial="hidden"
                                     animate="visible"
                                     exit="hidden"
                                     transition={{ duration: 0.2, delay: 0.1 }}
-                                    className="ml-3 text-left"
+                                    className="ml-3 text-left overflow-hidden"
                                 >
                                     <p className="text-sm font-semibold truncate">{profile?.first_name} {profile?.last_name}</p>
                                     <p className="text-xs text-muted-foreground">View Profile</p>
@@ -206,59 +189,44 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
                           </motion.div>
                        </Link>
                   </TooltipTrigger>
-                   {!isExpanded && (
+                   {!isSidebarExpanded && (
                         <TooltipContent side="right" sideOffset={8}>
                             Profile
                         </TooltipContent>
                     )}
               </Tooltip>
           </TooltipProvider>
-
-          {/* Bottom Actions */}
-          {bottomItems.map(item => (
-            <TooltipProvider key={item.label} delayDuration={0}>
+          <div className="flex items-center justify-between">
+            <TooltipProvider delayDuration={0}>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <motion.div whileTap={{ scale: 0.95 }} className="w-full">
-                            <Button 
-                                variant="ghost" 
-                                className={cn(
-                                    "w-full justify-start h-10",
-                                    item.isDestructive && "text-destructive hover:text-destructive hover:bg-destructive/10",
-                                    !isExpanded && "justify-center w-10 px-0"
-                                )}
-                                onClick={item.onClick}
-                            >
-                                <item.icon className="w-5 h-5" />
-                                <AnimatePresence>
-                                  {isExpanded && (
-                                    <motion.span 
-                                      variants={navItemVariants}
-                                      initial="hidden"
-                                      animate="visible"
-                                      exit="hidden"
-                                      transition={{ duration: 0.2, delay: 0.1 }}
-                                      className="ml-4 truncate"
-                                    >
-                                      {item.label}
-                                    </motion.span>
-                                  )}
-                                </AnimatePresence>
-                            </Button>
-                        </motion.div>
+                        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={toggleTheme}>
+                            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                        </Button>
                     </TooltipTrigger>
-                    {!isExpanded && (
-                        <TooltipContent side="right" sideOffset={8}>
-                            {item.tooltip}
-                        </TooltipContent>
-                    )}
+                    <TooltipContent side="top" sideOffset={8}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
-          ))}
-          
+            <AnimatePresence>
+                {isSidebarExpanded && (
+                    <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}}>
+                        <Separator orientation="vertical" className="h-6" />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" onClick={handleLogout}>
+                            <LogOut className="h-5 w-5" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={8}>Logout</TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </div>
-
        {/* Expander/Collapser Button */}
       <div className="absolute top-1/2 -right-4">
         <TooltipProvider delayDuration={0}>
@@ -269,29 +237,28 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
                         variant="secondary"
                         size="icon"
                         className="h-8 w-8 rounded-full"
-                        onClick={() => setIsExpanded(!isExpanded)}
+                        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
                     >
                         <AnimatePresence mode="wait">
                           <motion.div
-                            key={isExpanded ? 'left' : 'right'}
+                            key={isSidebarExpanded ? 'left' : 'right'}
                             initial={{ rotate: -90, opacity: 0 }}
                             animate={{ rotate: 0, opacity: 1 }}
                             exit={{ rotate: 90, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {isSidebarExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </motion.div>
                         </AnimatePresence>
                     </Button>
                 </motion.div>
             </TooltipTrigger>
              <TooltipContent side="right" sideOffset={5}>
-                {isExpanded ? 'Collapse' : 'Expand'}
+                {isSidebarExpanded ? 'Collapse' : 'Expand'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
-
     </motion.aside>
   );
 };

@@ -6,6 +6,7 @@ import { Sidebar } from './frontend/components/navigation/Sidebar';
 import { MobileBottomNavigation } from './frontend/components/navigation/MobileBottomNavigation';
 import { FullScreenLoader } from './frontend/components/FullScreenLoader';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 // Pages
 import LandingPage from './frontend/pages/Non-Authenticated/LandingPage';
@@ -14,8 +15,10 @@ import { SignUpPage } from './frontend/pages/Non-Authenticated/SignUpPage';
 import { OnboardingWizard } from './frontend/pages/Authenticated/OnboardingWizard';
 import { Dashboard } from './frontend/pages/Authenticated/Dashboard';
 import { UserProfilePage } from './frontend/pages/Authenticated/UserProfilePage';
+import { OrganizationPage } from './frontend/pages/Authenticated/OrganizationPage';
 
 import { ProtectedRoute } from './frontend/components/ProtectedRoute';
+import { AdminProtectedRoute } from './frontend/components/AdminProtectedRoute';
 
 export const App = () => {
   const {
@@ -25,6 +28,7 @@ export const App = () => {
     authHydrated,
     isDarkMode,
     toggleTheme,
+    isSidebarExpanded, // <-- Get the sidebar state
   } = useUserStore();
   const location = useLocation();
 
@@ -62,7 +66,6 @@ export const App = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
-            {/* SIDEBAR */}
             {showSidebar && (
               <Sidebar
                 isDarkMode={isDarkMode}
@@ -70,89 +73,38 @@ export const App = () => {
               />
             )}
 
-            {/* MAIN */}
             <main
-              className={[
-                'flex-grow transition-all',
-                showSidebar ? 'md:pl-60' : '',
-                showBottomNav ? 'pb-16' : '',
-              ].join(' ')}
+              className={cn(
+                'flex-grow transition-all duration-300 ease-in-out',
+                // Conditionally apply padding based on sidebar state
+                showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
+                showBottomNav ? 'pb-16 md:pb-0' : '', // Ensure bottom nav padding is removed on desktop
+              )}
             >
               <Routes>
                 {/* PUBLIC */}
-                <Route
-                  path="/"
-                  element={
-                    isLoggedIn ? (
-                      <Navigate to={getRedirect()} replace />
-                    ) : (
-                      <LandingPage />
-                    )
-                  }
-                />
-                <Route
-                  path="/login"
-                  element={
-                    isLoggedIn ? (
-                      <Navigate to={getRedirect()} replace />
-                    ) : (
-                      <LoginPage />
-                    )
-                  }
-                />
-                <Route
-                  path="/signup"
-                  element={
-                    isLoggedIn ? (
-                      <Navigate to={getRedirect()} replace />
-                    ) : (
-                      <SignUpPage />
-                    )
-                  }
-                />
+                <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
+                <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
+                <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
 
                 {/* PROTECTED */}
                 <Route element={<ProtectedRoute />}>
-                  <Route
-                    path="/profile-onboarding"
-                    element={
-                      profile?.fully_onboarded ? (
-                        <Navigate to="/dashboard" replace />
-                      ) : (
-                        <OnboardingWizard
-                          initialStep={profile ? 2 : 1}
-                        />
-                      )
-                    }
-                  />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      !profile?.fully_onboarded ? (
-                        <Navigate
-                          to="/profile-onboarding"
-                          replace
-                        />
-                      ) : (
-                        <Dashboard />
-                      )
-                    }
-                  />
-                  <Route
-                    path="/user-profile"
-                    element={<UserProfilePage />}
-                  />
+                  <Route path="/profile-onboarding" element={profile?.fully_onboarded ? <Navigate to="/dashboard" replace /> : <OnboardingWizard initialStep={profile ? 2 : 1} />} />
+                  <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
+                  <Route path="/user-profile" element={<UserProfilePage />} />
+                  
+                  {/* ADMIN PROTECTED */}
+                  <Route element={<AdminProtectedRoute />}>
+                    <Route path="/organization" element={<OrganizationPage />} />
+                  </Route>
+
                 </Route>
 
                 {/* FALLBACK */}
-                <Route
-                  path="*"
-                  element={<Navigate to={getRedirect()} replace />}
-                />
+                <Route path="*" element={<Navigate to={getRedirect()} replace />} />
               </Routes>
             </main>
 
-            {/* MOBILE NAV */}
             {showBottomNav && (
               <nav className="fixed bottom-0 left-0 right-0 md:hidden">
                 <MobileBottomNavigation

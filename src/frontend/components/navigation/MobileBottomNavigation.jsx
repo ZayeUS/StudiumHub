@@ -1,6 +1,7 @@
+// src/frontend/components/navigation/MobileBottomNavigation.jsx
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Menu, LogOut, UserCircle, Moon, Sun } from "lucide-react";
+import { Home, Menu, LogOut, UserCircle, Moon, Sun, Building } from "lucide-react";
 import { useUserStore } from "../../store/userStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../firebase";
@@ -14,14 +15,13 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 
 export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [isDrawerOpen, setDrawerOpen] = useState(false);
-  const { clearUser } = useUserStore();
+  const { clearUser, role } = useUserStore(); // Get role from the store
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -47,6 +47,11 @@ export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
   const drawerMenuItems = [
     { label: "Profile", icon: <UserCircle className="h-5 w-5" />, path: "/user-profile" }
   ];
+
+  // Conditionally add the Organization link for admins
+  if (role === 'admin') {
+      drawerMenuItems.push({ label: "Organization", icon: <Building className="h-5 w-5" />, path: "/organization" });
+  }
 
   return (
     <>
@@ -91,7 +96,7 @@ export const MobileBottomNavigation = ({ isDarkMode, toggleTheme }) => {
               ))}
               <Separator className="my-2" />
                <Button variant="ghost" className="justify-start" onClick={toggleTheme}>
-                  {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                  {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                   <span className="ml-2">{isDarkMode ? "Dark Mode" : "Light Mode"}</span>
                </Button>
               <Separator className="my-2" />

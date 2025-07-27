@@ -1,3 +1,4 @@
+// src/frontend/pages/Non-Authenticated/LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,8 +24,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
-
-// Animation Variants (remain the same)
+// Animation Variants
 const pageVariants = {
   initial: { opacity: 0 },
   in: { opacity: 1, transition: { duration: 0.5, delay: 0.2 } },
@@ -42,7 +42,7 @@ const shakeVariants = {
   shake: { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.5 } },
 };
 
-// --- NEW: Reset Password Modal Component ---
+// Reset Password Modal Component
 const ResetPasswordModal = ({ open, onOpenChange }) => {
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -137,6 +137,11 @@ export function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (authHydrated && isLoggedIn) {
+      navigate(profile?.fully_onboarded ? "/dashboard" : "/profile-onboarding");
+    }
+  }, [isLoggedIn, profile, navigate, authHydrated]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -173,7 +178,6 @@ export function LoginPage() {
       exit="out"
       variants={pageVariants}
     >
-        {/* --- NEW: Back to Home Link --- */}
         <TooltipProvider>
             <Tooltip>
                 <TooltipTrigger asChild>
@@ -223,7 +227,7 @@ export function LoginPage() {
       </div>
 
       <motion.div
-        className="w-full max-w-sm"
+        className="w-full max-w-md"
         variants={formContainerVariants}
         initial="hidden"
         animate="visible"
@@ -235,7 +239,7 @@ export function LoginPage() {
                         <Key className="h-6 w-6 text-primary" />
                     </div>
                     <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back</CardTitle>
-                    <CardDescription>Sign in to your AI workspace.</CardDescription>
+                    <CardDescription>Sign in to your organization's workspace.</CardDescription>
                 </motion.div>
             </CardHeader>
             <CardContent>
@@ -252,38 +256,40 @@ export function LoginPage() {
                 </AnimatePresence>
 
                 <form onSubmit={handleLogin} className="space-y-4">
-                <motion.div variants={formItemVariants}>
-                    <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} />
-                    </div>
-                </motion.div>
-                <motion.div variants={formItemVariants}>
-                    <div className="space-y-2 relative">
-                        <div className="flex justify-between items-center">
-                            <Label htmlFor="password">Password</Label>
-                            {/* --- UPDATED: Forgot Password Button --- */}
-                            <Button type="button" variant="link" className="text-xs h-auto p-0 text-muted-foreground" onClick={() => setResetModalOpen(true)}>Forgot?</Button>
+                    <motion.div variants={formItemVariants}>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email Address</Label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} className="pl-9" />
+                            </div>
                         </div>
-                    <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} />
-                    <button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                    </div>
-                </motion.div>
-                
-                <motion.div variants={formItemVariants}>
-                    <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Sign In'}
-                    </Button>
-                </motion.div>
+                    </motion.div>
+                    <motion.div variants={formItemVariants}>
+                        <div className="space-y-2 relative">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="password">Password</Label>
+                                <Button type="button" variant="link" className="text-xs h-auto p-0 text-muted-foreground" onClick={() => setResetModalOpen(true)}>Forgot?</Button>
+                            </div>
+                            <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} />
+                            <button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                    </motion.div>
+                    
+                    <motion.div variants={formItemVariants}>
+                        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Sign In'}
+                        </Button>
+                    </motion.div>
 
-                <motion.p variants={formItemVariants} className="text-center text-sm text-muted-foreground pt-4">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="font-semibold text-primary hover:underline underline-offset-4">
-                            Sign Up
-                        </Link>
-                    </motion.p>
+                    <motion.p variants={formItemVariants} className="text-center text-sm text-muted-foreground pt-4">
+                            Don't have an account?{' '}
+                            <Link to="/signup" className="font-semibold text-primary hover:underline underline-offset-4">
+                                Sign Up
+                            </Link>
+                        </motion.p>
                 </form>
             </CardContent>
         </Card>
