@@ -28,9 +28,16 @@ export const App = () => {
     authHydrated,
     isDarkMode,
     toggleTheme,
-    isSidebarExpanded, // <-- Get the sidebar state
+    isSidebarExpanded,
   } = useUserStore();
   const location = useLocation();
+
+  // This effect manages the theme class on the root HTML element
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(isDarkMode ? "dark" : "light");
+  }, [isDarkMode]);
 
   useEffect(() => {
     const unsubscribe = listenAuthState();
@@ -39,16 +46,13 @@ export const App = () => {
 
   const getRedirect = useCallback(() => {
     if (!isLoggedIn) return '/';
-    if (!profile || typeof profile.fully_onboarded !== 'boolean')
-      return '/profile-onboarding';
+    if (!profile || typeof profile.fully_onboarded !== 'boolean') return '/profile-onboarding';
     if (!profile.fully_onboarded) return '/profile-onboarding';
     return '/dashboard';
   }, [isLoggedIn, profile]);
 
-  const showSidebar =
-    isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
-  const showBottomNav =
-    isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
+  const showSidebar = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
+  const showBottomNav = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
   const isLoading = !authHydrated;
 
   if (isLoading) {
@@ -56,8 +60,7 @@ export const App = () => {
   }
 
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-      <div className="min-h-screen bg-background text-foreground dark:bg-background dark:text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
         <AnimatePresence mode="wait">
           <motion.div
             className="flex flex-col md:flex-row flex-grow min-h-screen"
@@ -66,56 +69,36 @@ export const App = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4 }}
           >
-            {showSidebar && (
-              <Sidebar
-                isDarkMode={isDarkMode}
-                toggleTheme={toggleTheme}
-              />
-            )}
-
+            {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
             <main
               className={cn(
                 'flex-grow transition-all duration-300 ease-in-out',
-                // Conditionally apply padding based on sidebar state
                 showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
-                showBottomNav ? 'pb-16 md:pb-0' : '', // Ensure bottom nav padding is removed on desktop
+                showBottomNav ? 'pb-16 md:pb-0' : '',
               )}
             >
               <Routes>
-                {/* PUBLIC */}
                 <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
                 <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
                 <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
-
-                {/* PROTECTED */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/profile-onboarding" element={profile?.fully_onboarded ? <Navigate to="/dashboard" replace /> : <OnboardingWizard initialStep={profile ? 2 : 1} />} />
                   <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
                   <Route path="/user-profile" element={<UserProfilePage />} />
-                  
-                  {/* ADMIN PROTECTED */}
                   <Route element={<AdminProtectedRoute />}>
                     <Route path="/organization" element={<OrganizationPage />} />
                   </Route>
-
                 </Route>
-
-                {/* FALLBACK */}
                 <Route path="*" element={<Navigate to={getRedirect()} replace />} />
               </Routes>
             </main>
-
             {showBottomNav && (
               <nav className="fixed bottom-0 left-0 right-0 md:hidden">
-                <MobileBottomNavigation
-                  isDarkMode={isDarkMode}
-                  toggleTheme={toggleTheme}
-                />
+                <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
               </nav>
             )}
           </motion.div>
         </AnimatePresence>
-      </div>
     </div>
   );
 };
