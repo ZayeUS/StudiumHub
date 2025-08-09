@@ -74,7 +74,7 @@ export function SignUpPage() {
   const invitation_token = searchParams.get("token");
 
   const navigate = useNavigate();
-  const { isLoggedIn, profile, authHydrated, isDarkMode, toggleTheme } = useUserStore();
+  const { isLoggedIn, profile, authHydrated, isDarkMode, toggleTheme, setUser } = useUserStore();
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -129,6 +129,17 @@ export function SignUpPage() {
     return Object.keys(errors).length === 0;
   };
 
+  const hydrateUserImmediately = async (firebaseUser) => {
+    try {
+      const userData = await getData(`/users/${firebaseUser.uid}`);
+      if (userData?.user_id) {
+        setUser(firebaseUser.uid, userData.user_id);
+      }
+    } catch (err) {
+      console.error("Failed to hydrate user after signup:", err);
+    }
+  };
+
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
@@ -147,7 +158,8 @@ export function SignUpPage() {
         invitation_token: invitation_token,
         organization_name: organizationName,
       });
-      // onAuthStateChanged handles navigation/user state
+      await hydrateUserImmediately(userCredential.user);
+      navigate("/profile-onboarding");
     } catch (err) {
       setError(err?.message || "Failed to create account. Please try again.");
     } finally {
@@ -170,6 +182,8 @@ export function SignUpPage() {
         invitation_token: invitation_token,
         organization_name: organizationName,
       });
+      await hydrateUserImmediately(userCredential.user);
+      navigate("/profile-onboarding");
     } catch (err) {
       if (err?.code === "auth/account-exists-with-different-credential") {
         setError("An account with this email already exists. Please log in with your original method.");

@@ -2,8 +2,8 @@
 import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
-import { signOut } from 'firebase/auth';
 
+// Safe localStorage with error handling
 const storage = {
   get: (key) => {
     try { return localStorage.getItem(key); }
@@ -20,6 +20,7 @@ const storage = {
 };
 
 export const useUserStore = create((set, get) => ({
+  // State
   firebaseId: null,
   userId: null,
   role: null,
@@ -29,10 +30,8 @@ export const useUserStore = create((set, get) => ({
   loading: false,
   authLoading: false,
   authHydrated: false,
-  profileHydrated: false, // ✅ NEW - profile state fully resolved
   userSubscriptionStatus: null,
-  isSidebarExpanded: false,
-  sessionReady: false,
+  isSidebarExpanded: false, // <-- Add this state
 
   isDarkMode: (() => {
     const savedTheme = storage.get("theme");
@@ -40,18 +39,12 @@ export const useUserStore = create((set, get) => ({
     return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
   })(),
 
+  // Actions
   setLoading: (loading) => set({ loading }),
-
-  // ✅ Merge profile data so removing avatar doesn't remove name fields
-  setProfile: (profile) => 
-    set((state) => ({
-      profile: { ...state.profile, ...profile },
-      profileHydrated: true
-    })),
-
+  setProfile: (profile) => set({ profile }),
   setOrganization: (organization) => set({ organization }),
   setUserSubscriptionStatus: (status) => set({ userSubscriptionStatus: status }),
-  setIsSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
+  setIsSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }), // <-- Add this action
 
   toggleTheme: () => {
     set(state => {
@@ -81,32 +74,21 @@ export const useUserStore = create((set, get) => ({
       loading: false,
       authLoading: false,
       authHydrated: true,
-      profileHydrated: false,
-      sessionReady: true
     });
   },
 
   listenAuthState: () => {
-    set({
-      authHydrated: false,
-      profileHydrated: false,
-      authLoading: true,
-      sessionReady: false,
-      isLoggedIn: false
-    });
-
+    set({ authHydrated: false, authLoading: true, isLoggedIn: false });
     return auth.onAuthStateChanged(async (user) => {
       if (user) {
         let userData;
         try {
           userData = await getData(`/users/${user.uid}`);
           if (!userData?.user_id) {
-            await signOut(auth);
             get().clearUser();
             return;
           }
-        } catch {
-          await signOut(auth);
+        } catch (error) {
           get().clearUser();
           return;
         }
@@ -114,40 +96,29 @@ export const useUserStore = create((set, get) => ({
         get().setUser(user.uid, userData.user_id);
 
         try {
-          const [profileData, paymentData, orgData, roleData] = await Promise.all([
-            getData(`/profile`).catch(() => null),
-            getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
-            getData(`/organizations/my-organization`).catch(() => null),
-            getData('/users/me/role').catch(() => null)
-          ]);
+            const [profileData, paymentData, orgData, roleData] = await Promise.all([
+                getData(`/profile`).catch(() => null),
+                getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
+                getData(`/organizations/my-organization`).catch(() => null),
+                getData('/users/me/role').catch(() => null)
+            ]);
 
-          set({
-            profile: profileData || {},
-            profileHydrated: true,
-            userSubscriptionStatus: paymentData?.status || 'unsubscribed',
-            organization: orgData,
-            role: roleData?.role
-          });
+            set({
+                profile: profileData,
+                userSubscriptionStatus: paymentData?.status || 'unsubscribed',
+                organization: orgData,
+                role: roleData?.role
+            });
 
-        } catch {
-          set({
-            profile: {},
-            profileHydrated: true,
-            userSubscriptionStatus: 'unsubscribed',
-            organization: null,
-            role: null
-          });
+        } catch (error) {
+            console.error("Failed to fetch user session details:", error);
+            set({ profile: null, userSubscriptionStatus: 'unsubscribed', organization: null, role: null });
         }
+
       } else {
         get().clearUser();
-        return;
       }
-
-      set({
-        authLoading: false,
-        authHydrated: true,
-        sessionReady: true
-      });
+      set({ authLoading: false, authHydrated: true });
     });
   }
 }));

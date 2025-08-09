@@ -109,14 +109,15 @@ router.post("/", async (req, res) => {
             throw new Error("Organization name or an invitation token is required.");
         }
       
-        // Log the audit event
+        // Log the audit event using the same transaction client
         await logAudit({
             actorUserId: user.user_id,
             targetUserId: user.user_id,
             action: "create_user",
             tableName: "users",
             recordId: user.user_id,
-            metadata: { email: user.email, role, organization_id }
+            metadata: { email: user.email, role, organization_id },
+            client: client // Pass the transaction client here
         });
 
         await client.query('COMMIT');

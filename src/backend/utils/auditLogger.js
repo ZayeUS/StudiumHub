@@ -1,15 +1,20 @@
+// src/backend/utils/auditLogger.js
 import { query } from '../db.js';
 
 export async function logAudit({
-  actorUserId = null,         // Who performed the action (nullable for system actions)
-  targetUserId = null,        // Who/what was acted upon
-  action,                     // e.g. "update_profile"
+  actorUserId = null,
+  targetUserId = null,
+  action,
   tableName = null,
   recordId = null,
-  metadata = null
+  metadata = null,
+  client = null // Accept an optional client
 }) {
+  // Use the provided client if it exists, otherwise use the default pool query
+  const db = client || { query };
+
   try {
-    await query(`
+    await db.query(`
       INSERT INTO audit_logs (
         actor_user_id,
         target_user_id,
