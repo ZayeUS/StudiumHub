@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, Sun, Moon, Sparkles } from 'lucide-react';
 
-import { postData, uploadFile } from '../../utils/BackendRequestHelper';
+import { postData, putData } from '../../utils/BackendRequestHelper';
 import { useUserStore } from '../../store/userStore';
+import { useDirectUpload } from '../../../hooks/useDirectUpload';
 import { auth } from '../../../firebase';
 
 // Onboarding Step Components
@@ -24,7 +25,8 @@ import { Separator } from '@/components/ui/separator';
 export const OnboardingWizard = ({ initialStep = 1 }) => {
   const [step, setStep] = useState(initialStep);
   const [apiError, setApiError] = useState('');
-  const { setProfile, clearUser, loading, setLoading, isDarkMode, toggleTheme, userSubscriptionStatus } = useUserStore();
+  const { profile, setProfile, clearUser, loading, setLoading, isDarkMode, toggleTheme, userSubscriptionStatus } = useUserStore();
+  const { upload: uploadAvatar } = useDirectUpload();
   const navigate = useNavigate();
 
   useEffect(() => setStep(initialStep), [initialStep]);
@@ -41,17 +43,23 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
     setLoading(true);
     setApiError('');
     try {
+      // Step 1: Create/update the profile
       const profileRes = await postData('/profile', formData);
       let finalProfile = profileRes?.profile;
 
-      if (finalProfile && avatarFile) {
-        const fd = new FormData();
-        fd.append('avatar', avatarFile);
-        const avatarResponse = await uploadFile('/profile/avatar', fd);
-        finalProfile = avatarResponse?.profile || finalProfile;
-      }
-      
       if (!finalProfile) throw new Error('Profile creation failed.');
+
+      // Step 2: Upload avatar if provided
+      if (avatarFile) {
+        try {
+          const updatedProfile = await uploadAvatar(avatarFile);
+          finalProfile = updatedProfile;
+        } catch (avatarError) {
+          console.error('Avatar upload failed:', avatarError);
+          // Continue with profile creation even if avatar upload fails
+          setApiError('Profile created, but avatar upload failed. You can upload it later.');
+        }
+      }
       
       setProfile(finalProfile);
       setStep(2);
@@ -78,7 +86,13 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
     {
       title: 'Create your profile',
       description: 'A few details to personalize your workspace.',
-      component: <ProfileStep onProfileComplete={handleProfileComplete} loading={loading} />,
+      component: (
+        <ProfileStep 
+          onProfileComplete={handleProfileComplete} 
+          loading={loading} 
+          profile={profile}
+        />
+      ),
     },
     {
       title: 'Select your plan',
@@ -94,7 +108,7 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
     },
     {
       title: 'Welcome aboard',
-      description: 'You’re ready to get to work.',
+      description: 'You`re ready to get to work.',
       component: <WelcomeStep />,
     },
   ];

@@ -1,5 +1,5 @@
 // src/frontend/components/onboarding/ProfileStep.jsx
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
 import { PersonStanding, Camera, Edit, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { getData } from '../../utils/BackendRequestHelper';
 
 const panelSwap = {
   hidden: { opacity: 0, x: 40 },
@@ -16,61 +17,118 @@ const panelSwap = {
   exit: { opacity: 0, x: -40, transition: { duration: 0.18 } },
 };
 
-const PhotoUpload = ({ onFileSelect, loading }) => {
-    const [preview, setPreview] = useState(null);
-  
-    const onDrop = useCallback(
-      (acceptedFiles) => {
-        const file = acceptedFiles?.[0];
-        if (!file) return;
-        setPreview(URL.createObjectURL(file));
-        onFileSelect(file);
-      },
-      [onFileSelect]
-    );
-  
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-      onDrop,
-      accept: { 'image/jpeg': [], 'image/png': [] },
-      multiple: false,
-      disabled: loading,
-    });
-  
-    return (
-        <div className="flex flex-col items-center">
-            <div
-                {...getRootProps()}
-                className={cn(
-                'relative w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition-all',
-                isDragActive ? 'border-primary bg-primary/10' : 'border-border',
-                loading && 'opacity-70 pointer-events-none'
-                )}
-                aria-label="Upload profile photo"
-            >
-                <input {...getInputProps()} />
-                <Avatar className="w-full h-full">
-                <AvatarImage src={preview || undefined} alt="User avatar" />
-                <AvatarFallback>
-                    <PersonStanding className="w-12 h-12 text-muted-foreground" />
-                </AvatarFallback>
-                </Avatar>
-                <div
-                className={cn(
-                    'absolute inset-0 w-full h-full bg-black/50 text-white flex flex-col items-center justify-center rounded-full transition-opacity',
-                    preview ? 'opacity-0 hover:opacity-100' : 'opacity-100'
-                )}
-                >
-                {preview ? <Edit /> : <Camera />}
-                <p className="text-xs mt-1">{preview ? 'Change' : 'Upload'}</p>
-                </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">Optional, but recommended.</p>
+// Avatar component that fetches presigned URL for existing avatars
+const AvatarWithPresignedUrl = ({ profile, preview, className = "w-full h-full" }) => {
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchAvatarUrl = async () => {
+      // If we have a preview (new upload), use that instead
+      if (preview) {
+        setAvatarUrl(preview);
+        return;
+      }
+
+      // If no avatar_url in profile, clear the avatar
+      if (!profile?.avatar_url) {
+        setAvatarUrl(null);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const { url } = await getData('/profile/avatar/view');
+        setAvatarUrl(url);
+      } catch (error) {
+        console.error('Failed to get avatar URL:', error);
+        setAvatarUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvatarUrl();
+  }, [profile?.avatar_url, preview]);
+
+  return (
+    <Avatar className={className}>
+      <AvatarImage src={avatarUrl || undefined} alt="User avatar" />
+      <AvatarFallback>
+        {loading ? (
+          <Loader2 className="w-12 h-12 animate-spin text-muted-foreground" />
+        ) : (
+          <PersonStanding className="w-12 h-12 text-muted-foreground" />
+        )}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
+
+const PhotoUpload = ({ onFileSelect, loading, profile }) => {
+  const [preview, setPreview] = useState(null);
+
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      const file = acceptedFiles?.[0];
+      if (!file) return;
+      const previewUrl = URL.createObjectURL(file);
+      setPreview(previewUrl);
+      onFileSelect(file);
+      
+      // Clean up the preview URL when component unmounts
+      return () => URL.revokeObjectURL(previewUrl);
+    },
+    [onFileSelect]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/jpeg': [], 'image/png': [], 'image/webp': [] },
+    multiple: false,
+    disabled: loading,
+  });
+
+  // Check if we have any avatar (preview from new upload or existing from profile)
+  const hasAvatar = preview || profile?.avatar_url;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div
+        {...getRootProps()}
+        className={cn(
+          'relative w-32 h-32 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer transition-all',
+          isDragActive ? 'border-primary bg-primary/10' : 'border-border',
+          loading && 'opacity-70 pointer-events-none'
+        )}
+        aria-label="Upload profile photo"
+      >
+        <input {...getInputProps()} />
+        <AvatarWithPresignedUrl 
+          profile={profile} 
+          preview={preview}
+          className="w-full h-full" 
+        />
+        <div
+          className={cn(
+            'absolute inset-0 w-full h-full bg-black/50 text-white flex flex-col items-center justify-center rounded-full transition-opacity',
+            hasAvatar ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+          )}
+        >
+          {hasAvatar ? <Edit /> : <Camera />}
+          <p className="text-xs mt-1">{hasAvatar ? 'Change' : 'Upload'}</p>
+        </div>
       </div>
-    );
-  };
+      <p className="text-sm text-muted-foreground mt-2">Optional, but recommended.</p>
+    </div>
+  );
+};
   
-export const ProfileStep = ({ onProfileComplete, loading }) => {
-  const [form, setForm] = useState({ first_name: '', last_name: '' });
+export const ProfileStep = ({ onProfileComplete, loading, profile }) => {
+  const [form, setForm] = useState({ 
+    first_name: profile?.first_name || '', 
+    last_name: profile?.last_name || '' 
+  });
   const [errors, setErrors] = useState({});
   const [avatarFile, setAvatarFile] = useState(null);
 
@@ -95,7 +153,11 @@ export const ProfileStep = ({ onProfileComplete, loading }) => {
   return (
     <motion.div variants={panelSwap} initial="hidden" animate="visible" exit="exit" className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center gap-6">
-        <PhotoUpload onFileSelect={setAvatarFile} loading={loading} />
+        <PhotoUpload 
+          onFileSelect={setAvatarFile} 
+          loading={loading} 
+          profile={profile}
+        />
         <div className="grid grid-cols-1 gap-4 w-full">
           <div className="space-y-2">
             <Label htmlFor="first_name">First name</Label>
