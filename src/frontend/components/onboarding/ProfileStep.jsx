@@ -69,7 +69,6 @@ const PhotoUpload = ({ onFileSelect, loading }) => {
     );
   };
   
-
 export const ProfileStep = ({ onProfileComplete, loading }) => {
   const [form, setForm] = useState({ first_name: '', last_name: '' });
   const [errors, setErrors] = useState({});

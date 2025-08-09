@@ -1,21 +1,12 @@
 // src/frontend/pages/Authenticated/UserProfilePage.jsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useUserStore } from "../../store/userStore";
-import { putData, deleteData, uploadFile } from "../../utils/BackendRequestHelper"; // 👈 added uploadFile
+import { putData, deleteData, getData } from "../../utils/BackendRequestHelper";
 import { updateUserPassword, reauthenticateUser, deleteFirebaseUser } from "../../../firebase";
 import {
-  Edit,
-  Save,
-  X,
-  User,
-  Lock,
-  Trash2,
-  Eye,
-  EyeOff,
-  Loader2,
-  Camera,
-  ImageOff,
+  Edit, Save, X, User, Lock, Trash2, Eye, EyeOff, Loader2, Camera, ImageOff,
 } from "lucide-react";
+import { useDirectUpload } from "../../../hooks/useDirectUpload";
 
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
@@ -26,27 +17,53 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-  DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+/* ---------------- Avatar with Presigned URLs ---------------- */
+const AvatarWithPresignedUrl = ({ profile, className = "h-16 w-16", onAvatarChange }) => {
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchAvatarUrl = async () => {
+      if (!profile?.avatar_url) {
+        setAvatarUrl(null);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const { url } = await getData('/profile/avatar/view');
+        setAvatarUrl(url);
+      } catch (error) {
+        console.error('Failed to get avatar URL:', error);
+        setAvatarUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvatarUrl();
+  }, [profile?.avatar_url, onAvatarChange]); // Re-fetch when avatar changes
+
+  return (
+    <Avatar className={className}>
+      <AvatarImage src={avatarUrl || undefined} />
+      <AvatarFallback>
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          profile ? profile.first_name?.[0] ?? <User /> : <User />
+        )}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
 
 /* ---------------- Re-authentication Dialog for sensitive actions ---------------- */
 const ReauthDialog = ({ open, onOpenChange, onConfirm, title, loading }) => {
@@ -55,7 +72,7 @@ const ReauthDialog = ({ open, onOpenChange, onConfirm, title, loading }) => {
 
   const handleConfirm = () => {
     onConfirm(password);
-    setPassword(""); // Clear password after submission
+    setPassword("");
   };
 
   return (
@@ -191,6 +208,7 @@ const ChangePasswordDialog = ({ onSave, loading, apiError, setApiError }) => {
 export function UserProfilePage() {
   const { profile, setProfile, clearUser, setLoading, loading } = useUserStore();
   const { toast } = useToast();
+  const { upload: uploadAvatar, loading: avatarUploading } = useDirectUpload();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -200,72 +218,49 @@ export function UserProfilePage() {
 
   const [dialogOpen, setDialogOpen] = useState({ changePass: false, reauthDelete: false });
   const [apiError, setApiError] = useState("");
-
-  // Avatar edit state
-  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarChangeKey, setAvatarChangeKey] = useState(0); // Force avatar re-fetch
   const fileInputRef = useRef(null);
 
   const openFilePicker = () => fileInputRef.current?.click();
 
   const handleAvatarFile = async (file) => {
+    console.log("File selected:", file?.name, file?.type, file?.size);
     if (!file) return;
-    if (!/image\/(png|jpe?g|webp)/i.test(file.type)) {
-      toast({ variant: "destructive", title: "Invalid file", description: "Please upload a PNG or JPG image." });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ variant: "destructive", title: "File too large", description: "Max file size is 5MB." });
-      return;
-    }
-
-    setAvatarUploading(true);
+  
     try {
-      const fd = new FormData();
-      fd.append("avatar", file);
-      // Backend should return { profile: { ... , avatar_url } }
-      const res = await uploadFile("/profile/avatar", fd);
-      if (res?.profile) {
-        setProfile(res.profile);
-        toast({ title: "Profile photo updated" });
-      } else {
-        // Fallback to re-fetch or optimistic update
-        setProfile((prev) => ({ ...prev, avatar_url: (res?.avatar_url || prev?.avatar_url) }));
-        toast({ title: "Profile photo updated" });
-      }
+      console.log("Starting upload...");
+      const updatedProfile = await uploadAvatar(file);
+      console.log("Upload successful:", updatedProfile);
+      setProfile(updatedProfile);
+      setAvatarChangeKey(prev => prev + 1); // Force avatar component to re-fetch
+      toast({ title: "Profile photo updated" });
     } catch (err) {
+      console.error("Upload error:", err);
       toast({
-        variant: "destructive",
+        variant: "destructive", 
         title: "Upload failed",
         description: err?.message || "Could not upload your image. Please try again.",
       });
-    } finally {
-      setAvatarUploading(false);
     }
   };
 
   const handleRemoveAvatar = async () => {
+    setLoading(true);
     try {
-      await deleteData('/profile/avatar');
-  
-      // Re-fetch profile so we get names + updated avatar
-      const updatedProfile = await getData('/profile');
-  
-      useUserStore.getState().setProfile(updatedProfile);
-  
-      toast({
-        title: 'Avatar removed',
-        description: 'Your profile picture has been removed successfully.'
-      });
+      const updatedProfile = await deleteData('/profile/avatar');
+      setProfile(updatedProfile.profile);
+      setAvatarChangeKey(prev => prev + 1); // Force avatar component to re-fetch
+      toast({ title: 'Avatar removed' });
     } catch (error) {
-      console.error('Error removing avatar:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove avatar. Please try again.',
         variant: 'destructive'
       });
+    } finally {
+        setLoading(false);
     }
   };
-  
 
   const handleProfileSave = async () => {
     if (!formData.first_name || !formData.last_name) return;
@@ -334,13 +329,11 @@ export function UserProfilePage() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
               <div className="relative">
-                <Avatar className="h-16 w-16">
-                  {/* Force cache-bust when avatar changes by appending updatedAt if available */}
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback>{profile ? profile.first_name?.[0] ?? <User /> : <User />}</AvatarFallback>
-                </Avatar>
-
-                {/* Edit overlay button on avatar */}
+                <AvatarWithPresignedUrl 
+                  profile={profile} 
+                  className="h-16 w-16"
+                  onAvatarChange={avatarChangeKey}
+                />
                 <Button
                   type="button"
                   variant="secondary"
@@ -353,8 +346,6 @@ export function UserProfilePage() {
                 >
                   {avatarUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                 </Button>
-
-                {/* Hidden file input */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -372,13 +363,12 @@ export function UserProfilePage() {
               </div>
             </div>
 
-            {/* Remove avatar button (if exists) */}
             {profile?.avatar_url ? (
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleRemoveAvatar}
-                disabled={avatarUploading}
+                disabled={loading || avatarUploading}
                 className="text-muted-foreground hover:text-destructive"
                 title="Remove profile photo"
               >
@@ -391,7 +381,6 @@ export function UserProfilePage() {
 
         <CardContent>
           <Separator className="my-4" />
-
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Personal Details</h3>
             {!isEditing && (
@@ -401,7 +390,6 @@ export function UserProfilePage() {
               </Button>
             )}
           </div>
-
           {isEditing ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -446,7 +434,6 @@ export function UserProfilePage() {
           )}
         </CardContent>
       </Card>
-
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Security Settings</CardTitle>
@@ -475,9 +462,7 @@ export function UserProfilePage() {
               />
             </Dialog>
           </div>
-
           <Separator />
-
           <div className="flex justify-between items-center py-3">
             <div>
               <p className="font-semibold text-destructive">Delete Account</p>
