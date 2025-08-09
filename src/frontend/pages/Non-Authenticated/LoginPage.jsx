@@ -1,19 +1,18 @@
 // src/frontend/pages/Non-Authenticated/LoginPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, Moon, Key, AlertCircle, Loader2, Sun, ArrowLeft, Mail } from "lucide-react";
-import { login, resetPassword } from "../../../firebase";
+import { login, resetPassword, signInWithGoogle } from "../../../firebase";
 import { useUserStore } from "../../store/userStore";
 import { useToast } from "@/components/ui/use-toast";
-
-// Shadcn UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -24,100 +23,102 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
-// Animation Variants
 const pageVariants = {
   initial: { opacity: 0 },
-  in: { opacity: 1, transition: { duration: 0.5, delay: 0.2 } },
-  out: { opacity: 0, transition: { duration: 0.3 } },
+  in: { opacity: 1, transition: { duration: 0.3, delay: 0.1 } },
+  out: { opacity: 0, transition: { duration: 0.2 } },
 };
 const formContainerVariants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.4 } },
+  visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
 };
 const formItemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 12 } },
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 120, damping: 14 } },
 };
 const shakeVariants = {
-  shake: { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.5 } },
+  shake: { x: [0, -10, 10, -10, 10, 0], transition: { duration: 0.45 } },
 };
 
-// Reset Password Modal Component
 const ResetPasswordModal = ({ open, onOpenChange }) => {
-    const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-    const { toast } = useToast();
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { toast } = useToast();
 
-    const handleReset = async () => {
-        if (!email) {
-            setError('Please enter your email address.');
-            return;
-        }
-        setIsLoading(true);
-        setError('');
-        try {
-            await resetPassword(email);
-            toast({
-                title: "Check Your Email",
-                description: `A password reset link has been sent to ${email}.`,
-            });
-            onOpenChange(false); // Close modal on success
-        } catch (err) {
-            setError('Failed to send reset email. Please check the address and try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const handleReset = async () => {
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+    setIsLoading(true);
+    setError("");
+    try {
+      await resetPassword(email);
+      toast({
+        title: "Check your email",
+        description: `A password reset link was sent to ${email}.`,
+      });
+      onOpenChange(false);
+    } catch {
+      setError("Failed to send reset email. Please verify the address and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // Reset state when modal opens/closes
-    useEffect(() => {
-        if (!open) {
-            setEmail('');
-            setError('');
-            setIsLoading(false);
-        }
-    }, [open]);
+  useEffect(() => {
+    if (!open) {
+      setEmail("");
+      setError("");
+      setIsLoading(false);
+    }
+  }, [open]);
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Forgot Password</DialogTitle>
-                    <DialogDescription>
-                        No problem. Enter your email address and we'll send you a link to reset it.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                    {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-                    <div className="space-y-2">
-                        <Label htmlFor="reset-email">Email</Label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                id="reset-email"
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="pl-9"
-                            />
-                        </div>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose asChild>
-                        <Button variant="outline" disabled={isLoading}>Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleReset} disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Send Reset Link
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Forgot password</DialogTitle>
+          <DialogDescription>
+            Enter your email and we’ll send you a link to reset it.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-4">
+          {error && (
+            <Alert variant="destructive" role="alert">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="reset-email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-9"
+                autoComplete="email"
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isLoading}>Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleReset} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Send reset link
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
-
 
 export function LoginPage() {
   const [email, setEmail] = useState("");
@@ -132,17 +133,19 @@ export function LoginPage() {
 
   useEffect(() => {
     document.body.classList.add("auth-page-gradient");
-    return () => {
-      document.body.classList.remove("auth-page-gradient");
-    };
+    return () => document.body.classList.remove("auth-page-gradient");
   }, []);
 
   useEffect(() => {
-    if (authHydrated && isLoggedIn) {
-      navigate(profile?.fully_onboarded ? "/dashboard" : "/profile-onboarding");
+    // Don't do anything until auth is hydrated and we have a profile value
+    if (!authHydrated || profile === undefined) return;
+  
+    if (isLoggedIn && profile) {
+      // Navigate only after both auth and profile are loaded
+      navigate(profile.fully_onboarded ? "/dashboard" : "/profile-onboarding");
     }
   }, [isLoggedIn, profile, navigate, authHydrated]);
-
+  
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -150,7 +153,6 @@ export function LoginPage() {
       setError("Please enter an email and password.");
       return;
     }
-
     setIsSubmitting(true);
     try {
       await login(email, password);
@@ -160,15 +162,32 @@ export function LoginPage() {
         "auth/wrong-password": "Incorrect password. Please try again.",
         "auth/invalid-credential": "Incorrect email or password.",
       };
-      setError(messages[err.code] || "Login failed. Please check your credentials.");
+      setError(messages[err?.code] || "Login failed. Please check your credentials.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!authHydrated) {
-    return null;
-  }
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setIsSubmitting(true);
+    try {
+      await signInWithGoogle();
+      // onAuthStateChanged will handle navigation
+    } catch (err) {
+      if (err?.code === "auth/account-exists-with-different-credential") {
+        setError("An account already exists with this email. Please sign in with your password instead.");
+      } else if (err?.code === "auth/popup-closed-by-user") {
+        // silent cancel
+      } else {
+        setError("Failed to sign in with Google. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!authHydrated) return null;
 
   return (
     <motion.div
@@ -178,40 +197,44 @@ export function LoginPage() {
       exit="out"
       variants={pageVariants}
     >
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <Link to="/" className="absolute top-4 left-4">
-                        <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 1.2 }}>
-                             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                        </motion.div>
-                    </Link>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Back to Home</p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+      {/* Back to home */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link to="/" className="absolute top-4 left-4">
+              <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Back to home">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+              </motion.div>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Back to Home</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
+      {/* Theme toggle */}
       <div className="absolute top-4 right-4">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 1, type: "spring" }}
-              >
-                <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
+              <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.8, type: "spring" }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleTheme}
+                  className="text-muted-foreground hover:text-foreground"
+                  aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+                >
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={isDarkMode ? "moon" : "sun"}
-                      initial={{ y: -20, opacity: 0, rotate: -30 }}
+                      initial={{ y: -16, opacity: 0, rotate: -20 }}
                       animate={{ y: 0, opacity: 1, rotate: 0 }}
-                      exit={{ y: 20, opacity: 0, rotate: 30 }}
-                      transition={{ duration: 0.2 }}
+                      exit={{ y: 16, opacity: 0, rotate: 20 }}
+                      transition={{ duration: 0.18 }}
                     >
                       {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </motion.div>
@@ -220,80 +243,130 @@ export function LoginPage() {
               </motion.div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Switch to {isDarkMode ? 'Light' : 'Dark'} Mode</p>
+              <p>Switch to {isDarkMode ? "Light" : "Dark"} Mode</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
 
-      <motion.div
-        className="w-full max-w-md"
-        variants={formContainerVariants}
-        initial="hidden"
-        animate="visible"
-      >
+      <motion.div className="w-full max-w-md" variants={formContainerVariants} initial="hidden" animate="visible">
         <Card>
-            <CardHeader className="text-center">
-                 <motion.div variants={formItemVariants} className="flex flex-col items-center">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                        <Key className="h-6 w-6 text-primary" />
-                    </div>
-                    <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back</CardTitle>
-                    <CardDescription>Sign in to your organization's workspace.</CardDescription>
-                </motion.div>
-            </CardHeader>
-            <CardContent>
-                <AnimatePresence>
-                    {error && (
-                        <motion.div variants={shakeVariants} animate="shake">
-                        <Alert variant="destructive" className="mb-4">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Login Failed</AlertTitle>
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+          <CardHeader className="text-center">
+            <motion.div variants={formItemVariants} className="flex flex-col items-center">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Key className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
+              <CardDescription>Sign in to your organization’s workspace.</CardDescription>
+            </motion.div>
+          </CardHeader>
+          <CardContent>
+            {/* Live region for errors */}
+            <div aria-live="polite" aria-atomic="true">
+              <AnimatePresence>
+                {error && (
+                  <motion.div variants={shakeVariants} animate="shake">
+                    <Alert variant="destructive" className="mb-4" role="alert">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Login failed</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <motion.div variants={formItemVariants}>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} className="pl-9" />
-                            </div>
-                        </div>
-                    </motion.div>
-                    <motion.div variants={formItemVariants}>
-                        <div className="space-y-2 relative">
-                            <div className="flex justify-between items-center">
-                                <Label htmlFor="password">Password</Label>
-                                <Button type="button" variant="link" className="text-xs h-auto p-0 text-muted-foreground" onClick={() => setResetModalOpen(true)}>Forgot?</Button>
-                            </div>
-                            <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} />
-                            <button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword(!showPassword)}>
-                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
-                    </motion.div>
-                    
-                    <motion.div variants={formItemVariants}>
-                        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : 'Sign In'}
-                        </Button>
-                    </motion.div>
+            <motion.div variants={formItemVariants} className="space-y-4">
+              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSubmitting} aria-label="Continue with Google">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Continue with Google
+              </Button>
 
-                    <motion.p variants={formItemVariants} className="text-center text-sm text-muted-foreground pt-4">
-                            Don't have an account?{' '}
-                            <Link to="/signup" className="font-semibold text-primary hover:underline underline-offset-4">
-                                Sign Up
-                            </Link>
-                        </motion.p>
-                </form>
-            </CardContent>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+            </motion.div>
+
+            <form onSubmit={handleLogin} className="space-y-4 mt-4" noValidate>
+              <motion.div variants={formItemVariants}>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isSubmitting}
+                      className="pl-9"
+                      autoComplete="email"
+                      inputMode="email"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div variants={formItemVariants}>
+                <div className="space-y-2 relative">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="password">Password</Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-xs h-auto p-0 text-muted-foreground"
+                      onClick={() => setResetModalOpen(true)}
+                    >
+                      Forgot?
+                    </Button>
+                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isSubmitting}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-pressed={showPassword}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </motion.div>
+
+              <motion.div variants={formItemVariants}>
+                <Button type="submit" className="w-full" size="lg" disabled={isSubmitting} aria-disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign in"}
+                </Button>
+              </motion.div>
+
+              <motion.p variants={formItemVariants} className="text-center text-sm text-muted-foreground pt-4">
+                Don’t have an account?{" "}
+                <Link to="/signup" className="font-semibold text-primary hover:underline underline-offset-4">
+                  Sign up
+                </Link>
+              </motion.p>
+            </form>
+          </CardContent>
         </Card>
       </motion.div>
+
       <ResetPasswordModal open={isResetModalOpen} onOpenChange={setResetModalOpen} />
     </motion.div>
   );

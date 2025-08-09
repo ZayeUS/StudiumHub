@@ -4,14 +4,13 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useUserStore } from '../store/userStore';
 
 export const ProtectedRoute = () => {
-  const { authHydrated, isLoggedIn } = useUserStore();
+  const { authHydrated, profileHydrated, isLoggedIn } = useUserStore();
 
-  // still waiting on Firebase/profile
-  if (!authHydrated) return null;
+  // Wait until both auth + profile are ready
+  if (!authHydrated || !profileHydrated) return null; // Or show a loader
 
-  // not signed in → login
+  // Not signed in → go to login
   if (!isLoggedIn) return <Navigate to="/login" replace />;
 
-  // otherwise render whatever child route matched
   return <Outlet />;
 };

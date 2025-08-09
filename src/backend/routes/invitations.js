@@ -33,6 +33,32 @@ router.get('/:token', async (req, res) => {
     }
 });
 
+// Get invitations for the current organization
+router.get('/', authenticate, checkRole(['admin']), async (req, res) => {
+  const { organization_id } = req.user;
+
+  try {
+    const result = await query(
+      `SELECT invitation_id, email, role, token, expires_at, created_at
+       FROM invitations
+       WHERE organization_id = $1
+       ORDER BY created_at DESC`,
+      [organization_id]
+    );
+
+    // Optional: emulate "pending" by checking if link hasn't expired yet
+    const pendingInvites = result.rows.filter(
+      invite => new Date(invite.expires_at) > new Date()
+    );
+
+    res.status(200).json(pendingInvites);
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 
 // Invite a user (Protected for Admins only)
 router.post('/', authenticate, checkRole(['admin']), async (req, res) => {

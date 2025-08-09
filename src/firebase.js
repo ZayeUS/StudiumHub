@@ -10,7 +10,9 @@ import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  deleteUser
+  deleteUser,
+  GoogleAuthProvider, // 👈 Added
+  signInWithPopup,      // 👈 Added
 } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
@@ -28,6 +30,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
+// --- NEW: Google Auth Provider ---
+const googleProvider = new GoogleAuthProvider();
+const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
+
+
 // --- Core Auth Functions ---
 const signUp = (email, password) => createUserWithEmailAndPassword(auth, email, password);
 const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
@@ -36,7 +43,7 @@ const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 const checkEmailExists = (email) => fetchSignInMethodsForEmail(auth, email).then(methods => methods.length > 0);
 const onAuthStateChangedListener = (callback) => onAuthStateChanged(auth, callback);
 
-// --- NEW: User Management Functions ---
+// --- User Management Functions ---
 
 // Re-authenticates the current user - required for sensitive operations
 const reauthenticateUser = (password) => {
@@ -70,4 +77,5 @@ export {
   reauthenticateUser,
   updateUserPassword,
   deleteFirebaseUser,
+  signInWithGoogle, // 👈 Exported
 };

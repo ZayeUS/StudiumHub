@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useUserStore } from './frontend/store/userStore';
@@ -29,10 +28,11 @@ export const App = () => {
     isDarkMode,
     toggleTheme,
     isSidebarExpanded,
+    sessionReady
   } = useUserStore();
+
   const location = useLocation();
 
-  // This effect manages the theme class on the root HTML element
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
@@ -53,54 +53,52 @@ export const App = () => {
 
   const showSidebar = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
   const showBottomNav = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
-  const isLoading = !authHydrated;
 
-  if (isLoading) {
+  // ✅ Only show loader while auth state is actually resolving
+  if (!sessionReady) {
     return <FullScreenLoader isLoading />;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-        <AnimatePresence mode="wait">
-          <motion.div
-            className="flex flex-col md:flex-row flex-grow min-h-screen"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
-            <main
-              className={cn(
-                'flex-grow transition-all duration-300 ease-in-out',
-                showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
-                showBottomNav ? 'pb-16 md:pb-0' : '',
-              )}
-            >
-              <Routes>
-                <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
-                <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
-                <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/profile-onboarding" element={profile?.fully_onboarded ? <Navigate to="/dashboard" replace /> : <OnboardingWizard initialStep={profile ? 2 : 1} />} />
-                  <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
-                  <Route path="/user-profile" element={<UserProfilePage />} />
-                  <Route element={<AdminProtectedRoute />}>
-                    <Route path="/organization" element={<OrganizationPage />} />
-                  </Route>
-                </Route>
-                <Route path="*" element={<Navigate to={getRedirect()} replace />} />
-              </Routes>
-            </main>
-            {showBottomNav && (
-              <nav className="fixed bottom-0 left-0 right-0 md:hidden">
-                <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-              </nav>
+      <AnimatePresence mode="wait">
+        <motion.div
+          className="flex flex-col md:flex-row flex-grow min-h-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
+          <main
+            className={cn(
+              'flex-grow transition-all duration-300 ease-in-out',
+              showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
+              showBottomNav ? 'pb-16 md:pb-0' : '',
             )}
-          </motion.div>
-        </AnimatePresence>
+          >
+            <Routes>
+              <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
+              <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
+              <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/profile-onboarding" element={profile?.fully_onboarded ? <Navigate to="/dashboard" replace /> : <OnboardingWizard initialStep={profile ? 2 : 1} />} />
+                <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
+                <Route path="/user-profile" element={<UserProfilePage />} />
+                <Route element={<AdminProtectedRoute />}>
+                  <Route path="/organization" element={<OrganizationPage />} />
+                </Route>
+              </Route>
+              <Route path="*" element={<Navigate to={getRedirect()} replace />} />
+            </Routes>
+          </main>
+          {showBottomNav && (
+            <nav className="fixed bottom-0 left-0 right-0 md:hidden">
+              <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+            </nav>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
-
-//dasd
