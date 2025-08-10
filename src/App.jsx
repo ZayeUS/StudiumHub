@@ -5,6 +5,7 @@ import { useUserStore } from './frontend/store/userStore';
 import { Sidebar } from './frontend/components/navigation/Sidebar';
 import { MobileBottomNavigation } from './frontend/components/navigation/MobileBottomNavigation';
 import { FullScreenLoader } from './frontend/components/FullScreenLoader';
+import { CommandPalette } from './frontend/components/CommandPalette'; // <-- Import the new component
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +20,7 @@ import { OrganizationPage } from './frontend/pages/Authenticated/OrganizationPag
 
 import { ProtectedRoute } from './frontend/components/ProtectedRoute';
 import { AdminProtectedRoute } from './frontend/components/AdminProtectedRoute';
+import { OnboardingRoute } from './frontend/components/onboarding/OnboardingRoute';
 
 export const App = () => {
   const {
@@ -29,10 +31,10 @@ export const App = () => {
     isDarkMode,
     toggleTheme,
     isSidebarExpanded,
+    toggleCommandPalette, // <-- Get the action from the store
   } = useUserStore();
   const location = useLocation();
 
-  // This effect manages the theme class on the root HTML element
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
@@ -43,6 +45,19 @@ export const App = () => {
     const unsubscribe = listenAuthState();
     return () => unsubscribe();
   }, [listenAuthState]);
+
+  // *** ADD THIS EFFECT for the keyboard shortcut ***
+  useEffect(() => {
+    const down = (e) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        toggleCommandPalette(true);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [toggleCommandPalette]);
+
 
   const getRedirect = useCallback(() => {
     if (!isLoggedIn) return '/';
@@ -61,13 +76,16 @@ export const App = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+        {/* Render the Command Palette here so it's available globally */}
+        {isLoggedIn && <CommandPalette />}
         <AnimatePresence mode="wait">
           <motion.div
+            key={location.pathname} // Add key to trigger animation on route change
             className="flex flex-col md:flex-row flex-grow min-h-screen"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.2 }}
           >
             {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
             <main
@@ -81,14 +99,18 @@ export const App = () => {
                 <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
                 <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
                 <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
+                
                 <Route element={<ProtectedRoute />}>
-                  <Route path="/profile-onboarding" element={profile?.fully_onboarded ? <Navigate to="/dashboard" replace /> : <OnboardingWizard initialStep={profile ? 2 : 1} />} />
+                  <Route element={<OnboardingRoute />}>
+                    <Route path="/profile-onboarding" element={<OnboardingWizard />} />
+                  </Route>
                   <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
                   <Route path="/user-profile" element={<UserProfilePage />} />
                   <Route element={<AdminProtectedRoute />}>
                     <Route path="/organization" element={<OrganizationPage />} />
                   </Route>
                 </Route>
+
                 <Route path="*" element={<Navigate to={getRedirect()} replace />} />
               </Routes>
             </main>

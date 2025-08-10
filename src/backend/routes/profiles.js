@@ -87,7 +87,8 @@ router.post('/avatar/presign', authenticate, async (req, res) => {
       Bucket: BUCKET,
       Key: key,
       ContentType: fileType,
-    })
+      ServerSideEncryption: "AES256" // <-- Add this line
+    });
     
     const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 3600 })
 

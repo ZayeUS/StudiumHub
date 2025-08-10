@@ -1,8 +1,10 @@
 // src/frontend/pages/Authenticated/OrganizationPage.jsx
-import React, { useEffect, useState,useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useUserStore } from '../../store/userStore';
-import { getData, postData } from '../../utils/BackendRequestHelper';
-import { Building, UserPlus, Loader2, AlertCircle, Shield, Mail } from 'lucide-react';
+import { getData, postData, putData } from '../../utils/BackendRequestHelper';
+import { Building, UserPlus, Loader2, AlertCircle, Shield, Mail, MoreHorizontal, UserCog, Trash2 } from 'lucide-react';
+
+// Shadcn UI Components
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,7 +23,7 @@ const getInitials = (firstName = '', lastName = '') => {
     const first = firstName ? firstName.charAt(0) : '';
     const last = lastName ? lastName.charAt(0) : '';
     return `${first}${last}`.toUpperCase();
-}
+};
 
 const InviteMemberDialog = ({ onInviteSent }) => {
     const { toast } = useToast();
@@ -46,7 +49,7 @@ const InviteMemberDialog = ({ onInviteSent }) => {
             setOpen(false);
             setEmail('');
             setRole('member');
-            if (onInviteSent) onInviteSent(); // Callback to refresh member list
+            if (onInviteSent) onInviteSent();
         } catch (err) {
             setError(err.message || 'Failed to send invitation.');
         } finally {
@@ -99,10 +102,11 @@ const InviteMemberDialog = ({ onInviteSent }) => {
 };
 
 export const OrganizationPage = () => {
-    const { organization, role } = useUserStore();
+    const { organization, role, profile } = useUserStore();
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { toast } = useToast();
 
     const fetchMembers = useCallback(async () => {
         try {
@@ -125,6 +129,23 @@ export const OrganizationPage = () => {
             setLoading(false);
         }
     }, [organization, fetchMembers]);
+
+    const handleRoleChange = async (targetUserId, newRole) => {
+        try {
+            await putData(`/members/${targetUserId}/role`, { role: newRole });
+            toast({
+                title: 'Success!',
+                description: `Member role has been updated to ${newRole}.`
+            });
+            fetchMembers(); // Refresh the list
+        } catch (err) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: err.message || 'Failed to update member role.'
+            });
+        }
+    };
 
     const isAdmin = role === 'admin';
 
@@ -162,14 +183,31 @@ export const OrganizationPage = () => {
                                             <div className="flex items-center space-x-4">
                                                 <Avatar><AvatarImage src={member.avatar_url} /><AvatarFallback>{getInitials(member.first_name, member.last_name)}</AvatarFallback></Avatar>
                                                 <div>
-                                                    <p className="font-semibold">{member.first_name && member.last_name ? `${member.first_name} ${member.last_name}` : member.email}</p>
+                                                    <p className="font-semibold flex items-center">{member.first_name && member.last_name ? `${member.first_name} ${member.last_name}` : member.email} {member.user_id === profile.user_id && <Badge variant="outline" className="ml-2">You</Badge>}</p>
                                                     <p className="text-sm text-muted-foreground">{member.email}</p>
                                                 </div>
                                             </div>
-                                            <Badge variant={member.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
-                                                {member.role === 'admin' && <Shield className="mr-1 h-3 w-3" />}
-                                                {member.role}
-                                            </Badge>
+                                            <div className="flex items-center gap-2">
+                                              <Badge variant={member.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                                                  {member.role === 'admin' && <Shield className="mr-1 h-3 w-3" />}
+                                                  {member.role}
+                                              </Badge>
+                                              {isAdmin && member.user_id !== profile.user_id && (
+                                                <DropdownMenu>
+                                                  <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                      <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                  </DropdownMenuTrigger>
+                                                  <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleRoleChange(member.user_id, member.role === 'admin' ? 'member' : 'admin')}>
+                                                      <UserCog className="mr-2 h-4 w-4" />
+                                                      <span>{member.role === 'admin' ? 'Change to Member' : 'Change to Admin'}</span>
+                                                    </DropdownMenuItem>
+                                                  </DropdownMenuContent>
+                                                </DropdownMenu>
+                                              )}
+                                            </div>
                                         </div>
                                     </motion.div>
                                     {index < members.length - 1 && <Separator />}

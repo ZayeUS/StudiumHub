@@ -37,6 +37,8 @@ export const WelcomeStep = () => {
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1, rotate: [0, 12, -12, 0] }}
+          // *** THE FIX IS HERE ***
+          // Changed 'spring' to 'tween' to support the multi-value keyframe animation for 'rotate'.
           transition={{ type: 'tween', duration: 0.5, ease: 'easeInOut', delay: 0.1 }}
         >
           <PartyPopper className="mx-auto h-16 w-16 text-yellow-400 mb-2" />
@@ -47,15 +49,15 @@ export const WelcomeStep = () => {
         </p>
       <Card className="bg-muted/30 text-left">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-center gap-2 text-sm"><Sparkles className="h-4 w-4 text-primary" />Explore templates</div>
-            <div className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-primary" />Invite your team</div>
-            <div className="flex items-center gap-2 text-sm"><BadgeCheck className="h-4 w-4 text-primary" />Connect data sources</div>
-          </div>
+          <ul className="space-y-3">
+            <li className="flex items-center gap-3 text-sm"><Sparkles className="h-4 w-4 text-primary" />Explore templates</li>
+            <li className="flex items-center gap-3 text-sm"><ShieldCheck className="h-4 w-4 text-primary" />Invite your team</li>
+            <li className="flex items-center gap-3 text-sm"><BadgeCheck className="h-4 w-4 text-primary" />Connect data sources</li>
+          </ul>
         </CardContent>
       </Card>
-      <div className="flex items-center justify-center">
-        <Button size="lg" onClick={handleGoToDashboard} disabled={loading}>
+      <div className="flex items-center justify-center pt-4">
+        <Button size="lg" onClick={handleGoToDashboard} disabled={loading} className="font-bold">
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Go to my dashboard
           <ArrowRight className="ml-2 h-4 w-4" />

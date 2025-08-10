@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const logoUrl = '/textLogo.svg';
+const logoUrl = '/loading.svg';
 
 export const FullScreenLoader = ({ isLoading }) => {
   return (

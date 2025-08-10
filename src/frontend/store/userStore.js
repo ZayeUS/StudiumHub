@@ -28,10 +28,11 @@ export const useUserStore = create((set, get) => ({
   profile: null,
   organization: null,
   loading: false,
-  authLoading: false,
+  authLoading: true, // Start in a loading state
   authHydrated: false,
   userSubscriptionStatus: null,
-  isSidebarExpanded: false, // <-- Add this state
+  isSidebarExpanded: false,
+  isCommandPaletteOpen: false,
 
   isDarkMode: (() => {
     const savedTheme = storage.get("theme");
@@ -44,21 +45,14 @@ export const useUserStore = create((set, get) => ({
   setProfile: (profile) => set({ profile }),
   setOrganization: (organization) => set({ organization }),
   setUserSubscriptionStatus: (status) => set({ userSubscriptionStatus: status }),
-  setIsSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }), // <-- Add this action
+  setIsSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
+  toggleCommandPalette: (open) => set(state => ({ isCommandPaletteOpen: typeof open === 'boolean' ? open : !state.isCommandPaletteOpen })),
 
   toggleTheme: () => {
     set(state => {
       const newIsDarkMode = !state.isDarkMode;
       storage.set('theme', newIsDarkMode ? 'dark' : 'light');
       return { isDarkMode: newIsDarkMode };
-    });
-  },
-
-  setUser: (firebaseId, userId) => {
-    set({
-      firebaseId,
-      userId,
-      isLoggedIn: true,
     });
   },
 
@@ -77,48 +71,44 @@ export const useUserStore = create((set, get) => ({
     });
   },
 
+  // *** THE REFACTORED AUTH LISTENER ***
   listenAuthState: () => {
-    set({ authHydrated: false, authLoading: true, isLoggedIn: false });
+    set({ authLoading: true, authHydrated: false }); // Ensure we start in a loading state
     return auth.onAuthStateChanged(async (user) => {
       if (user) {
-        let userData;
         try {
-          userData = await getData(`/users/${user.uid}`);
+          const userData = await getData(`/users/${user.uid}`);
           if (!userData?.user_id) {
-            get().clearUser();
-            return;
+            throw new Error("User not found in application database.");
           }
+
+          const [profileData, paymentData, orgData, roleData] = await Promise.all([
+              getData(`/profile`).catch(() => null),
+              getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
+              getData(`/organizations/my-organization`).catch(() => null),
+              getData('/users/me/role').catch(() => null)
+          ]);
+
+          // This is now one single, atomic update.
+          set({
+            firebaseId: user.uid,
+            userId: userData.user_id,
+            isLoggedIn: true,
+            profile: profileData,
+            userSubscriptionStatus: paymentData?.status || 'unsubscribed',
+            organization: orgData,
+            role: roleData?.role,
+            authLoading: false,
+            authHydrated: true,
+          });
+
         } catch (error) {
-          get().clearUser();
-          return;
+          console.error("Auth state change error:", error);
+          get().clearUser(); // Clear user on any failure during hydration
         }
-
-        get().setUser(user.uid, userData.user_id);
-
-        try {
-            const [profileData, paymentData, orgData, roleData] = await Promise.all([
-                getData(`/profile`).catch(() => null),
-                getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
-                getData(`/organizations/my-organization`).catch(() => null),
-                getData('/users/me/role').catch(() => null)
-            ]);
-
-            set({
-                profile: profileData,
-                userSubscriptionStatus: paymentData?.status || 'unsubscribed',
-                organization: orgData,
-                role: roleData?.role
-            });
-
-        } catch (error) {
-            console.error("Failed to fetch user session details:", error);
-            set({ profile: null, userSubscriptionStatus: 'unsubscribed', organization: null, role: null });
-        }
-
       } else {
         get().clearUser();
       }
-      set({ authLoading: false, authHydrated: true });
     });
   }
 }));

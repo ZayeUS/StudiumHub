@@ -80,9 +80,13 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    // *** THE FIX IS HERE ***
+    // 1. Navigate to the login page first.
+    navigate('/login'); 
+    
+    // 2. Then, sign out from Firebase and clear the user state.
     await firebaseSignOut(auth);
     clearUser();
-    navigate('/');
   };
 
   const navItems = [{ label: 'Dashboard', to: '/dashboard', icon: Home }];

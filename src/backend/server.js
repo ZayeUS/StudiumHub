@@ -10,6 +10,7 @@ import stripeRouter from './routes/stripeRoutes.js';
 import plansRouter from './routes/plans.js';
 import organizationsRouter from './routes/organizations.js';
 import invitationsRouter from './routes/invitations.js';
+import membersRouter from './routes/members.js'; // <-- IMPORT a new router
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use("/api/stripe", stripeRouter);
 app.use("/api/plans", plansRouter);
 app.use("/api/organizations", organizationsRouter);
 app.use("/api/invitations", invitationsRouter);
+app.use("/api/members", membersRouter); // <-- USE the new router
 
 const PORT = process.env.PORT || 5000;
 
