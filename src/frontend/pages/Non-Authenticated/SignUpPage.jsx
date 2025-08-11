@@ -44,19 +44,9 @@ const GoogleIcon = (props) => (
   </svg>
 );
 
-const AnimatedProgress = ({ value, className }) => {
-  const color = value >= 80 ? "bg-green-500" : value >= 60 ? "bg-yellow-500" : "bg-red-500";
-  return (
-    <Progress value={value} className={cn("h-1.5", className)} >
-        <motion.div
-            className={cn("h-full", color)}
-            initial={{ width: 0 }}
-            animate={{ width: `${value}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-        />
-    </Progress>
-  );
-};
+const AnimatedProgress = ({ value }) => (
+    <Progress value={value} className="h-1.5 transition-all" />
+);
 
 
 const PasswordStrengthIndicator = ({ strength, checks }) => {
@@ -75,8 +65,8 @@ const PasswordStrengthIndicator = ({ strength, checks }) => {
       <AnimatedProgress value={strength} />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
         {list.map((item) => (
-          <div key={item.label} className={`flex items-center text-xs transition-colors duration-200 ${item.met ? "text-green-500" : "text-muted-foreground"}`}>
-            <CheckCircle className={`h-3.5 w-3.5 mr-1.5 transition-all duration-200 ${item.met ? "opacity-100" : "opacity-50"}`} />
+          <div key={item.label} className={cn("flex items-center text-xs transition-colors duration-200", item.met ? "text-green-500" : "text-muted-foreground")}>
+            <CheckCircle className={cn("h-3.5 w-3.5 mr-1.5 transition-all duration-200", item.met ? "opacity-100" : "opacity-50")} />
             {item.label}
           </div>
         ))}
@@ -89,15 +79,11 @@ const AuthLayout = ({ children }) => {
   const { toggleTheme } = useUserStore();
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
-      {/* KEY FIX #1: Wrap children in AnimatePresence to handle mounting/unmounting */}
-      <AnimatePresence mode="wait">
-        <motion.div
-            key="auth-content" // Give it a key
-            className="relative flex items-center justify-center py-12 lg:py-0"
-        >
-            {children}
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative flex items-center justify-center py-12 lg:py-0">
+          <AnimatePresence mode="wait">
+              {children}
+          </AnimatePresence>
+      </div>
       <div className="hidden bg-muted lg:flex flex-col items-center justify-center text-center p-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -139,7 +125,10 @@ export function SignUpPage() {
   const orgId = `signup-organizationName-${uid}`, emailId = `signup-email-${uid}`, pwdId = `signup-password-${uid}`, cpwdId = `signup-confirmPassword-${uid}`;
 
   const navigate = useNavigate();
-  const { isLoggedIn, profile, setUser } = useUserStore();
+  // *** THE FIX IS HERE: Part 2 ***
+  // Get the new actions from the store
+  const { isLoggedIn, profile, setUser, fetchUserSession } = useUserStore();
+
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -153,7 +142,6 @@ export function SignUpPage() {
           setSearchParams({}, { replace: true });
         }
       }
-      // Use a small timeout to prevent jarring transition from loader to content
       setTimeout(() => setIsVerifyingToken(false), 300);
     };
     verifyToken();
@@ -171,10 +159,57 @@ export function SignUpPage() {
     return { strength: (Object.values(checks).filter(Boolean).length / 5) * 100, checks };
   };
 
-  const validate = () => { /* ... validation logic ... */ return true; };
-  const hydrateUserImmediately = async (firebaseUser) => { /* ... hydration logic ... */ };
-  const handleSignUp = async (e) => { /* ... signup logic ... */ };
-  const handleGoogleSignIn = async () => { /* ... google signin logic ... */ };
+  const validate = () => {
+    const errors = {};
+    if (!organizationName.trim()) errors.organizationName = "Organization name is required.";
+    if (!email.trim()) errors.email = "Email is required.";
+    if (password.length < 8) errors.password = "Password must be at least 8 characters.";
+    if (password !== confirmPassword) errors.confirmPassword = "Passwords do not match.";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!validate()) return;
+    
+    setIsSubmitting(true);
+    try {
+      const emailExists = await checkEmailExists(email);
+      if (emailExists) throw { code: "auth/email-already-in-use" };
+
+      const userCredential = await signUp(email, password);
+      const firebaseUser = userCredential.user;
+      if (!firebaseUser) throw new Error("Firebase user creation failed.");
+      
+      const payload = {
+        firebase_uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        invitation_token: invitation_token || undefined,
+        organization_name: organizationName,
+      };
+
+      const backendResponse = await postData("/users", payload, false);
+      const backendUser = backendResponse.user;
+      
+      // *** THE FIX IS HERE: Part 3 ***
+      // Manually set the user and fetch the session data after we know
+      // the backend user has been created, solving the race condition.
+      setUser(firebaseUser.uid, backendUser.user_id);
+      await fetchUserSession();
+      
+    } catch (err) {
+      const messages = {
+        "auth/email-already-in-use": "An account with this email already exists. Please sign in.",
+        "auth/weak-password": "Password is too weak. Please choose a stronger one.",
+      };
+      setError(messages[err?.code] || "Sign up failed. Please try again.");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => { /* ... */ };
 
   const passwordStrength = calculatePasswordStrength(password);
 
@@ -187,7 +222,7 @@ export function SignUpPage() {
           </motion.div>
         ) : (
           <motion.div
-            key="signup-form" // KEY FIX #2: Add a unique key to force a clean mount
+            key="signup-form"
             className="mx-auto grid w-[350px] gap-6"
             variants={STAGGER_CONTAINER_VARIANTS}
             initial="hidden"
@@ -209,7 +244,6 @@ export function SignUpPage() {
               )}
             </AnimatePresence>
             
-            {/* KEY FIX #3: Make <form> a container, and animate its children instead */}
             <form onSubmit={handleSignUp} className="grid gap-4">
               <motion.div variants={FADE_UP_VARIANTS} className="grid gap-2">
                 <Label htmlFor={orgId}>Organization name</Label>
@@ -221,11 +255,11 @@ export function SignUpPage() {
               </motion.div>
               <motion.div variants={FADE_UP_VARIANTS} className="grid gap-2">
                 <Label htmlFor={pwdId}>Password</Label>
-                <div className="relative"><Input id={pwdId} type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} className={cn(fieldErrors.password && "border-destructive")} autoComplete="new-password" /><button type="button" className="absolute bottom-2 right-2 text-muted-foreground" onClick={() => setShowPassword((s) => !s)}><EyeOff className="h-4 w-4" /></button></div>
+                <div className="relative"><Input id={pwdId} type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} className={cn(fieldErrors.password && "border-destructive")} autoComplete="new-password" /><button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground" onClick={() => setShowPassword((s) => !s)}>{showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button></div>
               </motion.div>
               <motion.div variants={FADE_UP_VARIANTS} className="grid gap-2">
                 <Label htmlFor={cpwdId}>Confirm password</Label>
-                <div className="relative"><Input id={cpwdId} type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isSubmitting} className={cn(fieldErrors.confirmPassword && "border-destructive")} autoComplete="new-password" /><button type="button" className="absolute bottom-2 right-2 text-muted-foreground" onClick={() => setShowConfirmPassword((s) => !s)}><EyeOff className="h-4 w-4" /></button></div>
+                <div className="relative"><Input id={cpwdId} type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isSubmitting} className={cn(fieldErrors.confirmPassword && "border-destructive")} autoComplete="new-password" /><button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground" onClick={() => setShowConfirmPassword((s) => !s)}>{showConfirmPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}</button></div>
               </motion.div>
 
               <AnimatePresence>

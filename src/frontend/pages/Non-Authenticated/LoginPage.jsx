@@ -12,11 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { getData, postData } from "../../utils/BackendRequestHelper";
 
 // --- Framer Motion Variants ---
 const FADE_UP_VARIANTS = {
   hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15, duration: 0.3 } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 100, damping: 15, duration: 0.3 },
+  },
   exit: { opacity: 0, y: -10, transition: { duration: 0.2 } },
 };
 
@@ -24,9 +29,7 @@ const STAGGER_CONTAINER_VARIANTS = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.08, // Slightly faster stagger
-    },
+    transition: { staggerChildren: 0.08 },
   },
 };
 
@@ -45,7 +48,6 @@ const GoogleIcon = (props) => (
 );
 
 const ResetPasswordModal = ({ open, onOpenChange }) => {
-  // ... (Modal code remains the same, it's already well-contained)
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,31 +67,60 @@ const ResetPasswordModal = ({ open, onOpenChange }) => {
     }
   };
 
-  useEffect(() => { if (!open) { setEmail(""); setError(""); setIsLoading(false); } }, [open]);
+  useEffect(() => {
+    if (!open) { setEmail(""); setError(""); setIsLoading(false); }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader><DialogTitle>Forgot password</DialogTitle><DialogDescription>Enter your email and we'll send you a link to reset it.</DialogDescription></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Forgot password</DialogTitle>
+          <DialogDescription>Enter your email and we'll send you a link to reset it.</DialogDescription>
+        </DialogHeader>
+
         <div className="py-4 space-y-4">
           <AnimatePresence>
             {error && (
-              <MotionAlert variant="destructive" role="alert" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
+              <MotionAlert
+                key="reset-error"
+                variant="destructive"
+                role="alert"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
                 <AlertDescription>{error}</AlertDescription>
               </MotionAlert>
             )}
           </AnimatePresence>
+
           <div className="space-y-2">
             <Label htmlFor="reset-email">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="reset-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-9" autoComplete="email" />
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-9"
+                autoComplete="email"
+              />
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <DialogClose asChild><Button variant="outline" disabled={isLoading}>Cancel</Button></DialogClose>
-          <Button onClick={handleReset} disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Send reset link</Button>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isLoading}>Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleReset} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Send reset link
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -98,23 +129,45 @@ const ResetPasswordModal = ({ open, onOpenChange }) => {
 
 const AuthLayout = ({ children }) => {
   const { toggleTheme } = useUserStore();
+
   return (
     <div className="min-h-screen w-full lg:grid lg:grid-cols-2">
-      {/* KEY FIX #1: Wrap children in AnimatePresence for clean mount/unmount */}
       <div className="relative flex items-center justify-center py-12 lg:py-0">
-          <AnimatePresence mode="wait">
-              {children}
-          </AnimatePresence>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key="auth-slot"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
+            className="w-full"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </div>
+
       <div className="hidden bg-muted lg:flex flex-col items-center justify-center text-center p-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease: "easeInOut" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2, ease: "easeInOut" }}
+        >
           <Zap className="h-16 w-16 text-primary mx-auto mb-6" />
           <h2 className="text-3xl font-bold tracking-tight">Launch your vision, faster.</h2>
-          <p className="text-muted-foreground mt-3 max-w-md mx-auto">Our production-ready boilerplate handles the essentials, so you can focus on building what makes your product unique.</p>
+          <p className="text-muted-foreground mt-3 max-w-md mx-auto">
+            Our production-ready boilerplate handles the essentials, so you can focus on building what makes your product unique.
+          </p>
         </motion.div>
       </div>
+
       <div className="absolute top-4 right-4">
-        <Button variant="ghost" size="icon" onClick={toggleTheme} className="text-muted-foreground hover:text-foreground">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleTheme}
+          className="text-muted-foreground hover:text-foreground"
+        >
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
         </Button>
@@ -134,14 +187,14 @@ export function LoginPage() {
 
   const navigate = useNavigate();
   const { isLoggedIn, profile } = useUserStore();
-  
+
   useEffect(() => {
     if (isLoggedIn) {
       const redirectTo = profile?.fully_onboarded ? "/dashboard" : "/profile-onboarding";
       navigate(redirectTo, { replace: true });
     }
   }, [isLoggedIn, profile, navigate]);
-  
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
@@ -150,23 +203,54 @@ export function LoginPage() {
     if (!password) errors.password = "Password is required.";
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
-    
+
     setIsSubmitting(true);
     try {
       await login(email, password);
     } catch (err) {
-      const messages = { "auth/user-not-found": "No account found with this email.", "auth/wrong-password": "Incorrect password. Please try again.", "auth/invalid-credential": "Incorrect email or password." };
+      const messages = {
+        "auth/user-not-found": "No account found with this email.",
+        "auth/wrong-password": "Incorrect password. Please try again.",
+        "auth/invalid-credential": "Incorrect email or password.",
+      };
       setError(messages[err?.code] || "Login failed. Please check your credentials.");
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleGoogleSignIn = async () => { /* ... (logic unchanged) ... */ };
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
+    setError("");
+    try {
+      const result = await signInWithGoogle();
+      const firebaseUser = result.user;
+
+      try {
+        await getData(`/users/${firebaseUser.uid}`);
+      } catch (error) {
+        if (error?.message === "User not found") {
+          const payload = {
+            firebase_uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            organization_name: `${firebaseUser.displayName || "My"}'s Organization`,
+          };
+          await postData("/users", payload, false);
+        } else {
+          throw error;
+        }
+      }
+    } catch (err) {
+      setError(err.message || "Failed to sign in with Google. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <AuthLayout>
       <motion.div
-        key="login-form" // KEY FIX #2: Add a unique key
+        key="login-form"
         className="mx-auto grid w-[350px] gap-6"
         variants={STAGGER_CONTAINER_VARIANTS}
         initial="hidden"
@@ -180,7 +264,15 @@ export function LoginPage() {
 
         <AnimatePresence>
           {error && (
-            <MotionAlert variants={FADE_UP_VARIANTS} variant="destructive" role="alert">
+            <MotionAlert
+              key="login-error"
+              variants={FADE_UP_VARIANTS}
+              variant="destructive"
+              role="alert"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Login Failed</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
@@ -188,41 +280,91 @@ export function LoginPage() {
           )}
         </AnimatePresence>
 
-        {/* KEY FIX #3: Use a regular <form> and animate its children */}
         <form onSubmit={handleLogin} className="grid gap-4">
           <motion.div variants={FADE_UP_VARIANTS} className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSubmitting} className={cn("pl-9", fieldErrors.email && "border-destructive")} autoComplete="email"/>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+                className={cn("pl-9", fieldErrors.email && "border-destructive")}
+                autoComplete="email"
+              />
             </div>
           </motion.div>
+
           <motion.div variants={FADE_UP_VARIANTS} className="grid gap-2">
             <div className="flex items-center">
               <Label htmlFor="password">Password</Label>
-              <Button type="button" variant="link" className="ml-auto inline-block h-auto p-0 text-sm underline" onClick={() => setResetModalOpen(true)}>Forgot your password?</Button>
+              <Button
+                type="button"
+                variant="link"
+                className="ml-auto inline-block h-auto p-0 text-sm underline"
+                onClick={() => setResetModalOpen(true)}
+              >
+                Forgot your password?
+              </Button>
             </div>
             <div className="relative">
-              <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isSubmitting} className={cn(fieldErrors.password && "border-destructive")} autoComplete="current-password"/>
-              <button type="button" className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setShowPassword(!showPassword)}>
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isSubmitting}
+                className={cn(fieldErrors.password && "border-destructive")}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="absolute bottom-2 right-2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </motion.div>
+
           <motion.div variants={FADE_UP_VARIANTS}>
-            <MotionButton type="submit" className="w-full" disabled={isSubmitting} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <MotionButton
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Signing In...' : 'Login'}
+              {isSubmitting ? "Signing In..." : "Login"}
             </MotionButton>
           </motion.div>
+
           <motion.div variants={FADE_UP_VARIANTS}>
-            <MotionButton variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
+            <MotionButton
+              variant="outline"
+              className="w-full"
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="mr-2 h-4 w-4" />
+              )}
               Login with Google
             </MotionButton>
           </motion.div>
         </form>
-        
+
         <motion.div variants={FADE_UP_VARIANTS} className="mt-4 text-center text-sm">
           Don&apos;t have an account?{" "}
           <MotionLink to="/signup" className="underline hover:no-underline transition-all" whileHover={{ letterSpacing: "0.2px" }}>
@@ -230,6 +372,7 @@ export function LoginPage() {
           </MotionLink>
         </motion.div>
       </motion.div>
+
       <ResetPasswordModal open={isResetModalOpen} onOpenChange={setResetModalOpen} />
     </AuthLayout>
   );

@@ -32,7 +32,7 @@ export const useUserStore = create((set, get) => ({
   authHydrated: false,
   userSubscriptionStatus: null,
   isSidebarExpanded: false,
-  isCommandPaletteOpen: false, // <-- Add this state
+  isCommandPaletteOpen: false,
 
   isDarkMode: (() => {
     const savedTheme = storage.get("theme");
@@ -46,7 +46,7 @@ export const useUserStore = create((set, get) => ({
   setOrganization: (organization) => set({ organization }),
   setUserSubscriptionStatus: (status) => set({ userSubscriptionStatus: status }),
   setIsSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
-  toggleCommandPalette: (open) => set(state => ({ isCommandPaletteOpen: typeof open === 'boolean' ? open : !state.isCommandPaletteOpen })), // <-- Add this action
+  toggleCommandPalette: (open) => set(state => ({ isCommandPaletteOpen: typeof open === 'boolean' ? open : !state.isCommandPaletteOpen })),
 
   toggleTheme: () => {
     set(state => {
@@ -60,7 +60,7 @@ export const useUserStore = create((set, get) => ({
     set({
       firebaseId,
       userId,
-      isLoggedIn: true,
+      isLoggedIn: !!(firebaseId && userId),
     });
   },
 
@@ -79,44 +79,49 @@ export const useUserStore = create((set, get) => ({
     });
   },
 
+  // *** THE FIX IS HERE: Part 1 ***
+  // We've extracted the data fetching logic into its own reusable action.
+  fetchUserSession: async () => {
+    try {
+        const [profileData, paymentData, orgData, roleData] = await Promise.all([
+            getData(`/profile`).catch(() => null),
+            getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
+            getData(`/organizations/my-organization`).catch(() => null),
+            getData('/users/me/role').catch(() => null)
+        ]);
+
+        set({
+            profile: profileData,
+            userSubscriptionStatus: paymentData?.status || 'unsubscribed',
+            organization: orgData,
+            role: roleData?.role
+        });
+        return true; // Indicate success
+    } catch (error) {
+        console.error("Failed to fetch user session details:", error);
+        get().clearUser(); // Clear user on failure
+        return false; // Indicate failure
+    }
+  },
+
   listenAuthState: () => {
     set({ authHydrated: false, authLoading: true, isLoggedIn: false });
     return auth.onAuthStateChanged(async (user) => {
       if (user) {
-        let userData;
         try {
-          userData = await getData(`/users/${user.uid}`);
+          const userData = await getData(`/users/${user.uid}`);
           if (!userData?.user_id) {
-            get().clearUser();
-            return;
+            throw new Error("User not found in DB.");
           }
+          
+          get().setUser(user.uid, userData.user_id);
+          // Now call our reusable function to get the rest of the data.
+          await get().fetchUserSession();
+
         } catch (error) {
+          console.log("Auth state change error, clearing user:", error.message);
           get().clearUser();
-          return;
         }
-
-        get().setUser(user.uid, userData.user_id);
-
-        try {
-            const [profileData, paymentData, orgData, roleData] = await Promise.all([
-                getData(`/profile`).catch(() => null),
-                getData(`/stripe/payment-status`).catch(() => ({ status: 'unsubscribed' })),
-                getData(`/organizations/my-organization`).catch(() => null),
-                getData('/users/me/role').catch(() => null)
-            ]);
-
-            set({
-                profile: profileData,
-                userSubscriptionStatus: paymentData?.status || 'unsubscribed',
-                organization: orgData,
-                role: roleData?.role
-            });
-
-        } catch (error) {
-            console.error("Failed to fetch user session details:", error);
-            set({ profile: null, userSubscriptionStatus: 'unsubscribed', organization: null, role: null });
-        }
-
       } else {
         get().clearUser();
       }
