@@ -5,7 +5,7 @@ import { useUserStore } from './frontend/store/userStore';
 import { Sidebar } from './frontend/components/navigation/Sidebar';
 import { MobileBottomNavigation } from './frontend/components/navigation/MobileBottomNavigation';
 import { FullScreenLoader } from './frontend/components/FullScreenLoader';
-import { CommandPalette } from './frontend/components/CommandPalette'; // <-- Import the new component
+import { CommandPalette } from './frontend/components/CommandPalette';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -28,10 +28,11 @@ export const App = () => {
     profile,
     listenAuthState,
     authHydrated,
+    authLoading,
     isDarkMode,
     toggleTheme,
     isSidebarExpanded,
-    toggleCommandPalette, // <-- Get the action from the store
+    toggleCommandPalette,
   } = useUserStore();
   const location = useLocation();
 
@@ -46,7 +47,6 @@ export const App = () => {
     return () => unsubscribe();
   }, [listenAuthState]);
 
-  // *** ADD THIS EFFECT for the keyboard shortcut ***
   useEffect(() => {
     const down = (e) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -58,7 +58,6 @@ export const App = () => {
     return () => document.removeEventListener("keydown", down);
   }, [toggleCommandPalette]);
 
-
   const getRedirect = useCallback(() => {
     if (!isLoggedIn) return '/';
     if (!profile || typeof profile.fully_onboarded !== 'boolean') return '/profile-onboarding';
@@ -68,59 +67,62 @@ export const App = () => {
 
   const showSidebar = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
   const showBottomNav = isLoggedIn && !location.pathname.startsWith('/profile-onboarding');
-  const isLoading = !authHydrated;
+  
+  // Only show full screen loader for authenticated pages or when auth is loading
+  const isAuthPage = ['/login', '/signup', '/'].includes(location.pathname);
+  const shouldShowLoader = !authHydrated && (!isAuthPage || authLoading);
 
-  if (isLoading) {
+  if (shouldShowLoader) {
     return <FullScreenLoader isLoading />;
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-        {/* Render the Command Palette here so it's available globally */}
-        {isLoggedIn && <CommandPalette />}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname} // Add key to trigger animation on route change
-            className="flex flex-col md:flex-row flex-grow min-h-screen"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
-            <main
-              className={cn(
-                'flex-grow transition-all duration-300 ease-in-out',
-                showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
-                showBottomNav ? 'pb-16 md:pb-0' : '',
-              )}
-            >
-              <Routes>
-                <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
-                <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
-                <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
-                
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<OnboardingRoute />}>
-                    <Route path="/profile-onboarding" element={<OnboardingWizard />} />
-                  </Route>
-                  <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
-                  <Route path="/user-profile" element={<UserProfilePage />} />
-                  <Route element={<AdminProtectedRoute />}>
-                    <Route path="/organization" element={<OrganizationPage />} />
-                  </Route>
-                </Route>
-
-                <Route path="*" element={<Navigate to={getRedirect()} replace />} />
-              </Routes>
-            </main>
-            {showBottomNav && (
-              <nav className="fixed bottom-0 left-0 right-0 md:hidden">
-                <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-              </nav>
+      {isLoggedIn && <CommandPalette />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          className="flex flex-col md:flex-row flex-grow min-h-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {showSidebar && <Sidebar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />}
+          <main
+            className={cn(
+              'flex-grow transition-all duration-300 ease-in-out',
+              showSidebar && (isSidebarExpanded ? 'md:pl-64' : 'md:pl-[72px]'),
+              showBottomNav ? 'pb-16 md:pb-0' : '',
             )}
-          </motion.div>
-        </AnimatePresence>
+          >
+            
+            <Routes>
+              <Route path="/" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LandingPage />} />
+              <Route path="/login" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <LoginPage />} />
+              <Route path="/signup" element={isLoggedIn ? <Navigate to={getRedirect()} replace /> : <SignUpPage />} />
+              
+              <Route element={<ProtectedRoute />}>
+                <Route element={<OnboardingRoute />}>
+                  <Route path="/profile-onboarding" element={<OnboardingWizard />} />
+                </Route>
+                <Route path="/dashboard" element={!profile?.fully_onboarded ? <Navigate to="/profile-onboarding" replace /> : <Dashboard />} />
+                <Route path="/user-profile" element={<UserProfilePage />} />
+                <Route element={<AdminProtectedRoute />}>
+                  <Route path="/organization" element={<OrganizationPage />} />
+                </Route>
+              </Route>
+
+              <Route path="*" element={<Navigate to={getRedirect()} replace />} />
+            </Routes>
+          </main>
+          {showBottomNav && (
+            <nav className="fixed bottom-0 left-0 right-0 md:hidden">
+              <MobileBottomNavigation isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+            </nav>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

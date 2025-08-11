@@ -23,31 +23,34 @@ const AvatarWithPresignedUrl = ({ profile, preview, className = "w-full h-full" 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (preview) {
-      setAvatarUrl(preview);
-      return;
-    }
-
-    if (!profile?.avatar_url) {
-      setAvatarUrl(null);
-      return;
-    }
-
     const fetchAvatarUrl = async () => {
-      setLoading(true);
-      try {
-        const { url } = await getData('/profile/avatar/view');
-        setAvatarUrl(url);
-      } catch (error) {
-        console.error('Failed to get avatar URL:', error);
+      // If we have a preview (user just selected a file), use that
+      if (preview) {
+        setAvatarUrl(preview);
+        return;
+      }
+
+      // FIXED: Only try to fetch if we have a profile AND it has an avatar_url
+      // This prevents 401 errors for new users who don't have profiles yet
+      if (profile && profile.avatar_url) {
+        setLoading(true);
+        try {
+          const { url } = await getData('/profile/avatar/view');
+          setAvatarUrl(url);
+        } catch (error) {
+          console.error('Failed to get avatar URL:', error);
+          setAvatarUrl(null);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // No profile or no avatar_url - just show fallback
         setAvatarUrl(null);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchAvatarUrl();
-  }, [profile?.avatar_url, preview]);
+  }, [profile, preview]);
 
   return (
     <Avatar className={className}>
@@ -123,7 +126,8 @@ export const ProfileStep = ({ onProfileComplete, loading, profile }) => {
     const errs = {};
     if (!form.first_name.trim()) errs.first_name = 'First name is required.';
     if (!form.last_name.trim()) errs.last_name = 'Last name is required.';
-    if (!form.organization_name.trim()) errs.organization_name = 'Organization name is required.';
+    // Remove organization validation since it's not shown in the form
+    // if (!form.organization_name.trim()) errs.organization_name = 'Organization name is required.';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
