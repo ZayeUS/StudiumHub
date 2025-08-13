@@ -1,8 +1,9 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useUserStore } from '../store/userStore';
 
-// Components & Pages
+// Import all your components and pages as before...
 import { FullScreenLoader } from './FullScreenLoader';
 import { ProtectedRoute } from './ProtectedRoute';
 import { AdminProtectedRoute } from './AdminProtectedRoute';
@@ -16,21 +17,14 @@ import { OrganizationPage } from '../pages/Authenticated/OrganizationPage';
 
 export const AppRouter = () => {
   const { authHydrated, isLoggedIn, profile } = useUserStore();
+  const location = useLocation();
 
-  // 1. Wait for the initial Firebase auth check to complete.
-  if (!authHydrated) {
+  // This loading logic now runs inside a stable component.
+  if (!authHydrated || (isLoggedIn && !profile)) {
     return <FullScreenLoader isLoading={true} />;
   }
 
-  // 2. NEW: If logged in, ALSO wait for the user's profile to be loaded.
-  // This is the fix that prevents the premature redirect.
-  if (isLoggedIn && !profile) {
-    return <FullScreenLoader isLoading={true} />;
-  }
-
-  // Determine the correct redirect path for an authenticated user
   const getAuthenticatedRedirect = () => {
-    // By the time this function runs, `profile` is guaranteed to be available.
     if (!profile?.fully_onboarded) {
       return "/profile-onboarding";
     }
@@ -38,38 +32,50 @@ export const AppRouter = () => {
   };
 
   return (
-    <Routes>
-      {isLoggedIn ? (
-        // --- AUTHENTICATED ROUTES ---
-        <Route element={<ProtectedRoute />}>
-          {/* These redirects will now have the correct profile data */}
-          <Route path="/" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-          <Route path="/login" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-          <Route path="/signup" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-
-          {/* Onboarding & Main App Routes */}
-          <Route element={<OnboardingRoute />}>
-            <Route path="/profile-onboarding" element={<OnboardingWizard />} />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        {/* We wrap each page component in a motion.div for the transition */}
+        {isLoggedIn ? (
+          // --- AUTHENTICATED ROUTES ---
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
+            <Route path="/login" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
+            <Route path="/signup" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
+            
+            <Route element={<OnboardingRoute />}>
+              <Route path="/profile-onboarding" element={<AnimatedPage><OnboardingWizard /></AnimatedPage>} />
+            </Route>
+            <Route path="/dashboard" element={<AnimatedPage><Dashboard /></AnimatedPage>} />
+            <Route path="/user-profile" element={<AnimatedPage><UserProfilePage /></AnimatedPage>} />
+            
+            <Route element={<AdminProtectedRoute />}>
+              <Route path="/organization" element={<AnimatedPage><OrganizationPage /></AnimatedPage>} />
+            </Route>
+            
+            <Route path="*" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
           </Route>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/user-profile" element={<UserProfilePage />} />
-          
-          <Route element={<AdminProtectedRoute />}>
-            <Route path="/organization" element={<OrganizationPage />} />
-          </Route>
-
-          {/* Catch-all for any other authenticated routes */}
-          <Route path="*" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-        </Route>
-      ) : (
-        // --- PUBLIC ROUTES ---
-        <>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<AuthPage />} />
-          <Route path="/signup" element={<AuthPage />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </>
-      )}
-    </Routes>
+        ) : (
+          // --- PUBLIC ROUTES ---
+          <>
+            <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
+            <Route path="/login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+            <Route path="/signup" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        )}
+      </Routes>
+    </AnimatePresence>
   );
 };
+
+// A simple helper component to wrap our pages with the animation props
+const AnimatedPage = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.2 }}
+  >
+    {children}
+  </motion.div>
+);
