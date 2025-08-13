@@ -20,7 +20,8 @@ export const AppRouter = () => {
   const location = useLocation();
 
   // This loading logic now runs inside a stable component.
-  if (!authHydrated || (isLoggedIn && !profile)) {
+// The corrected line
+if (!authHydrated) {
     return <FullScreenLoader isLoading={true} />;
   }
 
