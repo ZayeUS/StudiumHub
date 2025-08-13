@@ -11,8 +11,8 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   deleteUser,
-  GoogleAuthProvider, // 👈 Added
-  signInWithPopup,      // 👈 Added
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
@@ -30,12 +30,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const analytics = getAnalytics(app);
 
-// --- NEW: Google Auth Provider ---
+// Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 
 
-// --- Core Auth Functions ---
+// Core Auth Functions
 const signUp = (email, password) => createUserWithEmailAndPassword(auth, email, password);
 const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
 const logout = () => signOut(auth);
@@ -43,27 +43,22 @@ const resetPassword = (email) => sendPasswordResetEmail(auth, email);
 const checkEmailExists = (email) => fetchSignInMethodsForEmail(auth, email).then(methods => methods.length > 0);
 const onAuthStateChangedListener = (callback) => onAuthStateChanged(auth, callback);
 
-// --- User Management Functions ---
-
-// Re-authenticates the current user - required for sensitive operations
+// User Management Functions
 const reauthenticateUser = (password) => {
   const user = auth.currentUser;
   const credential = EmailAuthProvider.credential(user.email, password);
   return reauthenticateWithCredential(user, credential);
 };
 
-// Changes the user's password after they have been re-authenticated
 const updateUserPassword = (newPassword) => {
   const user = auth.currentUser;
   return updatePassword(user, newPassword);
 };
 
-// Deletes the user from Firebase Authentication
 const deleteFirebaseUser = () => {
   const user = auth.currentUser;
   return deleteUser(user);
 };
-
 
 export {
   auth,
@@ -77,5 +72,5 @@ export {
   reauthenticateUser,
   updateUserPassword,
   deleteFirebaseUser,
-  signInWithGoogle, // 👈 Exported
+  signInWithGoogle,
 };

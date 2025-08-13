@@ -1,4 +1,3 @@
-// src/frontend/store/userStore.js
 import { create } from 'zustand';
 import { auth } from '../../firebase';
 import { getData } from '../utils/BackendRequestHelper';
@@ -78,9 +77,7 @@ export const useUserStore = create((set, get) => ({
       authHydrated: true,
     });
   },
-
-  // *** THE FIX IS HERE: Part 1 ***
-  // We've extracted the data fetching logic into its own reusable action.
+  
   fetchUserSession: async () => {
     try {
         const [profileData, paymentData, orgData, roleData] = await Promise.all([
@@ -115,7 +112,6 @@ export const useUserStore = create((set, get) => ({
           }
           
           get().setUser(user.uid, userData.user_id);
-          // Now call our reusable function to get the rest of the data.
           await get().fetchUserSession();
 
         } catch (error) {
