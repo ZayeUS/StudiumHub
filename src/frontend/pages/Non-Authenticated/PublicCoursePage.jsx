@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getData } from '../../utils/BackendRequestHelper';
-import { Loader2, BookOpen, Layers, AlertCircle, ArrowRight } from 'lucide-react';
+import { Loader2, BookOpen, Layers, AlertCircle, ArrowRight, Library } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,14 +15,14 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.08,
     },
   },
 };
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 12 } },
 };
 
 export const PublicCoursePage = () => {
@@ -48,7 +48,7 @@ export const PublicCoursePage = () => {
     }, [fetchCourse]);
     
     if (loading) {
-        return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+        return <div className="flex h-screen w-full items-center justify-center bg-muted/20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
     }
 
     if (error) {
@@ -68,18 +68,17 @@ export const PublicCoursePage = () => {
     
     return (
         <div className="min-h-screen bg-muted/20">
-            <div className="container max-w-4xl mx-auto py-8 md:py-12 px-4">
+            <div className="container max-w-4xl mx-auto py-8 md:py-16 px-4">
                 <motion.div initial="hidden" animate="visible" variants={containerVariants}>
-                    <motion.div variants={itemVariants}>
-                        <Card className="mb-8 shadow-lg">
-                            <CardHeader>
-                                <Badge variant="secondary" className="w-fit mb-2">Course</Badge>
-                                <CardTitle className="text-4xl font-extrabold tracking-tight">{course?.title}</CardTitle>
-                                <CardDescription className="text-lg text-muted-foreground pt-2">
-                                    A comprehensive overview of the modules included in this course.
-                                </CardDescription>
-                            </CardHeader>
-                        </Card>
+                    <motion.div variants={itemVariants} className="text-center mb-12">
+                        <Badge variant="secondary" className="w-fit mb-4 text-sm font-medium">
+                            <Library className="mr-2 h-4 w-4" />
+                            Course Outline
+                        </Badge>
+                        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">{course?.title}</h1>
+                        <p className="text-lg text-muted-foreground mt-3 max-w-2xl mx-auto">
+                            Based on the document: <span className="font-medium text-foreground">{course.source_file_name}</span>
+                        </p>
                     </motion.div>
 
                     <motion.div variants={itemVariants}>
@@ -89,17 +88,20 @@ export const PublicCoursePage = () => {
                         </h2>
                     </motion.div>
 
-                    <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-4">
+                    <motion.div initial="hidden" animate="visible" variants={containerVariants} className="space-y-3">
                         {course?.modules.map((module, index) => (
                             <motion.div key={module.module_id} variants={itemVariants}>
-                                <Card className="hover:border-primary transition-all duration-300">
+                                <Card className="bg-background/50 hover:bg-background transition-shadow duration-300 shadow-sm hover:shadow-md">
                                     <CardContent className="p-4 flex items-center justify-between">
-                                        <div>
-                                            <p className="font-bold text-lg">{module.title}</p>
-                                            <p className="text-sm text-muted-foreground">Module {index + 1}</p>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center justify-center h-10 w-10 bg-primary/10 text-primary rounded-lg font-bold text-lg">
+                                                {index + 1}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-lg">{module.title}</p>
+                                            </div>
                                         </div>
-                                        <Button asChild>
-                                            {/* This will eventually link to the PublicModulePage */}
+                                        <Button asChild variant="ghost">
                                             <Link to={`/learn/module/${module.module_id}`}>
                                                 Start Learning
                                                 <ArrowRight className="ml-2 h-4 w-4" />

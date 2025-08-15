@@ -19,6 +19,8 @@ import { QuizPlayerPage } from '../pages/Authenticated/QuizPlayerPage';
 import { QuizEditorPage } from '../pages/Authenticated/QuizEditorPage';
 import { PublicCoursePage } from '../pages/Non-Authenticated/PublicCoursePage'; // <-- Import the new page
 import { PublicModulePage } from '../pages/Non-Authenticated/PublicModulePage'; // <-- Import the new module page
+import { PublicFlashcardPage } from '../pages/Non-Authenticated/PublicFlashcardPage'; // <-- Import the new flashcard page
+import { PublicQuizPage } from '../pages/Non-Authenticated/PublicQuizPage'; // <-- Import the new quiz page
 
 
 
@@ -61,6 +63,8 @@ export const AppRouter = () => {
           <>
           <Route path="/course/public/:courseId" element={<AnimatedPage><PublicCoursePage /></AnimatedPage>} />
           <Route path="/learn/module/:moduleId" element={<AnimatedPage><PublicModulePage /></AnimatedPage>} /> {/* <-- Add this new route */}
+          <Route path="/course/:courseId/deck/:deckId" element={<AnimatedPage><PublicFlashcardPage /></AnimatedPage>} />
+          <Route path="/course/:courseId/quiz/:quizId" element={<AnimatedPage><PublicQuizPage /></AnimatedPage>} />
             <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
             <Route path="/login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
             <Route path="/signup" element={<AnimatedPage><AuthPage /></AnimatedPage>} />

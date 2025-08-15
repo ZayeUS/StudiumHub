@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getData, postData } from '../../utils/BackendRequestHelper';
-import { BookOpen, ChevronLeft, Plus, FileText, Loader2, AlertCircle, Layers, Sparkles, ClipboardList, Edit, PlayCircle } from 'lucide-react';
+import { BookOpen, ChevronLeft, Plus, FileText, Loader2, AlertCircle, Layers, Sparkles, ClipboardList, Edit, Share, Check } from 'lucide-react';
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 // Import the view components
 import { SummaryView } from '../../components/course/SummaryView';
@@ -58,6 +60,7 @@ export const CourseDetailPage = () => {
     const [tabContent, setTabContent] = useState(null);
     const [generating, setGenerating] = useState('');
     const { toast } = useToast();
+    const [isCopied, setIsCopied] = useState(false);
 
     const fetchCourse = useCallback(async (shouldResetSelection = false) => {
         try {
@@ -104,7 +107,7 @@ export const CourseDetailPage = () => {
             await fetchCourse();
             setActiveTab(type);
         } catch (err) {
-            toast({ variant: "destructive", title: "Error", description: `Could not generate ${type}.` });
+            toast({ variant: "destructive", title: "Error", description: err.message || `Could not generate ${type}.` });
         } finally {
             setGenerating('');
         }
@@ -113,6 +116,18 @@ export const CourseDetailPage = () => {
     const handleModuleSelect = (module) => {
         setSelectedModule(module);
         setActiveTab('summary');
+    };
+
+    const handleShareLink = () => {
+        const url = `${window.location.origin}/course/public/${courseId}`;
+        navigator.clipboard.writeText(url).then(() => {
+            setIsCopied(true);
+            toast({ title: "Link Copied!", description: "Public course link copied to clipboard." });
+            setTimeout(() => setIsCopied(false), 2000); // Reset after 2 seconds
+        }, (err) => {
+            toast({ variant: "destructive", title: "Error", description: "Could not copy link." });
+            console.error('Could not copy text: ', err);
+        });
     };
 
     if (loading) { return <div className="flex h-full items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>; }
@@ -141,9 +156,24 @@ export const CourseDetailPage = () => {
                  (
                     <motion.div initial="hidden" animate="visible" variants={itemVariants}>
                         <Card className="bg-card/60 backdrop-blur-sm border-border/50 mb-8">
-                            <CardHeader>
-                                <CardTitle className="text-3xl font-bold">{course.title}</CardTitle>
-                                <CardDescription className="flex items-center gap-2 pt-2"><FileText className="h-4 w-4" /> Based on: {course.source_file_name}</CardDescription>
+                            <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                                <div>
+                                    <CardTitle className="text-3xl font-bold">{course.title}</CardTitle>
+                                    <CardDescription className="flex items-center gap-2 pt-2"><FileText className="h-4 w-4" /> Based on: {course.source_file_name}</CardDescription>
+                                </div>
+                                <Button onClick={handleShareLink} variant="outline" size="sm" className="mt-4 md:mt-0">
+                                    {isCopied ? (
+                                        <>
+                                            <Check className="mr-2 h-4 w-4 text-green-500" />
+                                            Copied!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Share className="mr-2 h-4 w-4" />
+                                            Share Public Link
+                                        </>
+                                    )}
+                                </Button>
                             </CardHeader>
                         </Card>
 
@@ -153,8 +183,30 @@ export const CourseDetailPage = () => {
                                     <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-4">
                                         <h3 className="text-2xl font-bold break-words">{selectedModule.title}</h3>
                                         <div className="flex gap-2 flex-shrink-0">
-                                            <Button onClick={() => handleGenerate('flashcards')} disabled={generating === 'flashcards' || !!selectedModule.flashcard_deck_id}><Sparkles className="mr-2 h-4 w-4" />{selectedModule.flashcard_deck_id ? "Flashcards Created" : "Generate"}</Button>
-                                            <Button onClick={() => handleGenerate('quiz')} disabled={generating === 'quiz' || !!selectedModule.quiz_id} variant="outline"><ClipboardList className="mr-2 h-4 w-4" />{selectedModule.quiz_id ? "Quiz Created" : "Generate"}</Button>
+                                            <Button onClick={() => handleGenerate('flashcards')} disabled={generating === 'flashcards' || !!selectedModule.flashcard_deck_id}><Sparkles className="mr-2 h-4 w-4" />{selectedModule.flashcard_deck_id ? "Flashcards Created" : "Generate Flashcards"}</Button>
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        {/* This div is necessary for the tooltip to work on a disabled button */}
+                                                        <div>
+                                                            <Button
+                                                                onClick={() => handleGenerate('quiz')}
+                                                                disabled={generating === 'quiz' || !!selectedModule.quiz_id || !selectedModule.flashcard_deck_id}
+                                                                variant="outline"
+                                                                className="w-full" // Ensure it fills the div
+                                                            >
+                                                                <ClipboardList className="mr-2 h-4 w-4" />
+                                                                {selectedModule.quiz_id ? "Quiz Created" : "Generate Quiz"}
+                                                            </Button>
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    {!selectedModule.flashcard_deck_id && (
+                                                        <TooltipContent>
+                                                            <p>You must generate flashcards first.</p>
+                                                        </TooltipContent>
+                                                    )}
+                                                </Tooltip>
+                                            </TooltipProvider>
                                         </div>
                                     </div>
                                     
