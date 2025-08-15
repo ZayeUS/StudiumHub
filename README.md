@@ -175,4 +175,4 @@ The project is organized with a clear separation between the frontend and backen
     ├── store/          # Zustand store for global state management (userStore.js)
     ├── hooks/          # Custom React hooks (useDirectUpload.js)
     └── App.jsx         # Main application component with routing logic
-```
+```# StudiumHub
