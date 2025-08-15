@@ -4,50 +4,83 @@
 
 @layer base {
   :root {
-    /* --- NEW Light Theme (Professional Slate) --- */
-    --background: 220 20% 98%;                /* Off-White */
-    --foreground: 220 15% 25%;                /* Very Dark Slate */
-    --card: 220 20% 100%;                     /* White */
-    --card-foreground: 220 15% 25%;
-    --popover: 220 20% 100%;
-    --popover-foreground: 220 15% 25%;
-    --primary: 220 15% 45%;                   /* Slate Gray */
-    --primary-foreground: 220 20% 98%;        /* Off-White */
-    --secondary: 220 15% 95%;                 /* Light Slate */
-    --secondary-foreground: 220 15% 25%;
+    /* --- StudiumHub Light (Indigo + Teal) --- */
+    --background: 220 25% 98%;               /* Paper */
+    --foreground: 222 22% 15%;               /* Ink */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 22% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 22% 15%;
+
+    --primary: 234 85% 60%;                  /* Indigo 600 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 16% 94%;                 /* Slate 100 */
+    --secondary-foreground: 222 22% 20%;
+
     --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 45%;           /* Medium Slate */
-    --accent: 220 15% 95%;
-    --accent-foreground: 220 15% 25%;
-    --destructive: 0 72% 51%;                 /* Refined Red */
+    --muted-foreground: 220 10% 40%;
+
+    --accent: 190 80% 40%;                   /* Teal 600 */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 45%;                /* Red 600 */
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 90%;                    /* Light Slate Border */
-    --input: 220 15% 90%;
-    --ring: 220 15% 45%;                      /* Ring color matches primary */
+
+    --border: 220 13% 88%;
+    --input: 220 13% 88%;
+    --ring: 234 85% 60%;                     /* Match primary */
+
+    /* Optional radius */
     --radius: 0.5rem;
+
+    /* Optional semantic tokens (use in components if you like) */
+    --success: 150 70% 38%;                  /* Green 600 */
+    --success-foreground: 0 0% 100%;
+    --warning: 40 95% 45%;                   /* Amber 500/600 */
+    --warning-foreground: 25 15% 15%;
+    --info: 205 90% 48%;                     /* Sky 500/600 */
+    --info-foreground: 0 0% 100%;
   }
 
   .dark {
-    /* --- NEW Dark Theme (Lighter Slate) --- */
-    --background: 220 15% 15%;                /* Dark Slate */
-    --foreground: 220 20% 98%;                /* Off-White */
-    --card: 220 15% 20%;                      /* Slightly Lighter Slate */
-    --card-foreground: 220 20% 98%;
-    --popover: 220 15% 15%;
-    --popover-foreground: 220 20% 98%;
-    --primary: 220 20% 80%;                   /* Light Slate Gray (for primary actions in dark mode) */
-    --primary-foreground: 220 15% 15%;        /* Dark Slate (for text on primary buttons) */
-    --secondary: 220 15% 25%;                 /* Medium Slate */
-    --secondary-foreground: 220 20% 98%;
-    --muted: 220 15% 25%;
-    --muted-foreground: 220 10% 65%;           /* Lighter Muted Slate */
-    --accent: 220 15% 25%;
-    --accent-foreground: 220 20% 98%;
-    --destructive: 0 63% 31%;
+    /* --- StudiumHub Dark (Indigo Glow) --- */
+    --background: 222 40% 8%;                /* Slate 950 */
+    --foreground: 210 40% 98%;
+
+    --card: 222 35% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 35% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 234 85% 70%;                  /* Lighter indigo for dark */
+    --primary-foreground: 234 100% 10%;
+
+    --secondary: 222 25% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 15% 22%;
+    --muted-foreground: 220 10% 70%;
+
+    --accent: 190 80% 45%;                   /* Teal pop on dark */
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 70% 55%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 15% 25%;
-    --input: 220 15% 25%;
-    --ring: 220 20% 80%;
+
+    --border: 222 20% 22%;
+    --input: 222 20% 22%;
+    --ring: 234 85% 70%;
+
+    --success: 150 70% 45%;
+    --success-foreground: 210 40% 98%;
+    --warning: 40 95% 52%;
+    --warning-foreground: 25 15% 10%;
+    --info: 205 90% 58%;
+    --info-foreground: 210 40% 98%;
   }
 
   * {
@@ -62,7 +95,7 @@
   /* Focus visibility (WCAG 2.2 aligned) */
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.8);
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.85);
   }
 
   /* Auth pages subtle animated gradient */
@@ -71,8 +104,8 @@
     background-image: linear-gradient(
       -45deg,
       hsl(var(--background)) 0%,
-      hsl(var(--background)) 50%,
-      hsl(var(--primary) / 0.05) 100%
+      hsl(var(--background)) 45%,
+      hsl(var(--primary) / 0.06) 100%
     );
     animation: gradient-pan 15s ease infinite;
   }

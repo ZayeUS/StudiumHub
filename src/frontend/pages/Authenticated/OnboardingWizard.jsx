@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, Sun, Moon, Sparkles, User, CreditCard, PartyPopper } from 'lucide-react';
 
-import { postData, putData } from '../../utils/BackendRequestHelper'; // Make sure putData is imported
+import { postData, putData } from '../../utils/BackendRequestHelper';
 import { useUserStore } from '../../store/userStore';
-import { useDirectUpload } from '../../../hooks/useDirectUpload';
+import { useFileUpload } from '../../../hooks/useDirectUpload'; // <-- UPDATED IMPORT
 import { auth } from '../../../firebase';
 
 // Onboarding Step Components
@@ -35,7 +35,7 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
   const [step, setStep] = useState(initialStep);
   const [apiError, setApiError] = useState('');
   const { profile, setProfile, clearUser, loading, setLoading, isDarkMode, toggleTheme, userSubscriptionStatus } = useUserStore();
-  const { upload: uploadAvatar } = useDirectUpload();
+  const { upload: uploadFile } = useFileUpload(); // <-- UPDATED HOOK
   const navigate = useNavigate();
 
   useEffect(() => setStep(initialStep), [initialStep]);
@@ -51,38 +51,46 @@ export const OnboardingWizard = ({ initialStep = 1 }) => {
     setLoading(true);
     setApiError('');
     try {
-      let profileRes;
+      let profileData;
       
-      // *** THE FIX IS HERE ***
-      // If a profile already exists in our global state, we UPDATE it with PUT.
-      // Otherwise, we CREATE it with POST.
+      // Determine if we are creating a new profile or updating an existing one
       if (profile) {
-        profileRes = await putData('/profile', {
+        const res = await putData('/profile', {
           first_name: formData.first_name,
           last_name: formData.last_name,
         });
+        profileData = res.profile;
       } else {
-        profileRes = await postData('/profile', {
+        const res = await postData('/profile', {
           first_name: formData.first_name,
           last_name: formData.last_name,
         });
+        profileData = res.profile;
       }
 
-      let finalProfile = profileRes?.profile;
+      if (!profileData) throw new Error('Profile creation/update failed.');
 
-      if (!finalProfile) throw new Error('Profile creation/update failed.');
-
+      // If an avatar file was selected, upload it
       if (avatarFile) {
         try {
-          const updatedProfile = await uploadAvatar(avatarFile);
-          finalProfile = updatedProfile;
+          // Use the new uploadFile hook
+          const updatedProfileWithAvatar = await uploadFile(avatarFile, {
+            purpose: 'avatar',
+            onSuccess: async (fileUrl) => {
+              const { profile: updatedProfile } = await putData("/profile/avatar", {
+                avatar_url: fileUrl,
+              });
+              return updatedProfile;
+            }
+          });
+          profileData = updatedProfileWithAvatar;
         } catch (avatarError) {
           console.error('Avatar upload failed:', avatarError);
-          setApiError('Profile saved, but avatar upload failed. You can try again later.');
+          setApiError('Profile saved, but avatar upload failed. You can add it later.');
         }
       }
       
-      setProfile(finalProfile);
+      setProfile(profileData);
       setStep(2);
     } catch (err) {
       setApiError(err?.message || 'Something went wrong saving your profile.');

@@ -6,7 +6,7 @@ import { updateUserPassword, reauthenticateUser, deleteFirebaseUser } from "../.
 import {
   Edit, Save, X, User, Lock, Trash2, Eye, EyeOff, Loader2, Camera, ImageOff,
 } from "lucide-react";
-import { useDirectUpload } from "../../../hooks/useDirectUpload";
+import { useFileUpload } from "../../../hooks/useDirectUpload"; // <-- UPDATED IMPORT
 
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
@@ -208,7 +208,7 @@ const ChangePasswordDialog = ({ onSave, loading, apiError, setApiError }) => {
 export function UserProfilePage() {
   const { profile, setProfile, clearUser, setLoading, loading } = useUserStore();
   const { toast } = useToast();
-  const { upload: uploadAvatar, loading: avatarUploading } = useDirectUpload();
+  const { upload: uploadFile, loading: isUploading } = useFileUpload(); // <-- UPDATED HOOK USAGE
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -218,28 +218,32 @@ export function UserProfilePage() {
 
   const [dialogOpen, setDialogOpen] = useState({ changePass: false, reauthDelete: false });
   const [apiError, setApiError] = useState("");
-  const [avatarChangeKey, setAvatarChangeKey] = useState(0); // Force avatar re-fetch
+  const [avatarChangeKey, setAvatarChangeKey] = useState(0);
   const fileInputRef = useRef(null);
 
   const openFilePicker = () => fileInputRef.current?.click();
 
   const handleAvatarFile = async (file) => {
-    console.log("File selected:", file?.name, file?.type, file?.size);
     if (!file) return;
   
     try {
-      console.log("Starting upload...");
-      const updatedProfile = await uploadAvatar(file);
-      console.log("Upload successful:", updatedProfile);
-      setProfile(updatedProfile);
-      setAvatarChangeKey(prev => prev + 1); // Force avatar component to re-fetch
-      toast({ title: "Profile photo updated" });
+      // <-- UPDATED UPLOAD LOGIC
+      await uploadFile(file, {
+        purpose: 'avatar',
+        onSuccess: async (fileUrl) => {
+          const { profile: updatedProfile } = await putData("/profile/avatar", {
+            avatar_url: fileUrl,
+          });
+          setProfile(updatedProfile);
+          setAvatarChangeKey(prev => prev + 1);
+          toast({ title: "Profile photo updated" });
+        }
+      });
     } catch (err) {
-      console.error("Upload error:", err);
       toast({
         variant: "destructive", 
         title: "Upload failed",
-        description: err?.message || "Could not upload your image. Please try again.",
+        description: err?.message || "Could not upload your image.",
       });
     }
   };
@@ -249,7 +253,7 @@ export function UserProfilePage() {
     try {
       const updatedProfile = await deleteData('/profile/avatar');
       setProfile(updatedProfile.profile);
-      setAvatarChangeKey(prev => prev + 1); // Force avatar component to re-fetch
+      setAvatarChangeKey(prev => prev + 1);
       toast({ title: 'Avatar removed' });
     } catch (error) {
       toast({
@@ -342,9 +346,9 @@ export function UserProfilePage() {
                   className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
                   title="Change profile photo"
                   aria-label="Change profile photo"
-                  disabled={avatarUploading}
+                  disabled={isUploading} // <-- UPDATED PROP
                 >
-                  {avatarUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                 </Button>
                 <input
                   ref={fileInputRef}
@@ -368,7 +372,7 @@ export function UserProfilePage() {
                 type="button"
                 variant="ghost"
                 onClick={handleRemoveAvatar}
-                disabled={loading || avatarUploading}
+                disabled={loading || isUploading} // <-- UPDATED PROP
                 className="text-muted-foreground hover:text-destructive"
                 title="Remove profile photo"
               >

@@ -1,87 +1,48 @@
 // src/frontend/pages/Authenticated/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useUserStore } from '../../store/userStore';
-import { postData } from '../../utils/BackendRequestHelper';
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  animate
-} from 'framer-motion';
-import {
-  Plus,
-  ChevronRight,
-  LayoutGrid,
-  Activity,
-  Users,
-  DollarSign,
-  Briefcase,
-  Loader2,
-  Mail,
-  UserPlus
-} from 'lucide-react';
+import { getData, postData } from '../../utils/BackendRequestHelper';
+import { useFileUpload } from '../../../hooks/useDirectUpload';
+import { useDropzone } from 'react-dropzone';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { Plus, BookOpen, FileText, UploadCloud, Loader2, AlertCircle, ArrowRight, CheckCircle, Clock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger,DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
-const InviteMemberDialog = () => {
-    const { toast } = useToast();
-    const { organization } = useUserStore();
-    const [open, setOpen] = useState(false);
-    const [email, setEmail] = useState('');
-    const [role, setRole] = useState('member');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+// --- Animation Variants ---
+const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+const itemVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 12 } } };
 
-    const handleInvite = async () => {
-        setError('');
-        if (!email || !role) {
-            setError('Please provide a valid email and select a role.');
+// --- Dialog Components ---
+const CreateCourseDialog = ({ materials, onCourseCreated }) => {
+    const [open, setOpen] = useState(false);
+    const [title, setTitle] = useState('');
+    const [materialId, setMaterialId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { toast } = useToast();
+
+    const handleCreate = async () => {
+        if (!title || !materialId) {
+            toast({ variant: "destructive", title: "Missing fields", description: "Please provide a title and select a source material." });
             return;
         }
         setLoading(true);
         try {
-            await postData('/invitations', {
-                email,
-                role,
-                organization_id: organization.organization_id
-            });
-            toast({
-                title: 'Invitation Sent!',
-                description: `${email} has been invited to join your organization.`,
-            });
-            setOpen(false); // Close dialog on success
-            setEmail('');
-            setRole('member');
+            await postData('/courses', { title, source_material_id: materialId });
+            toast({ title: "Course Created!", description: `${title} has been successfully created.` });
+            onCourseCreated();
+            setOpen(false);
+            setTitle('');
+            setMaterialId('');
         } catch (err) {
-            setError(err.message || 'Failed to send invitation.');
+            toast({ variant: "destructive", title: "Error", description: err.message || "Failed to create the course." });
         } finally {
             setLoading(false);
         }
@@ -90,40 +51,38 @@ const InviteMemberDialog = () => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <UserPlus className="mr-2 h-4 w-4" /> Invite Team Member
+                <Button size="lg" variant="outline" className="h-12 text-base" disabled={materials.length === 0}>
+                    <Plus className="mr-2 h-5 w-5" /> Create New Course
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Invite a New Team Member</DialogTitle>
+                    <DialogTitle>Create a New Course</DialogTitle>
                     <DialogDescription>
-                        Enter the email and assign a role. They will receive an email to sign up and join your organization.
+                        Create a structured course from one of your uploaded materials.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    {error && <p className="text-sm text-destructive">{error}</p>}
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="email" className="text-right">Email</Label>
-                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="course-title">Course Title</Label>
+                        <Input id="course-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Biology 101" />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="role" className="text-right">Role</Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Select a role" />
+                    <div className="space-y-2">
+                        <Label htmlFor="source-material">Source Material</Label>
+                        <Select onValueChange={setMaterialId} value={materialId}>
+                            <SelectTrigger id="source-material">
+                                <SelectValue placeholder="Select a PDF..." />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="member">Member</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
+                                {materials.map(m => <SelectItem key={m.material_id} value={m.material_id}>{m.file_name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleInvite} disabled={loading}>
+                    <Button onClick={handleCreate} disabled={loading}>
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Send Invitation
+                        Create Course
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -131,205 +90,129 @@ const InviteMemberDialog = () => {
     );
 };
 
+const UploadMaterialDialog = ({ onUploadComplete }) => {
+    const [file, setFile] = useState(null);
+    const [open, setOpen] = useState(false);
+    const { upload, loading: isUploading, error: uploadError } = useFileUpload();
+    const { toast } = useToast();
+    const onDrop = useCallback((acceptedFiles) => { if (acceptedFiles[0]) { setFile(acceptedFiles[0]); } }, []);
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] }, multiple: false });
 
-// Mock Data
-const MOCK_PROJECTS = [
-  { id: 1, name: 'AI Copywriter Pro', status: 'Active', lastUpdated: '3 hours ago', icon: Briefcase, color: 'text-blue-500' },
-  { id: 2, name: 'Client Onboarding Portal', status: 'In Progress', lastUpdated: '1 day ago', icon: Briefcase, color: 'text-yellow-500' },
-  { id: 3, name: 'Analytics Dashboard', status: 'On Hold', lastUpdated: '5 days ago', icon: Briefcase, color: 'text-orange-500' },
-  { id: 4, name: 'Internal Wiki', status: 'Completed', lastUpdated: '2 weeks ago', icon: Briefcase, color: 'text-green-500' },
-];
-
-const MOCK_STATS = [
-  { title: "Active Projects", value: 4, icon: Activity },
-  { title: "Team Members", value: 12, icon: Users },
-  { title: "Monthly Revenue", value: 2450, isCurrency: true, icon: DollarSign },
-];
-
-// AnimatedCounter using useMotionValue + animate
-const AnimatedCounter = ({ value, isCurrency = false }) => {
-  const [count, setCount] = useState(0);
-  const motionVal = useMotionValue(0);
-
-  useEffect(() => {
-    // animate the motion value from current to target
-    const animation = animate(motionVal, value, {
-      duration: 1.5,
-      ease: 'easeOut'
-    });
-    // subscribe to changes
-    const unsubscribe = motionVal.onChange(v => {
-      setCount(Math.round(v));
-    });
-    // cleanup
-    return () => {
-      unsubscribe();
-      animation.stop();
+    const handleUpload = async () => {
+        if (!file) return;
+        try {
+            await upload(file, { purpose: 'course_material' });
+            toast({ title: "Upload in Progress", description: `${file.name} is being processed and will appear shortly.` });
+            onUploadComplete();
+            setFile(null);
+            setOpen(false);
+        } catch (err) {
+            toast({ variant: "destructive", title: "Upload Failed", description: err.message });
+        }
     };
-  }, [value, motionVal]);
 
-  return (
-    <span>
-      {isCurrency && '$'}
-      {count.toLocaleString()}
-    </span>
-  );
+    return (
+        <Dialog open={open} onOpenChange={setOpen}><DialogTrigger asChild><Button size="lg" className="h-12 text-base"><UploadCloud className="mr-2 h-5 w-5" /> Upload New Material</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Upload Course Material</DialogTitle><DialogDescription>Upload a PDF textbook, syllabus, or lecture notes to get started.</DialogDescription></DialogHeader><div {...getRootProps()} className={cn("mt-4 p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors", isDragActive ? "border-primary bg-primary/10" : "border-border hover:border-primary/50")}><input {...getInputProps()} /><UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />{file ? (<p className="mt-2 text-sm font-semibold">{file.name}</p>) : (<p className="mt-2 text-sm text-muted-foreground">{isDragActive ? "Drop the PDF here..." : "Drag 'n' drop a PDF here, or click to select"}</p>)}</div>{uploadError && <p className="text-sm text-destructive mt-2">{uploadError}</p>}<div className="mt-4 flex justify-end"><Button onClick={handleUpload} disabled={!file || isUploading}>{isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Upload & Process</Button></div></DialogContent></Dialog>
+    );
 };
 
-// Animation Variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100, damping: 12 } },
-};
-
-const StatCard = ({ stat }) => (
-  <Card>
-    <CardHeader className="flex items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-      <stat.icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">
-        <AnimatedCounter value={stat.value} isCurrency={stat.isCurrency} />
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const EmptyState = () => (
-  <div className="flex flex-col items-center justify-center h-[50vh] text-center p-8">
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 120, damping: 10, delay: 0.2 }}
-      className="flex flex-col items-center"
-    >
-      <div className="p-4 bg-primary/10 rounded-full mb-4">
-        <LayoutGrid className="h-10 w-10 text-primary" />
-      </div>
-      <h2 className="text-2xl font-semibold mb-2">Welcome to your workspace!</h2>
-      <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-        This is where your projects will live. Get started by creating your first one.
-      </p>
-      <Button size="lg">
-        <Plus className="mr-2 h-5 w-5" /> Create New Project
-      </Button>
-    </motion.div>
-  </div>
-);
-
+// --- Main Dashboard Component ---
 export function Dashboard() {
-  const { profile, role, organization } = useUserStore();
-  const [projects, setProjects] = useState([]);
+  const { profile, organization, role } = useUserStore();
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setProjects(MOCK_PROJECTS);
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+  const fetchData = useCallback(async () => {
+    try {
+        setLoading(true);
+        const data = await getData('/dashboard/teacher');
+        setDashboardData(data);
+    } catch (err) {
+        setError('Could not load dashboard data.');
+    } finally {
+        setLoading(false);
+    }
   }, []);
 
-  const getStatusBadgeVariant = status => {
-    switch (status) {
-      case 'Active':      return 'default';
-      case 'In Progress': return 'secondary';
-      case 'On Hold':     return 'destructive';
-      case 'Completed':   return 'outline';
-      default:            return 'secondary';
-    }
-  };
+  useEffect(() => { if (role === 'admin') { fetchData(); } else { setLoading(false); } }, [role, fetchData]);
+
+  if (role !== 'admin') { return (<div className="p-8"><h1 className="text-2xl font-bold">Student Dashboard Coming Soon!</h1></div>); }
+  if (loading) { return (<div className="flex h-full w-full items-center justify-center p-8"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>); }
+  if (error) { return (<div className="p-8 text-center"><AlertCircle className="mx-auto h-12 w-12 text-destructive" /><h2 className="mt-4 text-xl font-semibold">Something went wrong</h2><p className="mt-2 text-muted-foreground">{error}</p><Button onClick={fetchData} className="mt-4">Try Again</Button></div>); }
+
+  const hasContent = dashboardData?.recentMaterials?.length > 0 || dashboardData?.recentCourses?.length > 0;
+  const readyMaterials = dashboardData?.recentMaterials.filter(m => m.status === 'ready') || [];
 
   return (
-    <motion.div
-      className="h-full p-4 md:p-8 space-y-8"
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-    >
-      {/* Header */}
-      <motion.header variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome to {organization?.name || 'your Dashboard'}!
-          </h1>
-          <p className="text-muted-foreground">
-            Here’s what’s happening with your projects today, {profile?.first_name}.
-          </p>
-        </div>
-       
+    <div className="h-full p-4 md:p-8 space-y-8">
+      <motion.header variants={itemVariants} initial="hidden" animate="visible">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Welcome, {profile?.first_name || 'Teacher'}!
+              </h1>
+              <p className="text-muted-foreground">
+                Here's your mission control for {organization?.name}.
+              </p>
+            </div>
+          </div>
       </motion.header>
 
-      {/* Stats */}
-      <motion.div variants={containerVariants} className="grid gap-4 md:grid-cols-3">
-        {MOCK_STATS.map(stat => (
-          <motion.div key={stat.title} variants={itemVariants}>
-            <StatCard stat={stat} />
+      <AnimatePresence mode="wait">
+        {!hasContent ? (
+          <motion.div key="empty-state" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <Card className="text-center py-16 px-8 bg-background/50 border-2 border-dashed"><FileText className="mx-auto h-16 w-16 text-muted-foreground" /><h2 className="mt-6 text-2xl font-semibold">Your Library is Empty</h2><p className="mt-2 text-muted-foreground">Get started by uploading your first course material.</p><div className="mt-6"><UploadMaterialDialog onUploadComplete={fetchData} /></div></Card>
           </motion.div>
-        ))}
-      </motion.div>
+        ) : (
+          <motion.div key="dashboard-content" variants={containerVariants} initial="hidden" animate="visible" className="space-y-8">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2 bg-card/60 backdrop-blur-sm border-border/50">
+                <CardHeader><CardTitle>Quick Actions</CardTitle></CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4">
+                  <UploadMaterialDialog onUploadComplete={fetchData} />
+                  <CreateCourseDialog materials={readyMaterials} onCourseCreated={fetchData} />
+                </CardContent>
+              </Card>
+              <Card className="bg-card/60 backdrop-blur-sm border-border/50">
+                <CardHeader><CardTitle>At a Glance</CardTitle></CardHeader>
+                <CardContent className="space-y-2"><div className="flex justify-between items-center text-sm"><p className="text-muted-foreground">Content Library</p><p className="font-semibold">{dashboardData.stats.totalMaterials} files</p></div><div className="flex justify-between items-center text-sm"><p className="text-muted-foreground">Published Courses</p><p className="font-semibold">{dashboardData.stats.totalCourses} courses</p></div></CardContent>
+              </Card>
+            </motion.div>
 
-      {/* Projects */}
-      <motion.div variants={itemVariants}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Projects</CardTitle>
-            <CardDescription>
-              An overview of all your current and past projects.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AnimatePresence mode="wait">
-              {loading ? (
-                <div className="h-40 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : projects.length === 0 ? (
-                <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <EmptyState />
+            {dashboardData.recentCourses.length > 0 && (
+                <motion.div variants={itemVariants}>
+                    <Card className="bg-card/60 backdrop-blur-sm border-border/50">
+                        <CardHeader><CardTitle>My Courses</CardTitle><CardDescription>Your most recently created courses.</CardDescription></CardHeader>
+                        <CardContent><div className="space-y-2">{dashboardData.recentCourses.map(course => (
+                            <Link to={`/course/${course.course_id}`} key={course.course_id}>
+                                <div className="flex items-center justify-between p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <BookOpen className="h-6 w-6 text-primary" />
+                                        <div>
+                                            <p className="font-semibold">{course.title}</p>
+                                            <p className="text-xs text-muted-foreground">Updated {new Date(course.updated_at).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <Button variant="ghost" size="icon" asChild>
+                                        <div><ArrowRight className="h-4 w-4" /></div>
+                                    </Button>
+                                </div>
+                            </Link>
+                        ))}</div></CardContent>
+                    </Card>
                 </motion.div>
-              ) : (
-                <motion.div key="projects" className="space-y-4">
-                  {projects.map((project, i) => (
-                    <motion.div
-                      key={project.id}
-                      variants={itemVariants}
-                      initial="hidden"
-                      animate="visible"
-                      transition={{ delay: i * 0.1 }}
-                    >
-                      <div className="flex items-center p-3 -m-3 rounded-lg hover:bg-accent transition-colors">
-                        <div className="mr-4 bg-muted p-2 rounded-lg">
-                          <project.icon className={cn("h-6 w-6", project.color)} />
-                        </div>
-                        <div className="flex-grow">
-                          <p className="font-semibold">{project.name}</p>
-                          <p className="text-sm text-muted-foreground">{project.lastUpdated}</p>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(project.status)}>
-                          {project.status}
-                        </Badge>
-                        <Button variant="ghost" size="icon" className="ml-4">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </motion.div>
+            )}
+
+            <motion.div variants={itemVariants}>
+              <Card className="bg-card/60 backdrop-blur-sm border-border/50">
+                <CardHeader><CardTitle>Content Library</CardTitle><CardDescription>Your most recently uploaded materials.</CardDescription></CardHeader>
+                <CardContent><div className="space-y-2">{dashboardData.recentMaterials.map(material => (<div key={material.material_id} className="flex items-center justify-between p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors"><div className="flex items-center gap-4"><FileText className="h-6 w-6 text-primary" /><div><p className="font-semibold">{material.file_name}</p><p className="text-xs text-muted-foreground">Uploaded {new Date(material.created_at).toLocaleDateString()}</p></div></div><div className="flex items-center gap-2 text-sm">{material.status === 'ready' ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Clock className="h-4 w-4 text-yellow-500" />}<span className="capitalize">{material.status}</span></div></div>))}</div></CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

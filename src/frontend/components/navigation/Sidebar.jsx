@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home, LogOut, Sun, Moon, ChevronLeft, ChevronRight, Settings, Building
+  Home, LogOut, Sun, Moon, ChevronLeft, ChevronRight, Building
 } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import { signOut as firebaseSignOut } from 'firebase/auth';
@@ -25,7 +25,8 @@ const navItemVariants = {
   hidden: { opacity: 0, x: -15 },
   visible: { opacity: 1, x: 0 }
 };
-const getInitials = (name = '') => name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+const getInitials = (name = '') =>
+  name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
 const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
   const { pathname } = useLocation();
@@ -39,9 +40,13 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
             <motion.div
               whileTap={{ scale: 0.97 }}
               className={cn(
-                'relative flex items-center h-10 rounded-lg text-muted-foreground transition-colors w-full font-medium overflow-hidden',
-                'hover:bg-accent hover:text-accent-foreground',
-                isActive && 'bg-primary/10 text-primary',
+                // base row
+                'relative flex items-center h-10 rounded-lg w-full font-medium overflow-hidden transition-colors',
+                'text-muted-foreground',
+                // glassy hover
+                'hover:bg-white/10 dark:hover:bg-white/10 supports-[backdrop-filter]:hover:backdrop-blur-sm',
+                // active tint
+                isActive && 'bg-[hsl(var(--primary)/.14)] text-primary',
                 isExpanded ? 'px-3 justify-start' : 'px-3 justify-center'
               )}
             >
@@ -76,15 +81,19 @@ const NavItem = ({ to, icon: Icon, label, isExpanded }) => {
 };
 
 export const Sidebar = ({ isDarkMode, toggleTheme }) => {
-  const { profile, organization, clearUser, role, isSidebarExpanded, setIsSidebarExpanded } = useUserStore();
+  const {
+    profile,
+    organization,
+    clearUser,
+    role,
+    isSidebarExpanded,
+    setIsSidebarExpanded
+  } = useUserStore();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    // *** THE FIX IS HERE ***
-    // 1. Navigate to the login page first.
-    navigate('/login'); 
-    
-    // 2. Then, sign out from Firebase and clear the user state.
+    // Navigate first to prevent UI flicker
+    navigate('/login');
     await firebaseSignOut(auth);
     clearUser();
   };
@@ -97,19 +106,34 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
   return (
     <motion.aside
       initial={false}
-      animate={isSidebarExpanded ? "expanded" : "collapsed"}
+      animate={isSidebarExpanded ? 'expanded' : 'collapsed'}
       variants={sidebarVariants}
       transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-      className="hidden md:flex fixed top-0 left-0 h-full flex-col bg-card border-r z-50 p-2"
+      className={cn(
+        // layout
+        'hidden md:flex fixed top-0 left-0 h-full z-50 p-2 flex-col',
+        // GLASS SIDEBAR CHROME
+        'border-r border-white/15 dark:border-white/10',
+        'bg-white/10 dark:bg-white/10',
+        'supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150',
+        'shadow-[inset_0_1px_0_rgba(255,255,255,.16),0_10px_30px_rgba(0,0,0,.20)]'
+      )}
     >
       {/* Top */}
       <div className="flex flex-col justify-between h-full">
         <div>
-          {/* Workspace */}
-          <div className="flex items-center h-14 mb-2">
+          {/* Workspace header strip (subtle glass band) */}
+          <div
+            className={cn(
+              'flex items-center h-14 mb-2 rounded-lg px-2',
+              'bg-white/8 dark:bg-white/8 border border-white/10',
+              'supports-[backdrop-filter]:backdrop-blur-md'
+            )}
+          >
             <div className="flex items-center w-full">
               <div className="flex items-center p-2">
                 <Avatar className="h-8 w-8">
+                  <AvatarImage />
                   <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                     {getInitials(organization?.name)}
                   </AvatarFallback>
@@ -147,19 +171,26 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
 
         {/* Bottom */}
         <div className="flex flex-col space-y-1">
-          <Separator className="my-2" />
-          {/* Profile */}
+          <Separator className="my-2 border-white/15" />
+
+          {/* Profile row (glassy hover) */}
           <TooltipProvider delayDuration={isSidebarExpanded ? 500 : 0}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link to="/user-profile">
                   <motion.div
                     whileTap={{ scale: 0.97 }}
-                    className="flex items-center h-14 rounded-lg hover:bg-accent w-full p-2"
+                    className={cn(
+                      'flex items-center h-14 rounded-lg w-full p-2 transition-colors',
+                      'hover:bg-white/10 dark:hover:bg-white/10 supports-[backdrop-filter]:hover:backdrop-blur-sm',
+                      'border border-transparent hover:border-white/10'
+                    )}
                   >
                     <Avatar className="w-9 h-9">
                       <AvatarImage src={profile?.avatar_url} />
-                      <AvatarFallback>{profile?.first_name?.[0] ?? 'U'}</AvatarFallback>
+                      <AvatarFallback>
+                        {profile?.first_name?.[0]?.toUpperCase() ?? 'U'}
+                      </AvatarFallback>
                     </Avatar>
                     <AnimatePresence>
                       {isSidebarExpanded && (
@@ -171,8 +202,12 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
                           transition={{ duration: 0.2, delay: 0.1 }}
                           className="ml-3 text-left overflow-hidden"
                         >
-                          <p className="text-sm font-semibold truncate">{profile?.first_name} {profile?.last_name}</p>
-                          <p className="text-xs text-muted-foreground">View Profile</p>
+                          <p className="text-sm font-semibold truncate">
+                            {profile?.first_name} {profile?.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            View Profile
+                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -188,24 +223,38 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10" onClick={toggleTheme}>
+                  <Button
+                    variant="glassGhost"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={toggleTheme}
+                    aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                  >
                     {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
             <AnimatePresence>
               {isSidebarExpanded && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <Separator orientation="vertical" className="h-6" />
+                  <Separator orientation="vertical" className="h-6 border-white/15" />
                 </motion.div>
               )}
             </AnimatePresence>
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-destructive" onClick={handleLogout}>
+                  <Button
+                    variant="glassGhost"
+                    size="icon"
+                    className="h-10 w-10 text-muted-foreground hover:text-destructive"
+                    onClick={handleLogout}
+                    aria-label="Logout"
+                  >
                     <LogOut className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
@@ -223,10 +272,11 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
             <TooltipTrigger asChild>
               <motion.div whileTap={{ scale: 0.9 }}>
                 <Button
-                  variant="secondary"
+                  variant="glassPrimary"
                   size="icon"
                   className="h-8 w-8 rounded-full"
                   onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                  aria-label={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
                 >
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -236,7 +286,11 @@ export const Sidebar = ({ isDarkMode, toggleTheme }) => {
                       exit={{ rotate: 90, opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      {isSidebarExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      {isSidebarExpanded ? (
+                        <ChevronLeft className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
                     </motion.div>
                   </AnimatePresence>
                 </Button>
