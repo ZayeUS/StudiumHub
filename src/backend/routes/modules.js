@@ -35,6 +35,29 @@ function enforceExactlyTen(arr, label) {
   return arr.slice(0, 10);
 }
 
+
+
+// NEW: Public route to get a single module's content
+router.get('/:moduleId', async (req, res) => {
+  const { moduleId } = req.params;
+  try {
+      const result = await query(
+          `SELECT module_id, course_id, title, ai_summary, flashcard_deck_id, quiz_id 
+           FROM course_modules 
+           WHERE module_id = $1`,
+          [moduleId]
+      );
+
+      if (result.rows.length === 0) {
+          return res.status(404).json({ message: 'Module not found.' });
+      }
+
+      res.status(200).json(result.rows[0]);
+  } catch (error) {
+      console.error('Error fetching public module:', error);
+      res.status(500).json({ message: 'Failed to retrieve module content.' });
+  }
+});
 // POST a new module
 router.post('/', authenticate, checkRole(['admin']), async (req, res) => {
   const { course_id, title } = req.body;

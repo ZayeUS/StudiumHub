@@ -6,6 +6,43 @@ import checkRole from '../middlewares/checkRole.js';
 
 const router = express.Router();
 
+
+// NEW: Public route for students (no authentication)
+router.get('/public/:courseId', async (req, res) => {
+    const { courseId } = req.params;
+    try {
+        // This query is almost identical to the authenticated one but without checking the organization
+        const courseQuery = `
+            SELECT c.course_id, c.title, c.description, cm.file_name as source_file_name
+            FROM courses c
+            JOIN course_materials cm ON c.source_material_id = cm.material_id
+            WHERE c.course_id = $1
+        `;
+        const courseResult = await query(courseQuery, [courseId]);
+
+        if (courseResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Course not found.' });
+        }
+
+        const modulesQuery = `
+            SELECT module_id, title, module_order
+            FROM course_modules
+            WHERE course_id = $1
+            ORDER BY module_order ASC
+        `;
+        const modulesResult = await query(modulesQuery, [courseId]);
+
+        const courseData = {
+            ...courseResult.rows[0],
+            modules: modulesResult.rows,
+        };
+
+        res.status(200).json(courseData);
+    } catch (error) {
+        console.error('Error fetching public course details:', error);
+        res.status(500).json({ message: 'Failed to retrieve course details.' });
+    }
+});
 // GET a single course by its ID
 router.get('/:courseId', authenticate, checkRole(['admin']), async (req, res) => {
     const { courseId } = req.params;

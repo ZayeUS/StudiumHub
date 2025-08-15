@@ -17,6 +17,10 @@ import { OrganizationPage } from '../pages/Authenticated/OrganizationPage';
 import { CourseDetailPage } from '../pages/Authenticated/CourseDetailPage';
 import { QuizPlayerPage } from '../pages/Authenticated/QuizPlayerPage';
 import { QuizEditorPage } from '../pages/Authenticated/QuizEditorPage';
+import { PublicCoursePage } from '../pages/Non-Authenticated/PublicCoursePage'; // <-- Import the new page
+import { PublicModulePage } from '../pages/Non-Authenticated/PublicModulePage'; // <-- Import the new module page
+
+
 
 export const AppRouter = () => {
   const { authHydrated, isLoggedIn, profile } = useUserStore();
@@ -48,11 +52,15 @@ export const AppRouter = () => {
               <Route path="/course/:courseId" element={<AnimatedPage><CourseDetailPage /></AnimatedPage>} />
               <Route path="/course/:courseId/quiz/:quizId" element={<AnimatedPage><QuizPlayerPage /></AnimatedPage>} />
               <Route path="/course/:courseId/quiz/:quizId/edit" element={<AnimatedPage><QuizEditorPage /></AnimatedPage>} />
+
+
             </Route>
             <Route path="*" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
           </Route>
         ) : (
           <>
+          <Route path="/course/public/:courseId" element={<AnimatedPage><PublicCoursePage /></AnimatedPage>} />
+          <Route path="/learn/module/:moduleId" element={<AnimatedPage><PublicModulePage /></AnimatedPage>} /> {/* <-- Add this new route */}
             <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
             <Route path="/login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
             <Route path="/signup" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
