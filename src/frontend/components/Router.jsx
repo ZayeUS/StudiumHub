@@ -42,8 +42,8 @@ export const AppRouter = () => {
         {isLoggedIn ? (
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-            <Route path="/login" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
-            <Route path="/signup" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
+            {/* <Route path="/login" element={<Navigate to={getAuthenticatedRedirect()} replace />} />
+            <Route path="/signup" element={<Navigate to={getAuthenticatedRedirect()} replace />} /> */}
             <Route element={<OnboardingRoute />}>
               <Route path="/profile-onboarding" element={<AnimatedPage><OnboardingWizard /></AnimatedPage>} />
             </Route>
@@ -66,8 +66,8 @@ export const AppRouter = () => {
           <Route path="/course/:courseId/deck/:deckId" element={<AnimatedPage><PublicFlashcardPage /></AnimatedPage>} />
           <Route path="/course/:courseId/quiz/:quizId" element={<AnimatedPage><PublicQuizPage /></AnimatedPage>} />
             <Route path="/" element={<AnimatedPage><LandingPage /></AnimatedPage>} />
-            <Route path="/login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
-            <Route path="/signup" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+            {/* <Route path="/login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+            <Route path="/signup" element={<AnimatedPage><AuthPage /></AnimatedPage>} /> */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </>
         )}

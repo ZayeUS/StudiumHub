@@ -1,178 +1,159 @@
+# StudiumHub
 
+**StudiumHub** turns static course materials (PDFs, slide decks, textbooks) into **interactive, AI-powered courses** that teachers can publish to their classes in minutes. It’s a teacher-first, student-friendly platform that goes far beyond “chat with PDF”: upload once → auto-generate **modules, lessons, quizzes, flashcards, and weekly review packs** → publish to students → track understanding with **real-time analytics**.
 
-# SoftwareTemplate B2B: A Modern SaaS Boilerplate
+---
 
-**SoftwareTemplate B2B** is a production-ready foundation for building modern, scalable, and user-centric B2B SaaS applications. This boilerplate is engineered to save hundreds of hours of development time by providing a robust suite of pre-configured, essential features. It allows developers to bypass repetitive setup and focus directly on building their unique business logic.
+## What StudiumHub Delivers
 
-This project is built on a modern, decoupled architecture, using **Firebase** for identity management and a powerful **Node.js (Express)** backend with a **PostgreSQL** database for core application logic.
+### For Teachers
 
------
+* **Upload → Course in minutes**
+  Drop in a syllabus, slides, or a chapter PDF. StudiumHub automatically proposes **modules and lessons**, each with:
 
-## Core Features
+  * **Teach**: concise, cite-backed summaries and key terms
+  * **Practice**: auto-generated quizzes (MCQ/TF/short) with explanations
+  * **Review**: flashcards (spaced-repetition ready)
+  * *(Optional wrappers)* **Warm-up**, **Apply task**, **Exit ticket**
+* **One-click publishing to a class**
+  Share a link or invite a roster. Every student receives the interactive version immediately.
+* **Actionable analytics**
+  See completion rates, average scores, high-friction concepts, and time-on-task—by student, lesson, and module.
+* **Time saved, quality up**
+  Replace hours of prep with AI-assisted structuring, while retaining full edit control.
 
-  * **Full Authentication Flow:** Secure sign-up, login, password reset, and Google Sign-In functionality powered by **Firebase Authentication**. The system is designed to gracefully handle account conflicts (e.g., email already exists).
-  * **Organization & Team Management:**
-      * Multi-user organizations with role-based access control (`admin`, `member`).
-      * Admins can invite new members to their organization via secure, expiring email links.
-      * Admins can manage team member roles directly from the organization dashboard.
-  * **Secure File Uploads:** A highly secure and scalable file upload system using **Amazon S3 Presigned URLs**. This ensures files are uploaded directly to S3, bypassing the backend server, and that all buckets are private and encrypted by default.
-  * **Subscription & Billing Integration:** Seamless integration with **Stripe** for recurring subscriptions, managed via backend logic to keep subscription statuses in sync with the application.
-  * **Polished Onboarding Experience:** A multi-step user onboarding wizard with a refined two-column layout on desktop, guiding new users through profile creation and plan selection.
-  * **Modern, Responsive UI:**
-      * A sleek and professional user interface built with **shadcn/ui** and styled with **Tailwind CSS**.
-      * **Light & Dark Mode:** A professionally designed, high-contrast slate theme that is easy on the eyes and fully theme-aware.
-      * Includes a collapsible sidebar for efficient navigation on authenticated pages.
-  * **Robust & Scalable Backend:**
-      * A well-structured **Express.js** API with clear routing and middleware.
-      * **PostgreSQL** database for reliable and scalable data persistence.
-      * **Database Transactions** are used for critical operations (like user creation) to ensure data integrity and prevent inconsistent states.
-  * **Developer-Focused:**
-      * Clean, well-structured codebase with a logical separation between frontend and backend.
-      * Pre-configured with **Vite** for a lightning-fast development environment.
-      * Code quality is enforced by **ESLint**.
+### For Students
 
------
+* **Guided, step-by-step lessons**
+  Clear progress through Warm-up → Teach → Practice → Apply → Review → Exit, with a progress bar and gentle pacing.
+* **Context-aware AI Tutor**
+  Ask questions in a side panel scoped to the current lesson’s sources, with **citations to the original pages**.
+* **Spaced review that just happens**
+  Automatic weekly review packs combine missed questions and due flashcards to reinforce weak spots.
+* **Light social motivation**
+  Optional deck sharing, streaks, and class leaderboards that keep study sessions sticky—never spammy.
 
-## Tech Stack
+### For Schools & Programs
 
-### Frontend
+* **Teacher-led, bottom-up adoption**
+  Teachers can run with it today; admins can standardize later.
+* **Privacy-aware by design**
+  Per-org and per-class data isolation, private file storage, auditability, and education-friendly defaults.
 
-  * **Framework:** React 18
-  * **Build Tool:** Vite
-  * **UI Components:** shadcn/ui
-  * **Styling:** Tailwind CSS
-  * **Animations:** Framer Motion
-  * **State Management:** Zustand
-  * **Routing:** React Router v6
+---
 
-### Backend
+## Why It’s Different
 
-  * **Framework:** Express.js
-  * **Database:** PostgreSQL (with `pg` driver)
-  * **Authentication:** Firebase Admin SDK
-  * **Payments:** Stripe
-  * **File Storage:** Amazon S3
-  * **Email:** SendGrid
+* **Not another “chat with PDF”**: StudiumHub **structures** content into courses—modules, lessons, and activities—so learning is guided, measurable, and repeatable.
+* **Teacher → Class network effect**: One upload equips an entire classroom; students remix and share study sets across cohorts.
+* **Scoped AI, not generic answers**: The Tutor is grounded in the current lesson’s chunked sources and cites where facts come from.
+* **Analytics that matter**: Confusion hotspots, mastery snapshots, and time-on-task help teachers intervene precisely.
 
------
+---
 
-## Getting Started
+## Product Pillars
 
-### 1\. Prerequisites
+1. **Structure** – Courses auto-assemble from real materials; teachers remain in control.
+2. **Guidance** – Students move through clear steps; help is always context-aware.
+3. **Mastery** – Assessment and spaced review are built in, not bolted on.
+4. **Trust** – Citations, privacy, and transparency by default.
+5. **Delight** – A modern UI (indigo + teal, glassmorphism, accessible) that feels effortless.
 
-  * Node.js (v18 or later)
-  * An Amazon S3 bucket with an associated IAM user.
-  * A PostgreSQL database.
-  * A Firebase project.
-  * A Stripe account.
-  * A SendGrid account (for sending email invitations).
+---
 
-### 2\. Installation
+## Key Capabilities
 
-Clone the repository and install the necessary dependencies:
+### Content Ingestion & Understanding
 
-```bash
-git clone https://github.com/your-username/SoftwareTemplateB2b.git
-cd SoftwareTemplateB2b
-npm install
-```
+* PDF/slide ingestion with heading detection and intelligent chunking.
+* Embeddings and retrieval tuned for educational materials.
+* Page-level **citations** maintained end-to-end.
 
-### 3\. Environment Variables
+### Lesson Activities (auto-generated, fully editable)
 
-This project requires two `.env` files for configuration.
+* **Warm-up** (diagnostic quick checks)
+* **Teach** (summary, key terms, examples, citations)
+* **Practice** (quizzes with explanations)
+* **Apply** (short tasks: problem/case/code)
+* **Review** (flashcards, spaced repetition)
+* **Exit ticket** (1–2 questions to log mastery)
 
-#### Frontend (`.env` file in the root directory):
+### Publishing & Collaboration
 
-Create this file and add your Firebase client-side keys.
+* Class links and roster invites.
+* Shared decks and study groups (optional).
+* Export options (e.g., flashcards to existing study ecosystems) and LMS-friendly shares.
 
-```
-# Firebase Client-Side Keys
-VITE_FIREBASE_API_KEY="your_firebase_api_key"
-VITE_FIREBASE_AUTH_DOMAIN="your_firebase_auth_domain"
-VITE_FIREBASE_PROJECT_ID="your_firebase_project_id"
-VITE_FIREBASE_STORAGE_BUCKET="your_firebase_storage_bucket"
-VITE_FIREBASE_MESSAGING_SENDER_ID="your_firebase_Messaginger_id"
-VITE_FIREBASE_APP_ID="your_firebase_app_id"
+### Analytics & Insights
 
-# Backend API URL
-VITE_API_BASE_URL="http://localhost:5000/api"
+* Completion %, average scores, and time-on-task by lesson/module/student.
+* **Confusion hotspots** (items most missed, terms most looked up).
+* Weekly digest for teachers with intervention suggestions.
 
-# Stripe
-VITE_STRIPE_PAYMENT_LINK="your_stripe_payment_link"
-```
+### Experience & Design
 
-#### Backend (`.env` file inside the `src/backend` directory):
+* Clean, responsive UI with **light/dark** modes and accessible contrast.
+* Subtle motion and **glass surfaces** for premium feel without distraction.
 
-Create this file and add your secret keys and database connection string.
+---
 
-```
-# Server Configuration
-PORT=5000
-CORS_ORIGIN="http://localhost:5173"
+## Who Uses StudiumHub
 
-# Database
-DATABASE_URL="your_postgresql_connection_string"
+* **Individual teachers & adjuncts** needing fast course prep that’s still rigorous.
+* **Departments & bootcamps** standardizing outcomes across multiple cohorts.
+* **Tutors and creators** productizing materials into guided, trackable learning paths.
 
-# Firebase Admin SDK (Service Account)
-FIREBASE_PROJECT_ID="your_firebase_project_id"
-FIREBASE_CLIENT_EMAIL="your_firebase_client_email"
-FIREBASE_PRIVATE_KEY="your_firebase_private_key"
+---
 
-# Stripe
-STRIPE_SECRET_KEY="your_stripe_secret_key"
-STRIPE_WEBHOOK_SECRET="your_stripe_webhook_secret"
+## Architecture (High-Level Description)
 
-# Amazon S3 (for file uploads)
-AWS_REGION="your_aws_region"
-AWS_ACCESS_KEY_ID="your_iam_user_access_key"
-AWS_SECRET_ACCESS_KEY="your_iam_user_secret_key"
-S3_BUCKET_NAME="your_s3_bucket_name"
+* **Modern web stack** designed for reliability and speed.
+* **Frontend**: React + Tailwind + shadcn/ui + Framer Motion for a polished, accessible interface.
+* **Backend**: A secure API powering orgs/roles, courses, ingestion, assessments, analytics, billing, and storage orchestration.
+* **Data & AI**: Chunked content stored with embeddings; retrieval-augmented generation ensures every answer is grounded and citable.
+* **Security & Privacy**: Private file storage, presigned uploads, per-org/class isolation, and audit trails—**education-friendly by default**.
 
-# SendGrid (for emails)
-SENDGRID_API_KEY="your_sendgrid_api_key"
-FROM_EMAIL="your_verified_sender_email"
-```
+*(Brand-specific services like auth, storage, payments, or email are pluggable and can be swapped to fit institutional requirements.)*
 
-### 4\. Database Setup
+---
 
-Connect to your PostgreSQL database and execute the entire contents of the `src/backend/database.sql` file. This will create all the necessary tables, relationships, and constraints.
+## Example Journeys
 
-### 5\. Run the Application
+**Teacher**
 
-You can start both the frontend development server and the backend server concurrently with a single command:
+1. Upload Unit 1 slides → auto outline (3 lessons) appears.
+2. Skim and edit the generated summaries; tweak a few quiz items.
+3. Publish to “Period 3 Biology” and share the link.
+4. Check analytics after class: Lesson 2 concepts A & C flagged as confusing → add a short Apply task and a recap deck.
 
-```bash
-npm run dev
-```
+**Student**
 
-Your application will be running at:
+1. Open the class link on phone → continue Lesson 1 from last checkpoint.
+2. Ask the Tutor “Why is this step valid?” → gets an answer with a page citation.
+3. Finish the quiz, miss one, read the explanation.
+4. Next day’s review pack includes that concept—and they nail it.
 
-  * **Frontend:** `http://localhost:5173`
-  * **Backend API:** `http://localhost:5000`
+---
 
------
+## Non-Functional Qualities
 
-## Project Structure
+* **Accessible**: keyboard navigation, focus rings, color contrast in all themes.
+* **Performant**: prefetching and pagination for large PDFs; responsive on low-end devices.
+* **Observable**: logs and metrics on ingestion, generation, and student progression.
+* **Extensible**: activity types and prompts are modular; integrations are adapter-based.
 
-The project is organized with a clear separation between the frontend and backend code within the `src` directory.
+---
 
-```
-/src
-├── backend/
-│   ├── routes/         # API route definitions (users, profiles, organizations, etc.)
-│   ├── middlewares/    # Custom Express middleware (authentication, role checks)
-│   ├── utils/          # Utility functions (S3, Stripe, audit logging)
-│   ├── templates/      # HTML email templates
-│   ├── db.js           # Database connection pool configuration
-│   ├── database.sql    # The complete database schema
-│   └── server.js       # The main Express server entry point
-│
-└── frontend/
-    ├── components/     # Reusable React components (navigation, protected routes)
-    ├── pages/          # Page-level components for different routes
-    │   ├── Authenticated/
-    │   └── Non-Authenticated/
-    ├── store/          # Zustand store for global state management (userStore.js)
-    ├── hooks/          # Custom React hooks (useDirectUpload.js)
-    └── App.jsx         # Main application component with routing logic
-```# StudiumHub
+## Roadmap Snapshot
+
+* Google Classroom / Canvas sharing shortcuts
+* Flashcard export to major study platforms
+* Short-answer auto-feedback with rubric hints
+* Rich media in lessons (figures, formulas, interactive diagrams)
+* Department-level dashboards and outcome mapping
+
+---
+
+## Positioning
+
+StudiumHub is the **AI-native classroom layer** that transforms everyday course files into living, measurable learning experiences. It gives teachers **time back**, students **clarity**, and schools **evidence**—all while unlocking a collaborative network around real classroom content.

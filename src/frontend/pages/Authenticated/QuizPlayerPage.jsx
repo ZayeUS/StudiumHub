@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getData } from '../../utils/BackendRequestHelper';
-import { Loader2, ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, CheckCircle, XCircle,ArrowRight } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
